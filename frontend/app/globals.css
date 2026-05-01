@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #0f0f12;
+  --surface: #ffffff;
+  --surface-foreground: #0f0f12;
+  --card: #f4f4f6;
+  --card-foreground: #0f0f12;
+  --muted-foreground: #52525b;
+  --border: #e4e4e7;
+  --primary: #6d28d9;
+  --primary-hover: #5b21b6;
+  --primary-muted: #ede9fe;
+  --primary-foreground: #fafafa;
+  --ring: #6d28d9;
+  --radius: 1rem;
+  --font-size-title: clamp(2rem, 1.5rem + 2vw, 3.5rem);
+  --font-size-subtitle: clamp(1.25rem, 1rem + 1vw, 2rem);
+  --font-size-text: clamp(0.95rem, 0.9rem + 0.2vw, 1.125rem);
+  --hero-scrim-start: color-mix(in srgb, var(--background) 88%, transparent);
+  --hero-scrim-end: transparent;
+  --hero-radial-mid: #e4e4e7;
+  --glow-primary-shadow: 0 24px 80px -24px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-muted: var(--primary-muted);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-ring: var(--ring);
+  --color-hero-scrim-start: var(--hero-scrim-start);
+  --color-hero-scrim-end: var(--hero-scrim-end);
+  --color-hero-radial-mid: var(--hero-radial-mid);
+  --font-sans: var(--font-plus-jakarta-sans);
+  --font-mono:
+    "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+    monospace;
+  --text-title: var(--font-size-title);
+  --text-subtitle: var(--font-size-subtitle);
+  --text-body: var(--font-size-text);
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --shadow-primary-glow: var(--glow-primary-shadow);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --background: #09090b;
+    --foreground: #f4f4f5;
+    --surface: #09090b;
+    --surface-foreground: #f4f4f5;
+    --card: #18181b;
+    --card-foreground: #f4f4f5;
+    --muted-foreground: #a1a1aa;
+    --border: #3f3f46;
+    --primary: #8b5cf6;
+    --primary-hover: #a78bfa;
+    --primary-muted: #2e1065;
+    --primary-foreground: #fafafa;
+    --ring: #8b5cf6;
+    --hero-scrim-start: color-mix(in srgb, var(--background) 92%, transparent);
+    --hero-scrim-end: transparent;
+    --hero-radial-mid: #141418;
+    --glow-primary-shadow: 0 28px 100px -24px color-mix(in srgb, var(--primary) 26%, transparent);
+  }
+}
+
+[data-landing="dark"] {
+  color-scheme: dark;
+  --background: #09090b;
+  --foreground: #f4f4f5;
+  --surface: #09090b;
+  --surface-foreground: #f4f4f5;
+  --card: #18181b;
+  --card-foreground: #f4f4f5;
+  --muted-foreground: #a1a1aa;
+  --border: #3f3f46;
+  --primary: #8b5cf6;
+  --primary-hover: #a78bfa;
+  --primary-muted: #2e1065;
+  --primary-foreground: #fafafa;
+  --ring: #8b5cf6;
+  --hero-scrim-start: color-mix(in srgb, #09090b 94%, transparent);
+  --hero-scrim-end: transparent;
+  --hero-radial-mid: #141418;
+  --glow-primary-shadow: 0 28px 100px -24px color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-text);
+}
+
+html:has([data-landing="dark"]) {
+  scroll-behavior: smooth;
+}
+
+/* Hero: soft primary glow overlay (used by HeroParticleField) */
+.hero-particles-glow {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background: radial-gradient(
+    70% 60% at 50% 45%,
+    color-mix(in srgb, var(--primary) 18%, transparent),
+    transparent 68%
+  );
+  pointer-events: none;
+}
