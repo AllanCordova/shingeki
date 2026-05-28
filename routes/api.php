@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\SystemController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -15,4 +16,7 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-Route::middleware('auth:sanctum')->apiResource('projects', ProjectController::class);
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('projects', ProjectController::class);
+    Route::apiResource('projects.systems', SystemController::class);
+});
