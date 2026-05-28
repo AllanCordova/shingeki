@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProjectController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -13,3 +14,5 @@ Route::prefix('auth')->group(function () {
         Route::put('/me', [AuthController::class, 'update']);
     });
 });
+
+Route::middleware('auth:sanctum')->apiResource('projects', ProjectController::class);
