@@ -12,6 +12,8 @@ class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $this->authorize('viewAny', Project::class);
+
         $projects = Project::query()
             ->where('user_id', $request->user()->id)
             ->latest()
@@ -24,6 +26,8 @@ class ProjectController extends Controller
 
     public function store(ProjectCreate $request): JsonResponse
     {
+        $this->authorize('create', Project::class);
+
         $project = Project::create([
             ...$request->safe()->only(['cover_path', 'name', 'description']),
             'user_id' => $request->user()->id,
@@ -37,6 +41,8 @@ class ProjectController extends Controller
 
     public function show(Project $project): JsonResponse
     {
+        $this->authorize('view', $project);
+
         return response()->json([
             'project' => $this->formatProject($project),
         ]);
@@ -44,6 +50,8 @@ class ProjectController extends Controller
 
     public function update(ProjectUpdate $request, Project $project): JsonResponse
     {
+        $this->authorize('update', $project);
+
         $data = $request->safe()->only(['cover_path', 'name', 'description']);
 
         if ($data !== []) {
@@ -58,6 +66,8 @@ class ProjectController extends Controller
 
     public function destroy(Project $project): JsonResponse
     {
+        $this->authorize('delete', $project);
+
         $project->delete();
 
         return response()->json([
