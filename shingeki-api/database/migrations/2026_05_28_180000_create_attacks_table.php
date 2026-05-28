@@ -11,18 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('signatures', function (Blueprint $table) {
+        Schema::create('attacks', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignUuid('system_id')->constrained('systems')->cascadeOnDelete();
-            $table->string('ip_address');
-            $table->string('token', 64);
-            $table->string('status');
-            $table->date('expiration');
+            $table->string('category');
+            $table->json('payload');
+            $table->string('target_location');
+            $table->string('risk_level');
             $table->timestamps();
-
-            $table->unique('token');
-            $table->index(['user_id', 'system_id']);
         });
     }
 
@@ -31,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('signatures');
+        Schema::dropIfExists('attacks');
     }
 };

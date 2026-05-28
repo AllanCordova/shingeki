@@ -11,18 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('signatures', function (Blueprint $table) {
+        Schema::create('system_results', function (Blueprint $table) {
             $table->uuid('id')->primary();
-            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignUuid('system_id')->constrained('systems')->cascadeOnDelete();
-            $table->string('ip_address');
-            $table->string('token', 64);
-            $table->string('status');
-            $table->date('expiration');
+            $table->foreignUuid('attack_id')->constrained('attacks')->cascadeOnDelete();
+            $table->text('vulnerable_route');
+            $table->text('payload_used');
+            $table->text('evidence');
+            $table->text('http_request');
             $table->timestamps();
 
-            $table->unique('token');
-            $table->index(['user_id', 'system_id']);
+            $table->index(['system_id', 'attack_id']);
         });
     }
 
@@ -31,6 +30,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('signatures');
+        Schema::dropIfExists('system_results');
     }
 };
