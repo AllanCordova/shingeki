@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
-use Database\Factories\ProjectFactory;
+use Database\Factories\SystemFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Project extends Model
+class System extends Model
 {
-    /** @use HasFactory<ProjectFactory> */
+    /** @use HasFactory<SystemFactory> */
     use HasFactory, HasUuids;
 
     public $incrementing = false;
@@ -22,20 +21,16 @@ class Project extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'user_id',
+        'project_id',
         'cover_path',
         'name',
-        'description',
+        'target_url',
+        'repository_url',
     ];
 
-    public function user(): BelongsTo
+    public function project(): BelongsTo
     {
-        return $this->belongsTo(User::class);
-    }
-
-    public function systems(): HasMany
-    {
-        return $this->hasMany(System::class);
+        return $this->belongsTo(Project::class);
     }
 
     /**
@@ -44,15 +39,15 @@ class Project extends Model
      */
     public function resolveRouteBinding($value, $field = null): ?static
     {
-        $user = auth()->user();
+        $project = request()->route('project');
 
-        if (! $user) {
+        if (! $project instanceof Project) {
             return null;
         }
 
         return static::query()
             ->where($field ?? $this->getRouteKeyName(), $value)
-            ->where('user_id', $user->id)
+            ->where('project_id', $project->id)
             ->first();
     }
 }
