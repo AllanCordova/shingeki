@@ -39,6 +39,11 @@ class System extends Model
         return $this->hasMany(Signature::class);
     }
 
+    public function systemResults(): HasMany
+    {
+        return $this->hasMany(SystemResult::class);
+    }
+
     /**
      * @param  mixed  $value
      * @param  string|null  $field

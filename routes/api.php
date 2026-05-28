@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AttackController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SignatureController;
@@ -26,4 +27,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/validate', [SignatureController::class, 'validate']);
         Route::post('/revoke', [SignatureController::class, 'revoke']);
     });
+
+    Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
 });

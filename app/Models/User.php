@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Signature::class);
     }
+
+    public function attacks(): HasMany
+    {
+        return $this->hasMany(Attack::class);
+    }
 }
