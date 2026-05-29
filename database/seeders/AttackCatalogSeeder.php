@@ -40,7 +40,7 @@ class AttackCatalogSeeder extends Seeder
             'category' => AttackCategory::PathTraversal,
             'target_location' => AttackTargetLocation::UrlPath,
             'risk_level' => AttackRiskLevel::High,
-            'payload' => ['path' => '../../etc/passwd'],
+            'payload' => ['value' => '../storage/secret.txt'],
         ],
     ];
 

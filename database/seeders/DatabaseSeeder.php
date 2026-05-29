@@ -46,5 +46,7 @@ class DatabaseSeeder extends Seeder
                 System::factory($systemsToCreate)->for($project)->create();
             }
         });
+
+        $this->call(VulnerableTargetSeeder::class);
     }
 }

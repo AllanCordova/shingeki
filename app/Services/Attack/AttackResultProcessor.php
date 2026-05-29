@@ -3,6 +3,7 @@
 namespace App\Services\Attack;
 
 use App\Models\Attack;
+use App\Models\AttackDispatch;
 use App\Models\System;
 use App\Models\SystemResult;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -19,9 +20,14 @@ class AttackResultProcessor
 
         $attackId = $payload['attack_id'] ?? null;
         $systemId = $payload['system_id'] ?? null;
+        $dispatchId = $payload['dispatch_id'] ?? null;
 
         if (! is_string($attackId) || ! is_string($systemId)) {
             throw new InvalidArgumentException('attack_id and system_id are required in the result payload.');
+        }
+
+        if ($dispatchId !== null && ! is_string($dispatchId)) {
+            throw new InvalidArgumentException('dispatch_id must be a string when provided.');
         }
 
         $attack = Attack::query()->find($attackId);
@@ -29,6 +35,14 @@ class AttackResultProcessor
 
         if ($attack === null || $system === null) {
             throw new ModelNotFoundException('Attack or system not found for the result payload.');
+        }
+
+        if (is_string($dispatchId)) {
+            $dispatch = AttackDispatch::query()->find($dispatchId);
+
+            if ($dispatch === null || $dispatch->system_id !== $system->id) {
+                throw new ModelNotFoundException('Attack dispatch not found for the result payload.');
+            }
         }
 
         foreach (['vulnerable_route', 'payload_used', 'evidence', 'http_request'] as $field) {
@@ -39,6 +53,7 @@ class AttackResultProcessor
 
         return SystemResult::create([
             'system_id' => $system->id,
+            'attack_dispatch_id' => $dispatchId,
             'attack_id' => $attack->id,
             'vulnerable_route' => $payload['vulnerable_route'],
             'payload_used' => $payload['payload_used'],

@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\SystemController;
+use App\Http\Controllers\SystemResultController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -29,4 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
+
+    Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
+    Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);
 });
