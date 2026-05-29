@@ -47,17 +47,10 @@ func (p *Publisher) Connect(url string) error {
 		return fmt.Errorf("open channel: %w", err)
 	}
 
-	if _, err := ch.QueueDeclare(
-		p.cfg.ResultsQueue,
-		true,
-		false,
-		false,
-		false,
-		nil,
-	); err != nil {
+	if err := DeclareAttackQueues(ch, p.cfg.DispatchQueue, p.cfg.ResultsQueue); err != nil {
 		_ = ch.Close()
 		_ = conn.Close()
-		return fmt.Errorf("declare results queue %q: %w", p.cfg.ResultsQueue, err)
+		return err
 	}
 
 	p.conn = conn

@@ -44,8 +44,16 @@ func (e *CompositeEngine) Discover(ctx context.Context, targetURL string) ([]con
 		}
 	}
 
+	// Quando o crawl falha (alvo offline, timeout do Rod, etc.), o fallback antigo
+	// gerava apenas GET na raiz com API_ENDPOINT — incompativel com o catalogo
+	// (FORM, QUERY_PARAMETER, URL_PATH) e resultava em jobs=0.
 	if len(vectors) == 0 {
-		vectors = append(vectors, contracts.NewAttackVector(targetURL, "GET", "API_ENDPOINT"))
+		vectors = fallbackVectors(targetURL)
+		e.logger.Warn(
+			"discovery produced no vectors; using built-in fallback routes",
+			"target", targetURL,
+			"fallback_count", len(vectors),
+		)
 	}
 
 	return vectors, nil

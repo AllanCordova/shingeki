@@ -34,11 +34,15 @@ services:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test:
+        [
+          "CMD-SHELL",
+          "rabbitmqctl await_startup && rabbitmq-diagnostics -q check_port_connectivity",
+        ]
       interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      timeout: 10s
+      retries: 8
+      start_period: 40s
     networks:
       - shingeki
 
@@ -50,6 +54,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+      - path: ./shingeki-dast-worker/.env
+        required: false
     environment:
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
@@ -59,13 +65,16 @@ services:
       RABBITMQ_ATTACKS_DISPATCH_QUEUE: ${RABBITMQ_ATTACKS_DISPATCH_QUEUE:-attacks.dispatch}
       RABBITMQ_ATTACKS_RESULTS_QUEUE: ${RABBITMQ_ATTACKS_RESULTS_QUEUE:-attacks.results}
       DISCOVERY_ROD_ENABLED: "true"
+      CHROME_PATH: /usr/bin/chromium
+      DISCOVERY_ROD_NO_SANDBOX: "true"
+      DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       rabbitmq:
         condition: service_healthy
       vulnerable-target:
-        condition: service_started
+        condition: service_healthy
     networks:
       - shingeki
 
@@ -80,12 +89,17 @@ services:
       SHINGEKI_SIGNATURE_TOKEN: ${VULNERABLE_TARGET_SIGNATURE_TOKEN}
     volumes:
       - vulnerable_data:/var/www/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1/ > /dev/null || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
     networks:
       - shingeki
 
 networks:
   shingeki:
-    name: shingeki
     driver: bridge
 
 volumes:

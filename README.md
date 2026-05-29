@@ -9,6 +9,7 @@ A API organiza projetos de segurança, cadastra sistemas-alvo, gerencia assinatu
 | Diretório | Descrição |
 |-----------|-----------|
 | [`shingeki-api/`](shingeki-api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
+| [`shingeki-client/`](shingeki-client/) | Frontend Next.js (BFF, React Query, autenticação) |
 | [`shingeki-dast-worker/`](shingeki-dast-worker/) | Worker Go (discovery, ataques, evidências) |
 | [`shingeki-vulnerable-target/`](shingeki-vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
 
@@ -27,6 +28,7 @@ Módulos da disciplina utilizados: **[MODULOS-DISCIPLINA.md](MODULOS-DISCIPLINA.
 ## Requisitos
 
 - **PHP** 8.4+ e **Composer** 2.x
+- **Node.js** 20+ e **npm** (client Next.js)
 - **Go** 1.22+ (opcional, para desenvolvimento local do worker)
 - **Docker** e **Docker Compose** (MySQL, RabbitMQ, worker e alvo)
 
@@ -47,21 +49,13 @@ composer install
 cd ..
 ```
 
-3. Crie o arquivo de ambiente na **raiz** do monorepo:
+3. Copie os arquivos de ambiente:
 
 ```bash
 cp .env.example .env
-```
-
-```powershell
-# Windows (copiar é o mais simples)
-Copy-Item ..\.env .env
-```
-
-No Linux/macOS:
-
-```bash
-ln -sf ../.env .env
+cp shingeki-api/.env.example shingeki-api/.env
+cp shingeki-dast-worker/.env.example shingeki-dast-worker/.env
+cp shingeki-client/.env.example shingeki-client/.env.local
 ```
 
 4. Gere a chave da aplicação:
@@ -71,6 +65,24 @@ cd shingeki-api
 php artisan key:generate
 cd ..
 ```
+
+5. Instale as dependências do client:
+
+```bash
+cd shingeki-client
+npm install
+cd ..
+```
+
+## Usuários do seed
+
+Após `php artisan migrate --seed`, use estas credenciais no login do app ou na API:
+
+| E-mail | Senha | Perfil |
+|--------|-------|--------|
+| `test@example.com` | `password` | Usuário com projetos e sistemas de exemplo |
+
+O seed também cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** no usuário `test@example.com`.
 
 ## Execução
 
@@ -110,6 +122,36 @@ php artisan attacks:consume-results
 ```
 
 O alvo de laboratório expõe a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
+
+| Contexto | URL do alvo |
+|----------|-------------|
+| Host (navegador, API com `php artisan serve`) | http://127.0.0.1:8090 |
+| Rede Docker (`docker compose`, worker DAST) | http://vulnerable-target |
+
+Cadastre o sistema no app com a URL da coluna que corresponde a onde a API e o worker rodam. O `migrate --seed` cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** já apontando para o alvo.
+
+O token de assinatura é o valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (mesmo nos `.env` da **raiz** e de **`shingeki-api`**; o container do alvo também usa esse valor). Com o exemplo padrão dos repositórios:
+
+```json
+{
+  "signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}
+```
+
+Dispare o ataque com `POST /api/projects/{projectId}/systems/{systemId}/attacks/dispatch` (substitua os IDs; após o seed, busque-os em `GET /api/projects`). Envie o JSON acima no body e `Authorization: Bearer {token}` no header.
+
+### Client (Next.js)
+
+Com a API rodando (`php artisan serve` em `http://127.0.0.1:8000`), em outro terminal:
+
+```bash
+cd shingeki-client
+npm run dev
+```
+
+O app abre em http://localhost:3000. Faça login com `test@example.com` / `password`.
+
+O client usa o BFF em `/api` e aponta para a API Laravel via `API_BASE_URL` em `shingeki-client/.env.local` (padrão `http://127.0.0.1:8000/api`).
 
 ## Endpoints principais
 

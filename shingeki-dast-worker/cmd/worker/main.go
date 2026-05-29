@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack"
 	"github.com/shingeki/dast-worker/internal/config"
@@ -26,7 +27,10 @@ func main() {
 	}
 
 	publisher := queue.NewPublisher(cfg.RabbitMQ, logger)
-	if err := publisher.Connect(cfg.RabbitMQURL()); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := connectPublisherWithRetry(ctx, publisher, cfg.RabbitMQURL(), logger); err != nil {
 		logger.Error("connect publisher", "error", err)
 		os.Exit(1)
 	}
@@ -42,9 +46,6 @@ func main() {
 
 	pipeline := orchestrator.NewPipeline(discoveryEngine, attackEngine, evidenceEngine, publisher, logger)
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
 	consumer := queue.NewConsumer(cfg.RabbitMQ, func(jobCtx context.Context, batch contracts.DispatchBatch) error {
 		runCtx, cancel := context.WithTimeout(jobCtx, cfg.Worker.JobTimeout)
 		defer cancel()
@@ -56,4 +57,32 @@ func main() {
 		logger.Error("consumer stopped", "error", err)
 		os.Exit(1)
 	}
+}
+
+func connectPublisherWithRetry(
+	ctx context.Context,
+	publisher *queue.Publisher,
+	url string,
+	logger *slog.Logger,
+) error {
+	const maxAttempts = 15
+	var lastErr error
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		if err := publisher.Connect(url); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+		logger.Warn("rabbitmq not ready, retrying publisher connect",
+			"attempt", attempt,
+			"max_attempts", maxAttempts,
+			"error", lastErr,
+		)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(time.Duration(attempt) * time.Second):
+		}
+	}
+	return lastErr
 }

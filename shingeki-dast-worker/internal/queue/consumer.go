@@ -27,9 +27,9 @@ func NewConsumer(cfg config.RabbitMQConfig, handler Handler, logger *slog.Logger
 }
 
 func (c *Consumer) Run(ctx context.Context, url string) error {
-	conn, err := amqp.Dial(url)
+	conn, err := dialRabbitMQ(ctx, url)
 	if err != nil {
-		return fmt.Errorf("connect rabbitmq: %w", err)
+		return err
 	}
 	defer conn.Close()
 
@@ -38,6 +38,10 @@ func (c *Consumer) Run(ctx context.Context, url string) error {
 		return fmt.Errorf("open channel: %w", err)
 	}
 	defer ch.Close()
+
+	if err := DeclareAttackQueues(ch, c.cfg.DispatchQueue, c.cfg.ResultsQueue); err != nil {
+		return err
+	}
 
 	if err := ch.Qos(c.cfg.PrefetchCount, 0, false); err != nil {
 		return fmt.Errorf("set qos: %w", err)

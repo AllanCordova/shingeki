@@ -1,7 +1,7 @@
 FROM php:8.4-apache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libsqlite3-dev \
+    && apt-get install -y --no-install-recommends libsqlite3-dev curl \
     && docker-php-ext-install pdo_sqlite \
     && rm -rf /var/lib/apt/lists/* \
     && a2enmod rewrite
@@ -17,7 +17,9 @@ RUN mkdir -p /var/www/data \
     && chown -R www-data:www-data /var/www/data /var/www/storage
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-ENTRYPOINT ["docker-entrypoint.sh"]
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["apache2-foreground"]
