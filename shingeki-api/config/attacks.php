@@ -4,7 +4,7 @@ return [
 
     'catalog_admin_email' => env('ATTACKS_CATALOG_ADMIN_EMAIL', 'admin@admin.com'),
 
-    'vulnerable_target_url' => env('VULNERABLE_TARGET_URL', 'http://host.docker.internal:8090'),
+    'vulnerable_target_url' => env('VULNERABLE_TARGET_URL', 'http://vulnerable-target'),
 
     'vulnerable_target_signature_token' => env(
         'VULNERABLE_TARGET_SIGNATURE_TOKEN',
