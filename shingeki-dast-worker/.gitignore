@@ -1,0 +1,4 @@
+.env
+/worker
+/worker.exe
+*.exe
