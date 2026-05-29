@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\AttackDispatch;
+use App\Http\Requests\AttackDispatch as AttackDispatchRequest;
 use App\Models\Attack;
+use App\Models\AttackDispatch;
 use App\Models\Project;
 use App\Models\System;
 use App\Services\Attack\AttackCatalogService;
@@ -21,7 +22,7 @@ class AttackController extends Controller
         private readonly AttackQueuePublisher $attackQueuePublisher,
     ) {}
 
-    public function dispatch(AttackDispatch $request, Project $project, System $system): JsonResponse
+    public function dispatch(AttackDispatchRequest $request, Project $project, System $system): JsonResponse
     {
         $this->authorize('create', [Attack::class, $system]);
 
@@ -45,7 +46,15 @@ class AttackController extends Controller
             ], 422);
         }
 
+        $dispatch = AttackDispatch::create([
+            'system_id' => $system->id,
+            'user_id' => $request->user()->id,
+            'attacks_count' => $attacks->count(),
+            'dispatched_at' => now(),
+        ]);
+
         $this->attackQueuePublisher->publishDispatchBatch(
+            $dispatch,
             $system,
             $request->user(),
             $attacks,
@@ -53,9 +62,30 @@ class AttackController extends Controller
 
         return response()->json([
             'message' => 'Attack catalog dispatched to processing queue.',
+            'dispatch' => $this->formatDispatch($dispatch),
             'attacks_count' => $attacks->count(),
             'attacks' => $attacks->map(fn (Attack $attack) => $this->formatAttack($attack)),
         ], 202);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatDispatch(AttackDispatch $dispatch): array
+    {
+        return [
+            'id' => $dispatch->id,
+            'system_id' => $dispatch->system_id,
+            'user_id' => $dispatch->user_id,
+            'attacks_count' => $dispatch->attacks_count,
+            'dispatched_at' => $dispatch->dispatched_at,
+            'completed_at' => $dispatch->completed_at,
+            'duration_ms' => $dispatch->duration_ms,
+            'findings_count' => $dispatch->findings_count,
+            'status' => $dispatch->completed_at === null ? 'pending' : 'completed',
+            'created_at' => $dispatch->created_at,
+            'updated_at' => $dispatch->updated_at,
+        ];
     }
 
     /**

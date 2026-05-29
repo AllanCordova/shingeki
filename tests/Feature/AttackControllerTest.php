@@ -2,6 +2,7 @@
 
 use App\Enums\SignatureStatus;
 use App\Models\Attack;
+use App\Models\AttackDispatch;
 use App\Models\Project;
 use App\Models\Signature;
 use App\Models\System;
@@ -49,11 +50,12 @@ describe('POST attacks/dispatch', function () {
         $this->mock(AttackQueuePublisher::class)
             ->shouldReceive('publishDispatchBatch')
             ->once()
-            ->withArgs(function (System $queuedSystem, User $queuedUser, Collection $attacks) use ($system, $user, $catalogAttacks) {
-                return $queuedSystem->is($system)
-                    && $queuedUser->is($user)
-                    && $attacks->pluck('id')->all() === $catalogAttacks->pluck('id')->all();
-            });
+            ->with(
+                Mockery::type(AttackDispatch::class),
+                Mockery::on(fn (System $queuedSystem) => $queuedSystem->is($system)),
+                Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
+                Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === $catalogAttacks->pluck('id')->all()),
+            );
 
         $response = $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload($token));
 
@@ -64,12 +66,14 @@ describe('POST attacks/dispatch', function () {
                 'attacks_count' => 2,
             ])
             ->assertJsonStructure([
+                'dispatch' => ['id', 'system_id', 'user_id', 'attacks_count', 'dispatched_at'],
                 'attacks' => [
                     ['id', 'category', 'target_location', 'risk_level', 'payload'],
                 ],
             ]);
 
-        expect(Attack::query()->where('user_id', $user->id)->count())->toBe(0);
+        expect(Attack::query()->where('user_id', $user->id)->count())->toBe(0)
+            ->and(AttackDispatch::query()->where('system_id', $system->id)->count())->toBe(1);
     });
 
     test('returns unprocessable when catalog is empty', function () {

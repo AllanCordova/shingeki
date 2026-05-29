@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Services\Attack\AttackResultProcessor;
+use App\Models\AttackDispatch;
+use App\Models\SystemResult;
+use App\Services\Attack\AttackResultsMessageHandler;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -18,7 +20,7 @@ class ConsumeAttackResultsCommand extends Command
 
     protected $description = 'Consume attack result messages from RabbitMQ and persist system results';
 
-    public function handle(AttackResultProcessor $processor): int
+    public function handle(AttackResultsMessageHandler $handler): int
     {
         $this->info('Listening for attack results on queue: '.config('attacks.queues.results'));
 
@@ -41,9 +43,17 @@ class ConsumeAttackResultsCommand extends Command
 
             try {
                 $payload = json_decode($job->getRawBody(), true, 512, JSON_THROW_ON_ERROR);
-                $result = $processor->process($payload);
+                $processed = $handler->handle($payload);
 
-                $this->info("Stored system result [{$result->id}] for attack [{$result->attack_id}].");
+                if ($processed instanceof SystemResult) {
+                    $this->info("Stored system result [{$processed->id}] for attack [{$processed->attack_id}].");
+                }
+
+                if ($processed instanceof AttackDispatch) {
+                    $this->info("Marked dispatch [{$processed->id}] as completed in {$processed->duration_ms}ms with {$processed->findings_count} findings.");
+                }
+
+                $job->delete();
             } catch (Throwable $exception) {
                 Log::error('Failed to process attack result message.', [
                     'body' => $job instanceof RabbitMQJob ? $job->getRawBody() : null,
@@ -51,8 +61,10 @@ class ConsumeAttackResultsCommand extends Command
                 ]);
 
                 $this->error($exception->getMessage());
-            } finally {
-                $job->delete();
+
+                if ($job instanceof RabbitMQJob) {
+                    $job->release();
+                }
             }
         } while (! $this->option('once'));
 

@@ -3,6 +3,7 @@
 namespace App\Services\Attack;
 
 use App\Models\Attack;
+use App\Models\AttackDispatch;
 use App\Models\System;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -14,10 +15,18 @@ class AttackQueuePublisher
     /**
      * @param  Collection<int, Attack>  $attacks
      */
-    public function publishDispatchBatch(System $system, User $requestedBy, Collection $attacks): void
-    {
+    public function publishDispatchBatch(
+        AttackDispatch $dispatch,
+        System $system,
+        User $requestedBy,
+        Collection $attacks,
+    ): void {
+        $connection = $this->connection();
+        $connection->declareQueue(config('attacks.queues.results'));
+
         $message = json_encode([
             'event' => 'attack.dispatch.batch',
+            'dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'user_id' => $requestedBy->id,
             'target_url' => $system->target_url,
@@ -26,7 +35,7 @@ class AttackQueuePublisher
                 ->map(fn (Attack $attack) => $this->formatAttackForQueue($attack))
                 ->values()
                 ->all(),
-            'dispatched_at' => now()->toIso8601String(),
+            'dispatched_at' => $dispatch->dispatched_at->toIso8601String(),
         ], JSON_THROW_ON_ERROR);
 
         $this->connection()->pushRaw($message, config('attacks.queues.dispatch'));
