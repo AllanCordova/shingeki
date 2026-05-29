@@ -47,21 +47,12 @@ composer install
 cd ..
 ```
 
-3. Crie o arquivo de ambiente na **raiz** do monorepo:
+3. Copie os arquivos de ambiente:
 
 ```bash
 cp .env.example .env
-```
-
-```powershell
-# Windows (copiar é o mais simples)
-Copy-Item ..\.env .env
-```
-
-No Linux/macOS:
-
-```bash
-ln -sf ../.env .env
+cp shingeki-api/.env.example shingeki-api/.env
+cp shingeki-dast-worker/.env.example shingeki-dast-worker/.env
 ```
 
 4. Gere a chave da aplicação:
@@ -110,6 +101,23 @@ php artisan attacks:consume-results
 ```
 
 O alvo de laboratório expõe a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
+
+| Contexto | URL do alvo |
+|----------|-------------|
+| Host (navegador, API com `php artisan serve`) | http://127.0.0.1:8090 |
+| Rede Docker (`docker compose`, worker DAST) | http://vulnerable-target |
+
+Cadastre o sistema no app com a URL da coluna que corresponde a onde a API e o worker rodam. O `migrate --seed` cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** já apontando para o alvo.
+
+O token de assinatura é o valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (mesmo nos `.env` da **raiz** e de **`shingeki-api`**; o container do alvo também usa esse valor). Com o exemplo padrão dos repositórios:
+
+```json
+{
+  "signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}
+```
+
+Dispare o ataque com `POST /api/projects/{projectId}/systems/{systemId}/attacks/dispatch` (substitua os IDs; após o seed, busque-os em `GET /api/projects`). Envie o JSON acima no body e `Authorization: Bearer {token}` no header (login com `test@example.com` / `password` após o seed).
 
 ## Endpoints principais
 
