@@ -22,6 +22,7 @@ class AttackQueuePublisher
         Collection $attacks,
     ): void {
         $connection = $this->connection();
+        $connection->declareQueue(config('attacks.queues.dispatch'));
         $connection->declareQueue(config('attacks.queues.results'));
 
         $message = json_encode([

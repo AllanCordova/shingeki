@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 ENV CHROME_PATH=/usr/bin/chromium
 ENV DISCOVERY_ROD_ENABLED=true
 ENV DISCOVERY_ROD_HEADLESS=true
+ENV DISCOVERY_ROD_NO_SANDBOX=true
 
 WORKDIR /app
 COPY --from=builder /worker /app/worker

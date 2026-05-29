@@ -31,12 +31,15 @@ type WorkerConfig struct {
 }
 
 type DiscoveryConfig struct {
-	MaxDepth       int
-	MaxPages       int
-	PageTimeout    time.Duration
-	RodEnabled     bool
-	RodHeadless    bool
-	MinVectorsForRod int
+	MaxDepth              int
+	MaxPages              int
+	PageTimeout           time.Duration
+	BrowserLaunchTimeout  time.Duration
+	RodEnabled            bool
+	RodHeadless           bool
+	RodNoSandbox          bool
+	ChromePath            string
+	MinVectorsForRod      int
 }
 
 type AttackConfig struct {
@@ -108,6 +111,11 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_PAGE_TIMEOUT: %w", err)
 	}
 
+	browserLaunchTimeout, err := time.ParseDuration(getEnv("DISCOVERY_BROWSER_LAUNCH_TIMEOUT", "90s"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid DISCOVERY_BROWSER_LAUNCH_TIMEOUT: %w", err)
+	}
+
 	reqTimeout, err := time.ParseDuration(getEnv("ATTACK_REQUEST_TIMEOUT", "15s"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid ATTACK_REQUEST_TIMEOUT: %w", err)
@@ -133,12 +141,15 @@ func Load() (Config, error) {
 			JobTimeout: jobTimeout,
 		},
 		Discovery: DiscoveryConfig{
-			MaxDepth:         maxDepth,
-			MaxPages:         maxPages,
-			PageTimeout:      pageTimeout,
-			RodEnabled:       getEnv("DISCOVERY_ROD_ENABLED", "false") == "true",
-			RodHeadless:      getEnv("DISCOVERY_ROD_HEADLESS", "true") == "true",
-			MinVectorsForRod: minVectorsRod,
+			MaxDepth:             maxDepth,
+			MaxPages:             maxPages,
+			PageTimeout:          pageTimeout,
+			BrowserLaunchTimeout: browserLaunchTimeout,
+			RodEnabled:           getEnv("DISCOVERY_ROD_ENABLED", "false") == "true",
+			RodHeadless:          getEnv("DISCOVERY_ROD_HEADLESS", "true") == "true",
+			RodNoSandbox:         getEnv("DISCOVERY_ROD_NO_SANDBOX", "false") == "true",
+			ChromePath:           getEnv("CHROME_PATH", ""),
+			MinVectorsForRod:     minVectorsRod,
 		},
 		Attack: AttackConfig{
 			Concurrency:    concurrency,
