@@ -39,6 +39,52 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - shingeki
+
+  dast-worker:
+    build:
+      context: ../shingeki-dast-worker
+      dockerfile: deployments/Dockerfile
+    container_name: shingeki-dast-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_ATTACKS_DISPATCH_QUEUE: ${RABBITMQ_ATTACKS_DISPATCH_QUEUE:-attacks.dispatch}
+      RABBITMQ_ATTACKS_RESULTS_QUEUE: ${RABBITMQ_ATTACKS_RESULTS_QUEUE:-attacks.results}
+      DISCOVERY_ROD_ENABLED: "true"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      vulnerable-target:
+        condition: service_started
+    networks:
+      - shingeki
+
+  vulnerable-target:
+    build:
+      context: ../shingeki-vulnerable-target
+    container_name: shingeki-vulnerable-target
+    restart: unless-stopped
+    ports:
+      - "${VULNERABLE_TARGET_PORT:-8090}:80"
+    environment:
+      SHINGEKI_SIGNATURE_TOKEN: ${VULNERABLE_TARGET_SIGNATURE_TOKEN}
+    networks:
+      - shingeki
+
+networks:
+  shingeki:
+    name: shingeki
+    driver: bridge
 
 volumes:
   mysql_data:
