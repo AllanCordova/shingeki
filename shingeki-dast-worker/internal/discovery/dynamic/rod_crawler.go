@@ -35,14 +35,17 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string) ([]contract
 		return nil, nil
 	}
 
-	pageCtx, cancel := context.WithTimeout(ctx, r.cfg.PageTimeout)
-	defer cancel()
+	launchCtx, launchCancel := context.WithTimeout(ctx, r.cfg.BrowserLaunchTimeout)
+	defer launchCancel()
 
-	browser, cleanup, err := r.launchBrowser()
+	browser, cleanup, err := r.launchBrowser(launchCtx)
 	if err != nil {
 		return nil, err
 	}
 	defer cleanup()
+
+	pageCtx, pageCancel := context.WithTimeout(ctx, r.cfg.PageTimeout)
+	defer pageCancel()
 
 	page, err := browser.Context(pageCtx).Page(proto.TargetCreateTarget{URL: "about:blank"})
 	if err != nil {
@@ -100,9 +103,19 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string) ([]contract
 	return result, nil
 }
 
-func (r *RodCrawler) launchBrowser() (*rod.Browser, func(), error) {
+func (r *RodCrawler) launchBrowser(ctx context.Context) (*rod.Browser, func(), error) {
 	l := launcher.New().Headless(r.cfg.RodHeadless)
-	controlURL, err := l.Launch()
+
+	if r.cfg.ChromePath != "" {
+		l = l.Bin(r.cfg.ChromePath)
+		r.logger.Info("using system browser for rod", "path", r.cfg.ChromePath)
+	}
+
+	if r.cfg.RodNoSandbox {
+		l = l.NoSandbox(true)
+	}
+
+	controlURL, err := l.Context(ctx).Launch()
 	if err != nil {
 		return nil, nil, fmt.Errorf("launch browser: %w", err)
 	}
