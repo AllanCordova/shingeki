@@ -22,6 +22,7 @@ class SystemResult extends Model
      */
     protected $fillable = [
         'system_id',
+        'attack_dispatch_id',
         'attack_id',
         'vulnerable_route',
         'payload_used',
@@ -32,6 +33,11 @@ class SystemResult extends Model
     public function system(): BelongsTo
     {
         return $this->belongsTo(System::class);
+    }
+
+    public function attackDispatch(): BelongsTo
+    {
+        return $this->belongsTo(AttackDispatch::class);
     }
 
     public function attack(): BelongsTo

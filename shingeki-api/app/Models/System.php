@@ -44,6 +44,11 @@ class System extends Model
         return $this->hasMany(SystemResult::class);
     }
 
+    public function attackDispatches(): HasMany
+    {
+        return $this->hasMany(AttackDispatch::class);
+    }
+
     /**
      * @param  mixed  $value
      * @param  string|null  $field
