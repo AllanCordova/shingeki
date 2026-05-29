@@ -2,6 +2,8 @@
 
 Go microservice that consumes attack dispatch batches from RabbitMQ, discovers attack surface on the target, executes catalog payloads, validates evidence, and publishes confirmed findings back to Laravel.
 
+Documentação geral e stack Docker: [README na raiz](../README.md).
+
 ## Queues
 
 ### Input: `attacks.dispatch`
@@ -41,8 +43,8 @@ Go microservice that consumes attack dispatch batches from RabbitMQ, discovers a
 
 ## Run locally
 
-1. Copy `.env.example` to `.env` and adjust RabbitMQ settings.
-2. Start RabbitMQ from the Laravel project: `docker compose up -d rabbitmq` in `shingeki-api`.
+1. Use the root `.env` (see [`.env.example`](../.env.example)) for RabbitMQ settings.
+2. Start infrastructure from the monorepo root: `docker compose up -d rabbitmq`.
 3. Run the worker:
 
 ```bash
@@ -52,13 +54,16 @@ go run ./cmd/worker
 4. In Laravel, consume results:
 
 ```bash
+cd ../shingeki-api
 php artisan attacks:consume-results
 ```
 
 ## Docker
 
+From the monorepo root:
+
 ```bash
-docker compose up --build
+docker compose up -d --build dast-worker
 ```
 
 Set `DISCOVERY_ROD_ENABLED=true` in Docker to enable SPA discovery with headless Chromium.

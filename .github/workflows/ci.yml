@@ -7,6 +7,10 @@ on:
 env:
   PHP_VERSION: "8.4"
 
+defaults:
+  run:
+    working-directory: shingeki-api
+
 jobs:
   lint:
     name: Lint (Pint)
@@ -24,15 +28,15 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          path: shingeki-api/vendor
+          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('shingeki-api/composer.lock') }}
           restore-keys: composer-${{ env.PHP_VERSION }}-
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Run Laravel Pint
-        if: ${{ hashFiles('vendor/bin/pint') != '' }}
+        if: ${{ hashFiles('shingeki-api/vendor/bin/pint') != '' }}
         run: vendor/bin/pint --test
 
   tests:
@@ -52,8 +56,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: vendor
-          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('composer.lock') }}
+          path: shingeki-api/vendor
+          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('shingeki-api/composer.lock') }}
           restore-keys: composer-${{ env.PHP_VERSION }}-
 
       - name: Install dependencies
@@ -61,7 +65,7 @@ jobs:
 
       - name: Prepare environment
         run: |
-          cp .env.example .env
+          cp ../.env.example .env
           php artisan key:generate
 
       - name: Run tests

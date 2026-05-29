@@ -44,7 +44,7 @@ services:
 
   dast-worker:
     build:
-      context: ../shingeki-dast-worker
+      context: ./shingeki-dast-worker
       dockerfile: deployments/Dockerfile
     container_name: shingeki-dast-worker
     restart: unless-stopped
@@ -71,13 +71,15 @@ services:
 
   vulnerable-target:
     build:
-      context: ../shingeki-vulnerable-target
+      context: ./shingeki-vulnerable-target
     container_name: shingeki-vulnerable-target
     restart: unless-stopped
     ports:
       - "${VULNERABLE_TARGET_PORT:-8090}:80"
     environment:
       SHINGEKI_SIGNATURE_TOKEN: ${VULNERABLE_TARGET_SIGNATURE_TOKEN}
+    volumes:
+      - vulnerable_data:/var/www/data
     networks:
       - shingeki
 
@@ -88,4 +90,6 @@ networks:
 
 volumes:
   mysql_data:
+    driver: local
+  vulnerable_data:
     driver: local
