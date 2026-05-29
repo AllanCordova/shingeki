@@ -1,6 +1,6 @@
 # Shingeki
 
-Monorepo da plataforma Shingeki: API REST em Laravel, worker DAST em Go e alvo PHP intencionalmente vulnerável para laboratório.
+Plataforma web voltada para a detecção automatizada e a remediação interativa de vulnerabilidades web
 
 A API organiza projetos de segurança, cadastra sistemas-alvo, gerencia assinaturas digitais de autorização de testes e dispara varreduras DAST de forma assíncrona via filas RabbitMQ. O worker Go consome dispatches, explora o alvo e publica resultados; a API persiste os achados vinculados ao sistema testado.
 
@@ -12,7 +12,17 @@ A API organiza projetos de segurança, cadastra sistemas-alvo, gerencia assinatu
 | [`shingeki-dast-worker/`](shingeki-dast-worker/) | Worker Go (discovery, ataques, evidências) |
 | [`shingeki-vulnerable-target/`](shingeki-vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
 
-**Repositório:** https://github.com/AllanCordova/shingeki
+## Módulos da disciplina
+
+Na implementação deste projeto foram aplicados os seguintes módulos (detalhes, artefatos e caminhos no código):
+
+1. **07 — Forms e Validação de Requisições**
+2. **08 — Autenticação de Usuários**
+3. **09 — Migrações e Relacionamentos**
+4. **10 — Integridade e Integração**
+5. **11 — Autorização com Policies e Testes de Feature**
+
+Módulos da disciplina utilizados: **[MODULOS-DISCIPLINA.md](MODULOS-DISCIPLINA.md)**
 
 ## Requisitos
 
@@ -43,8 +53,6 @@ cd ..
 cp .env.example .env
 ```
 
-4. Vincule o `.env` ao Laravel:
-
 ```powershell
 # Windows (copiar é o mais simples)
 Copy-Item ..\.env .env
@@ -56,15 +64,13 @@ No Linux/macOS:
 ln -sf ../.env .env
 ```
 
-5. Gere a chave da aplicação:
+4. Gere a chave da aplicação:
 
 ```bash
 cd shingeki-api
 php artisan key:generate
 cd ..
 ```
-
-Variáveis relevantes estão em [`.env.example`](.env.example), em especial `DB_*`, `RABBITMQ_*` e `VULNERABLE_TARGET_*`.
 
 ## Execução
 
@@ -119,12 +125,6 @@ O alvo de laboratório expõe a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 
 Envie `Authorization: Bearer {token}` nas rotas protegidas.
 
-## Saúde da aplicação
-
-```bash
-curl http://127.0.0.1:8000/up
-```
-
 ## Licença
 
-Projeto acadêmico — consulte o repositório para informações de licenciamento.
+Este projeto está licenciado sob a [MIT License](LICENSE).
