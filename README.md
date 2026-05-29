@@ -9,6 +9,7 @@ A API organiza projetos de segurança, cadastra sistemas-alvo, gerencia assinatu
 | Diretório | Descrição |
 |-----------|-----------|
 | [`shingeki-api/`](shingeki-api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
+| [`shingeki-client/`](shingeki-client/) | Frontend Next.js (BFF, React Query, autenticação) |
 | [`shingeki-dast-worker/`](shingeki-dast-worker/) | Worker Go (discovery, ataques, evidências) |
 | [`shingeki-vulnerable-target/`](shingeki-vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
 
@@ -27,6 +28,7 @@ Módulos da disciplina utilizados: **[MODULOS-DISCIPLINA.md](MODULOS-DISCIPLINA.
 ## Requisitos
 
 - **PHP** 8.4+ e **Composer** 2.x
+- **Node.js** 20+ e **npm** (client Next.js)
 - **Go** 1.22+ (opcional, para desenvolvimento local do worker)
 - **Docker** e **Docker Compose** (MySQL, RabbitMQ, worker e alvo)
 
@@ -53,6 +55,7 @@ cd ..
 cp .env.example .env
 cp shingeki-api/.env.example shingeki-api/.env
 cp shingeki-dast-worker/.env.example shingeki-dast-worker/.env
+cp shingeki-client/.env.example shingeki-client/.env.local
 ```
 
 4. Gere a chave da aplicação:
@@ -62,6 +65,24 @@ cd shingeki-api
 php artisan key:generate
 cd ..
 ```
+
+5. Instale as dependências do client:
+
+```bash
+cd shingeki-client
+npm install
+cd ..
+```
+
+## Usuários do seed
+
+Após `php artisan migrate --seed`, use estas credenciais no login do app ou na API:
+
+| E-mail | Senha | Perfil |
+|--------|-------|--------|
+| `test@example.com` | `password` | Usuário com projetos e sistemas de exemplo |
+
+O seed também cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** no usuário `test@example.com`.
 
 ## Execução
 
@@ -117,7 +138,20 @@ O token de assinatura é o valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (mesmo n
 }
 ```
 
-Dispare o ataque com `POST /api/projects/{projectId}/systems/{systemId}/attacks/dispatch` (substitua os IDs; após o seed, busque-os em `GET /api/projects`). Envie o JSON acima no body e `Authorization: Bearer {token}` no header (login com `test@example.com` / `password` após o seed).
+Dispare o ataque com `POST /api/projects/{projectId}/systems/{systemId}/attacks/dispatch` (substitua os IDs; após o seed, busque-os em `GET /api/projects`). Envie o JSON acima no body e `Authorization: Bearer {token}` no header.
+
+### Client (Next.js)
+
+Com a API rodando (`php artisan serve` em `http://127.0.0.1:8000`), em outro terminal:
+
+```bash
+cd shingeki-client
+npm run dev
+```
+
+O app abre em http://localhost:3000. Faça login com `test@example.com` / `password`.
+
+O client usa o BFF em `/api` e aponta para a API Laravel via `API_BASE_URL` em `shingeki-client/.env.local` (padrão `http://127.0.0.1:8000/api`).
 
 ## Endpoints principais
 
