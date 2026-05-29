@@ -35,10 +35,10 @@ export function SignaturePanel({
 
   const handleGenerate = async () => {
     setRevoked(false);
-    const result = await notify.run(() => generate.generate(), {
+    generate.reset();
+    await notify.run(() => generate.generate(), {
       success: "Token de assinatura gerado.",
     });
-    if (!result) generate.reset();
   };
 
   const handleValidate = async () => {
