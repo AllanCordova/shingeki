@@ -43,16 +43,17 @@ cd ..
 cp .env.example .env
 ```
 
-4. Vincule o `.env` ao Laravel (Windows):
+4. Vincule o `.env` ao Laravel:
 
 ```powershell
-New-Item -ItemType Junction -Path shingeki-api\.env -Target .env -Force
+# Windows (copiar é o mais simples)
+Copy-Item ..\.env .env
 ```
 
 No Linux/macOS:
 
 ```bash
-ln -sf ../.env shingeki-api/.env
+ln -sf ../.env .env
 ```
 
 5. Gere a chave da aplicação:

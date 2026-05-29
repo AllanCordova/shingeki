@@ -9,7 +9,7 @@ Documentação de setup, execução e endpoints: [README na raiz](../README.md).
 ```bash
 composer install
 cp ../.env.example ../.env
-# Windows: New-Item -ItemType Junction -Path .env -Target ..\.env -Force
+cp ../.env .env
 php artisan key:generate
 composer test
 ```
