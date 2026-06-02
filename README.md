@@ -27,7 +27,7 @@ flowchart LR
 
 ## Documentação
 
-**[https://allancordova.github.io/shingeki/](https://allancordova.github.io/shingeki/)**
+Site (MkDocs Material): **[https://allancordova.github.io/shingeki/](https://allancordova.github.io/shingeki/)**
 
 | Tópico | Arquivo no repositório |
 |--------|-------------------------|
