@@ -2,6 +2,9 @@
 
 use App\Models\Project;
 use App\Models\User;
+use App\Models\UserCoverUpload;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 const PROJECTS_INDEX = '/api/projects';
@@ -12,13 +15,42 @@ function projectUrl(Project $project): string
     return '/api/projects/'.$project->id;
 }
 
-function validProjectPayload(array $overrides = []): array
+/**
+ * @param  array<string, mixed>  $fields
+ */
+function validProjectFields(array $overrides = []): array
 {
     return array_merge([
-        'cover_path' => '/storage/covers/app.png',
         'name' => 'Pentest Project',
         'description' => 'Application security assessment scope.',
     ], $overrides);
+}
+
+function fakeCover(): UploadedFile
+{
+    return UploadedFile::fake()->create('cover.jpg', 100, 'image/jpeg');
+}
+
+/**
+ * @param  array<string, mixed>  $fields
+ */
+function postProject(array $fields = [], ?UploadedFile $cover = null)
+{
+    return test()->post(PROJECTS_STORE, [
+        ...validProjectFields($fields),
+        'cover' => $cover ?? fakeCover(),
+    ]);
+}
+
+/**
+ * @param  array<string, mixed>  $fields
+ */
+function putProject(Project $project, array $fields = [], ?UploadedFile $cover = null)
+{
+    return test()->put(projectUrl($project), [
+        ...$fields,
+        ...($cover !== null ? ['cover' => $cover] : []),
+    ]);
 }
 
 function projectJsonStructure(): array
@@ -82,12 +114,31 @@ describe('GET /api/projects', function () {
 });
 
 describe('POST /api/projects', function () {
-    test('creates a project for authenticated user', function () {
+    test('creates a project using an existing library upload', function () {
+        $user = User::factory()->create();
+        $upload = UserCoverUpload::factory()->for($user)->create([
+            'path' => '/storage/covers/library-pick.jpg',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->post(PROJECTS_STORE, [
+            'name' => 'Library Project',
+            'description' => 'Uses saved upload.',
+            'cover_upload_id' => $upload->id,
+        ])
+            ->assertCreated()
+            ->assertJsonPath('project.cover_path', '/storage/covers/library-pick.jpg');
+    });
+
+    test('creates a project for authenticated user with uploaded cover', function () {
+        Storage::fake('public');
+
         $user = User::factory()->create();
 
         Sanctum::actingAs($user);
 
-        $response = $this->postJson(PROJECTS_STORE, validProjectPayload());
+        $response = postProject();
 
         $response
             ->assertCreated()
@@ -95,7 +146,6 @@ describe('POST /api/projects', function () {
                 'message' => 'Project created successfully.',
                 'project' => [
                     'user_id' => $user->id,
-                    'cover_path' => '/storage/covers/app.png',
                     'name' => 'Pentest Project',
                     'description' => 'Application security assessment scope.',
                 ],
@@ -105,33 +155,54 @@ describe('POST /api/projects', function () {
                 'project' => projectJsonStructure(),
             ]);
 
+        $coverPath = $response->json('project.cover_path');
+
+        expect($coverPath)->toMatch('#^/storage/covers/[a-f0-9\-]+\.jpg$#');
+
+        $relativePath = str_replace('/storage/', '', $coverPath);
+        Storage::disk('public')->assertExists($relativePath);
+
         $this->assertDatabaseHas('projects', [
             'user_id' => $user->id,
             'name' => 'Pentest Project',
-            'cover_path' => '/storage/covers/app.png',
+            'cover_path' => $coverPath,
+        ]);
+
+        $this->assertDatabaseHas('user_cover_uploads', [
+            'user_id' => $user->id,
+            'path' => $coverPath,
         ]);
     });
 
-    test('rejects invalid payload', function (array $payload, array $errors) {
+    test('rejects missing cover', function () {
         Sanctum::actingAs(User::factory()->create());
 
-        $this->postJson(PROJECTS_STORE, $payload)
+        $this->post(PROJECTS_STORE, validProjectFields())
             ->assertUnprocessable()
-            ->assertJsonValidationErrors($errors);
-    })->with([
-        'missing cover_path' => [
-            validProjectPayload(['cover_path' => null]),
-            ['cover_path'],
-        ],
-        'missing name' => [
-            validProjectPayload(['name' => null]),
-            ['name'],
-        ],
-        'missing description' => [
-            validProjectPayload(['description' => null]),
-            ['description'],
-        ],
-    ]);
+            ->assertJsonValidationErrors(['cover']);
+    });
+
+    test('rejects missing name', function () {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->post(PROJECTS_STORE, [
+            ...validProjectFields(['name' => null]),
+            'cover' => fakeCover(),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['name']);
+    });
+
+    test('rejects invalid cover type', function () {
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->post(PROJECTS_STORE, [
+            ...validProjectFields(),
+            'cover' => UploadedFile::fake()->create('notes.txt', 100, 'text/plain'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['cover']);
+    });
 });
 
 describe('GET /api/projects/{project}', function () {
@@ -179,7 +250,6 @@ describe('PUT /api/projects/{project}', function () {
         $this->putJson(projectUrl($project), [
             'name' => 'New Name',
             'description' => 'New description.',
-            'cover_path' => '/storage/covers/updated.png',
         ])
             ->assertOk()
             ->assertJson([
@@ -187,15 +257,43 @@ describe('PUT /api/projects/{project}', function () {
                 'project' => [
                     'name' => 'New Name',
                     'description' => 'New description.',
-                    'cover_path' => '/storage/covers/updated.png',
                 ],
             ]);
 
         $project->refresh();
 
         expect($project->name)->toBe('New Name')
-            ->and($project->description)->toBe('New description.')
-            ->and($project->cover_path)->toBe('/storage/covers/updated.png');
+            ->and($project->description)->toBe('New description.');
+    });
+
+    test('replaces cover when a new image is uploaded', function () {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create([
+            'cover_path' => '/storage/covers/original.png',
+        ]);
+
+        UserCoverUpload::factory()->for($user)->create([
+            'path' => '/storage/covers/original.png',
+        ]);
+
+        Storage::disk('public')->put('covers/original.png', 'original');
+
+        Sanctum::actingAs($user);
+
+        $response = putProject($project, [], fakeCover());
+
+        $response->assertOk();
+
+        $newCoverPath = $response->json('project.cover_path');
+
+        expect($newCoverPath)->toMatch('#^/storage/covers/[a-f0-9\-]+\.jpg$#')
+            ->and($newCoverPath)->not->toBe('/storage/covers/original.png');
+
+        Storage::disk('public')->assertExists('covers/original.png');
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $newCoverPath));
+        $this->assertDatabaseCount('user_cover_uploads', 2);
     });
 
     test('updates only provided fields', function () {

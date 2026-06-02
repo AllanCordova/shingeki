@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesCoverSelection;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ProjectUpdate extends FormRequest
 {
+    use ValidatesCoverSelection;
+
     public function authorize(): bool
     {
         return true;
@@ -18,7 +21,7 @@ class ProjectUpdate extends FormRequest
     public function rules(): array
     {
         return [
-            'cover_path' => ['sometimes', 'string', 'max:2048'],
+            ...$this->coverUpdateRules(),
             'name' => ['sometimes', 'string', 'max:255'],
             'description' => ['sometimes', 'string'],
         ];

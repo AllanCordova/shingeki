@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AttackController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CoverUploadController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\SystemController;
@@ -20,6 +21,9 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('cover-uploads', [CoverUploadController::class, 'index']);
+    Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
+
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('projects.systems', SystemController::class);
 
