@@ -2,7 +2,7 @@
 
 Configuração mínima compartilhada pela API e pelos clientes. Depois, escolha o guia do client que for usar.
 
-## Requisitos
+## Requisitos {#requisitos}
 
 - **PHP** 8.4+ e **Composer** 2.x
 - **Node.js** 20+ e **npm**
@@ -40,7 +40,7 @@ cd ..
 
 Copie também o `.env` do client que for usar (detalhes nos guias abaixo).
 
-## 3. API em execução
+## 3. API em execução {#api-em-execucao}
 
 ### Só testes (sem Docker)
 
@@ -77,7 +77,7 @@ php artisan attacks:consume-results
 
 Para cadastrar o alvo, disparar ataques e consultar resultados, veja [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 
-## Credenciais do seed
+## Credenciais do seed {#credenciais-do-seed}
 
 Após `php artisan migrate --seed`:
 

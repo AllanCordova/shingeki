@@ -2,6 +2,19 @@
 
 Plataforma para detecção automatizada e remediação interativa de vulnerabilidades web.
 
+A API Laravel organiza projetos de segurança, sistemas-alvo, assinaturas de autorização e disparos DAST assíncronos (RabbitMQ). O worker Go explora o alvo e publica resultados; a API persiste os achados. O client Next.js e o app Expo (`shingeki-mobile`) consomem a mesma API REST.
+
+## Arquitetura
+
+```mermaid
+flowchart LR
+  Web[Client Web] --> API[Laravel API]
+  Mobile[App Mobile] --> API
+  API --> Queue[RabbitMQ]
+  Queue --> Worker[Worker Go]
+  Worker --> Target[Alvo lab]
+```
+
 ## Estrutura do repositório
 
 | Diretório | Descrição |
@@ -14,17 +27,16 @@ Plataforma para detecção automatizada e remediação interativa de vulnerabili
 
 ## Documentação
 
-### API REST
+**[https://allancordova.github.io/shingeki/](https://allancordova.github.io/shingeki/)**
 
-[docs/API.md](docs/API.md) — visão geral, autenticação, erros, índice de rotas e links para os guias por módulo (`docs/api/`).
+| Tópico | Arquivo no repositório |
+|--------|-------------------------|
+| Como rodar | [docs/RUN-PROJECT.md](docs/RUN-PROJECT.md) |
+| API REST | [docs/API.md](docs/API.md) |
+| Client web / mobile | [docs/WEB-DEVELOPMENT.md](docs/WEB-DEVELOPMENT.md) · [docs/MOBILE-DEVELOPMENT.md](docs/MOBILE-DEVELOPMENT.md) |
+| CI | [docs/CI.md](docs/CI.md) |
 
-### Como rodar o projeto
-
-[docs/RUN-PROJECT.md](docs/RUN-PROJECT.md) — configuração essencial da API e links para o client **web** ou **mobile**.
-
-### Integração contínua
-
-[docs/CI.md](docs/CI.md) — pipeline no GitHub Actions (Pint, Pest) e comandos locais equivalentes.
+Preview local: `pip install -r requirements-docs.txt` e `mkdocs serve` (abre em http://127.0.0.1:8000).
 
 ## Módulos da disciplina
 
