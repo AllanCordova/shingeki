@@ -93,12 +93,13 @@ export default function SystemDetailPage() {
         title="Editar sistema"
       >
         <SystemForm
+          mode="edit"
           isLoading={updateSystem.isLoading}
           error={updateSystem.error}
           submitLabel="Salvar alteracoes"
+          currentCoverPath={system.cover_path}
           defaultValues={{
             name: system.name,
-            cover_path: system.cover_path,
             target_url: system.target_url,
             repository_url: system.repository_url,
           }}

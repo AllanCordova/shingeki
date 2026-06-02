@@ -5,11 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProjectCreate;
 use App\Http\Requests\ProjectUpdate;
 use App\Models\Project;
+use App\Services\Cover\UserCoverLibraryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
+    public function __construct(
+        private readonly UserCoverLibraryService $coverLibrary,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Project::class);
@@ -28,9 +33,16 @@ class ProjectController extends Controller
     {
         $this->authorize('create', Project::class);
 
+        $user = $request->user();
+
         $project = Project::create([
-            ...$request->safe()->only(['cover_path', 'name', 'description']),
-            'user_id' => $request->user()->id,
+            ...$request->safe()->only(['name', 'description']),
+            'cover_path' => $this->coverLibrary->resolveCoverForCreate(
+                $user,
+                $request->file('cover'),
+                $request->input('cover_upload_id'),
+            ),
+            'user_id' => $user->id,
         ]);
 
         return response()->json([
@@ -52,7 +64,17 @@ class ProjectController extends Controller
     {
         $this->authorize('update', $project);
 
-        $data = $request->safe()->only(['cover_path', 'name', 'description']);
+        $data = $request->safe()->only(['name', 'description']);
+
+        $newCoverPath = $this->coverLibrary->resolveCoverForUpdate(
+            $request->user(),
+            $request->file('cover'),
+            $request->input('cover_upload_id'),
+        );
+
+        if ($newCoverPath !== null) {
+            $data['cover_path'] = $newCoverPath;
+        }
 
         if ($data !== []) {
             $project->update($data);
@@ -68,7 +90,7 @@ class ProjectController extends Controller
     {
         $this->authorize('delete', $project);
 
-        $project->delete();
+        $this->coverLibrary->releaseCoversForProject($project);
 
         return response()->json([
             'message' => 'Project deleted successfully.',

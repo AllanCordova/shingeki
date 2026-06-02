@@ -13,6 +13,7 @@ import { ProjectForm } from "@/components/forms/project-form";
 import { SystemForm } from "@/components/forms/system-form";
 import { SystemCard } from "@/components/systems/system-card";
 import { notify } from "@/lib/notify";
+import type { SystemCreateInput } from "@/lib/contracts";
 import {
   Button,
   CoverHero,
@@ -126,13 +127,14 @@ export default function ProjectDetailPage() {
         title="Editar projeto"
       >
         <ProjectForm
+          mode="edit"
           isLoading={updateProject.isLoading}
           error={updateProject.error}
           submitLabel="Salvar alteracoes"
+          currentCoverPath={project.cover_path}
           defaultValues={{
             name: project.name,
             description: project.description,
-            cover_path: project.cover_path,
           }}
           onCancel={() => setEditOpen(false)}
           onSubmit={async (values) => {
@@ -157,7 +159,7 @@ export default function ProjectDetailPage() {
           onCancel={() => setSystemOpen(false)}
           onSubmit={async (values) => {
             const ok = await notify.run(
-              () => createSystem.createSystem(values),
+              () => createSystem.createSystem(values as SystemCreateInput),
               { success: "Sistema criado." },
             );
             if (ok) setSystemOpen(false);

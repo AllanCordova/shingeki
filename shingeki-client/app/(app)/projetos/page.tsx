@@ -1,6 +1,7 @@
 "use client";
 
 import { useProjects, useCreateProject } from "@/lib/hooks/use-projects";
+import type { ProjectCreateInput } from "@/lib/contracts";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ProjectCard } from "@/components/projects/project-card";
@@ -84,7 +85,7 @@ export default function ProjetosPage() {
           onCancel={handleClose}
           onSubmit={async (values) => {
             const ok = await notify.run(
-              () => createProject(values),
+              () => createProject(values as ProjectCreateInput),
               { success: "Projeto criado com sucesso." },
             );
             if (ok) handleClose();

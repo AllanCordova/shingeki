@@ -60,4 +60,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Attack::class);
     }
+
+    public function coverUploads(): HasMany
+    {
+        return $this->hasMany(UserCoverUpload::class);
+    }
 }

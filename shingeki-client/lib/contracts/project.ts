@@ -1,17 +1,23 @@
 import { z } from "zod";
 import type { Timestamps } from "./common";
-import { coverPathSchema } from "./cover-path";
+import { createWithCoverSchema, updateWithCoverSchema } from "./cover-selection";
 
-export const projectCreateSchema = z.object({
+export const projectCreateSchema = createWithCoverSchema({
   name: z
     .string()
     .min(1, "Informe o nome do projeto.")
     .max(255, "O nome deve ter no maximo 255 caracteres."),
   description: z.string().min(1, "Informe a descricao."),
-  cover_path: coverPathSchema,
 });
 
-export const projectUpdateSchema = projectCreateSchema.partial();
+export const projectUpdateSchema = updateWithCoverSchema({
+  name: z
+    .string()
+    .min(1, "Informe o nome do projeto.")
+    .max(255, "O nome deve ter no maximo 255 caracteres.")
+    .optional(),
+  description: z.string().min(1, "Informe a descricao.").optional(),
+});
 
 export type ProjectCreateInput = z.infer<typeof projectCreateSchema>;
 export type ProjectUpdateInput = z.infer<typeof projectUpdateSchema>;
