@@ -1,6 +1,6 @@
 # Integração contínua (CI)
 
-Pipeline definido em [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). Dispara em **push** e **pull_request** para qualquer branch.
+Pipeline definido em [`.github/workflows/ci.yml`](https://github.com/AllanCordova/shingeki/blob/main/.github/workflows/ci.yml). Dispara em **push** e **pull_request** para qualquer branch.
 
 Hoje o workflow cobre apenas **`shingeki-api`**. O client tem lint local (ESLint), mas ainda não entra no GitHub Actions.
 
@@ -99,6 +99,34 @@ npm run build
 ## Cache no CI
 
 O workflow cacheia `shingeki-api/vendor` pela chave `composer-{PHP_VERSION}-{hash do composer.lock}` para acelerar `composer install` entre execuções.
+
+## Site de documentação (MkDocs)
+
+Stack: [MkDocs](https://www.mkdocs.org/) 1.x + [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/). Versões fixadas em `requirements-docs.txt` (`mkdocs<2`) — o aviso no terminal sobre **MkDocs 2.0** é informativo; **não** rode `pip install --upgrade mkdocs` sem revisar essa pinagem.
+
+Workflow [`.github/workflows/docs.yml`](https://github.com/AllanCordova/shingeki/blob/main/.github/workflows/docs.yml): em **push** em `main` que altere `docs/`, `mkdocs.yml` ou `requirements-docs.txt`, publica o site em **GitHub Pages** (`mkdocs gh-deploy` → branch `gh-pages`).
+
+URL: **https://allancordova.github.io/shingeki/**
+
+### Preview local
+
+Na raiz do monorepo:
+
+```bash
+pip install -r requirements-docs.txt
+mkdocs serve
+```
+
+Abre http://127.0.0.1:8000 (hot-reload ao editar arquivos em `docs/`).
+
+Build estático sem publicar:
+
+```bash
+mkdocs build
+# saída em site/ (ignorada pelo git)
+```
+
+Na primeira vez no GitHub: **Settings → Pages → Source: Deploy from branch → `gh-pages` / `/ (root)`**.
 
 ## Ampliar o pipeline (futuro)
 

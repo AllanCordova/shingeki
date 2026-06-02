@@ -4,7 +4,7 @@ Guia para levantar o app `shingeki-mobile` no emulador ou dispositivo Android.
 
 **Pré-requisito:** API em execução — [RUN-PROJECT.md](RUN-PROJECT.md) (seções 1–3).
 
-No emulador ou celular físico, a API precisa estar acessível pela rede do dispositivo. Ao seguir o [RUN-PROJECT.md](RUN-PROJECT.md#3-api-em-execução), use `php artisan serve --host=0.0.0.0 --port=8000` se for testar em aparelho físico na mesma Wi‑Fi.
+No emulador ou celular físico, a API precisa estar acessível pela rede do dispositivo. Ao seguir o [RUN-PROJECT.md](RUN-PROJECT.md#api-em-execucao), use `php artisan serve --host=0.0.0.0 --port=8000` se for testar em aparelho físico na mesma Wi‑Fi.
 
 ## Requisitos
 

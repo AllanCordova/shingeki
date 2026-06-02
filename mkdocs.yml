@@ -1,0 +1,69 @@
+site_name: Shingeki
+site_description: Documentação do projeto Shingeki — DAST, API Laravel e clients web/mobile
+site_url: https://allancordova.github.io/shingeki/
+repo_url: https://github.com/AllanCordova/shingeki
+repo_name: AllanCordova/shingeki
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: pt
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Modo escuro
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Modo claro
+  features:
+    - content.code.copy
+    - navigation.sections
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - toc.follow
+
+plugins:
+  - search:
+      lang: pt
+
+markdown_extensions:
+  - attr_list
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+
+nav:
+  - Início: index.md
+  - Como rodar: RUN-PROJECT.md
+  - API:
+    - Visão geral: API.md
+    - Autenticação: api/AUTHENTICATION.md
+    - Projetos e sistemas: api/PROJECTS-AND-SYSTEMS.md
+    - Capas: api/COVERS.md
+    - Assinaturas: api/SIGNATURES.md
+    - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
+  - Desenvolvimento:
+    - Web (Next.js): WEB-DEVELOPMENT.md
+    - Mobile (Expo): MOBILE-DEVELOPMENT.md
+  - CI: CI.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/AllanCordova/shingeki
