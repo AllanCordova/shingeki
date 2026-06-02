@@ -11,6 +11,10 @@ import type {
   ProjectUpdateInput,
   ProjectsResponse,
 } from "@/lib/contracts";
+import {
+  buildProjectCreateFormData,
+  buildProjectUpdateFormData,
+} from "@/lib/multipart";
 
 /** Lista de projetos (baixa volatilidade). */
 export function useProjects() {
@@ -59,12 +63,13 @@ export function useCreateProject() {
     mutationFn: async (input: ProjectCreateInput) => {
       const { data } = await apiClient.post<ProjectResponse>(
         "/projects",
-        input,
+        buildProjectCreateFormData(input),
       );
       return data.project;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 
@@ -81,14 +86,20 @@ export function useUpdateProject(projectId: string) {
 
   const mutation = useMutation({
     mutationFn: async (input: ProjectUpdateInput) => {
-      const { data } = await apiClient.put<ProjectResponse>(
-        `/projects/${projectId}`,
-        input,
-      );
+      const formData = buildProjectUpdateFormData(input);
+
+      const { data } = formData
+        ? await apiClient.put<ProjectResponse>(
+            `/projects/${projectId}`,
+            formData,
+          )
+        : await apiClient.put<ProjectResponse>(`/projects/${projectId}`, input);
+
       return data.project;
     },
     onSuccess: (project: Project) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
       queryClient.setQueryData(queryKeys.project(projectId), project);
     },
   });
@@ -111,6 +122,7 @@ export function useDeleteProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 

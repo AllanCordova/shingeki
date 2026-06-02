@@ -15,3 +15,8 @@ export async function readJson(request: Request): Promise<unknown> {
     return {};
   }
 }
+
+export function isMultipartRequest(request: Request): boolean {
+  const contentType = request.headers.get("content-type") ?? "";
+  return contentType.includes("multipart/form-data");
+}
