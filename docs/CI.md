@@ -4,6 +4,8 @@ Pipeline definido em [`.github/workflows/ci.yml`](../.github/workflows/ci.yml). 
 
 Hoje o workflow cobre apenas **`shingeki-api`**. O client tem lint local (ESLint), mas ainda não entra no GitHub Actions.
 
+Como rodar o projeto localmente: [RUN-PROJECT.md](RUN-PROJECT.md).
+
 ## Jobs no GitHub Actions
 
 | Job | Nome | O que faz |
