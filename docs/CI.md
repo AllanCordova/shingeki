@@ -104,9 +104,17 @@ O workflow cacheia `shingeki-api/vendor` pela chave `composer-{PHP_VERSION}-{has
 
 Stack: [MkDocs](https://www.mkdocs.org/) 1.x + [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/). Versões fixadas em `requirements-docs.txt` (`mkdocs<2`) — o aviso no terminal sobre **MkDocs 2.0** é informativo; **não** rode `pip install --upgrade mkdocs` sem revisar essa pinagem.
 
-Workflow [`.github/workflows/docs.yml`](https://github.com/AllanCordova/shingeki/blob/main/.github/workflows/docs.yml): em **push** em `main` que altere `docs/`, `mkdocs.yml` ou `requirements-docs.txt`, publica o site em **GitHub Pages** (`mkdocs gh-deploy` → branch `gh-pages`).
+Workflow [`.github/workflows/docs.yml`](https://github.com/AllanCordova/shingeki/blob/main/.github/workflows/docs.yml): em **push** em `main` que altere `docs/`, `mkdocs.yml` ou `requirements-docs.txt`, roda `mkdocs build` e publica o artefato via **GitHub Actions** (job `deploy-pages`).
 
-URL: **https://allancordova.github.io/shingeki/**
+URL correta do site: **https://allancordova.github.io/shingeki/**
+
+### Configurar GitHub Pages (uma vez)
+
+No repositório: **Settings → Pages → Build and deployment → Source: `GitHub Actions`**.
+
+Não use **Deploy from branch → pasta `/docs`** do branch `main`: isso publica os arquivos Markdown crus (sem tema Material, Mermaid vira texto, sem troca de cor). A pasta `docs/` no repo é só a **fonte**; o site gerado fica no artefato do workflow.
+
+Se o site abrir em `.../shingeki/docs/` sem estilo, a origem do Pages está errada — troque para **GitHub Actions** e rode o workflow **Docs** de novo (`Actions → Docs → Run workflow`).
 
 ### Preview local
 
@@ -125,8 +133,6 @@ Build estático sem publicar:
 mkdocs build
 # saída em site/ (ignorada pelo git)
 ```
-
-Na primeira vez no GitHub: **Settings → Pages → Source: Deploy from branch → `gh-pages` / `/ (root)`**.
 
 ## Ampliar o pipeline (futuro)
 

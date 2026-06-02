@@ -28,6 +28,7 @@ theme:
     - search.suggest
     - search.highlight
     - toc.follow
+    - content.action.edit
 
 plugins:
   - search:
