@@ -6,14 +6,7 @@ A API Laravel organiza projetos de segurança, sistemas-alvo, assinaturas de aut
 
 ## Arquitetura
 
-```mermaid
-flowchart LR
-  Web[Client Web] --> API[Laravel API]
-  Mobile[App Mobile] --> API
-  API --> Queue[RabbitMQ]
-  Queue --> Worker[Worker Go]
-  Worker --> Target[Alvo lab]
-```
+Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (site: [Arquitetura](https://allancordova.github.io/shingeki/ARCHITECTURE/)).
 
 ## Estrutura do repositório
 
@@ -31,6 +24,7 @@ Site (MkDocs Material): **[https://allancordova.github.io/shingeki/](https://all
 
 | Tópico | Arquivo no repositório |
 |--------|-------------------------|
+| Arquitetura | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Como rodar | [docs/RUN-PROJECT.md](docs/RUN-PROJECT.md) |
 | API REST | [docs/API.md](docs/API.md) |
 | Client web / mobile | [docs/WEB-DEVELOPMENT.md](docs/WEB-DEVELOPMENT.md) · [docs/MOBILE-DEVELOPMENT.md](docs/MOBILE-DEVELOPMENT.md) |
