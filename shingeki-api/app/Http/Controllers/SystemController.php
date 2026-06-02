@@ -6,10 +6,15 @@ use App\Http\Requests\SystemCreate;
 use App\Http\Requests\SystemUpdate;
 use App\Models\Project;
 use App\Models\System;
+use App\Services\Cover\UserCoverLibraryService;
 use Illuminate\Http\JsonResponse;
 
 class SystemController extends Controller
 {
+    public function __construct(
+        private readonly UserCoverLibraryService $coverLibrary,
+    ) {}
+
     public function index(Project $project): JsonResponse
     {
         $this->authorize('viewAny', [System::class, $project]);
@@ -25,9 +30,14 @@ class SystemController extends Controller
     {
         $this->authorize('create', [System::class, $project]);
 
-        $system = $project->systems()->create(
-            $request->safe()->only(['cover_path', 'name', 'target_url', 'repository_url']),
-        );
+        $system = $project->systems()->create([
+            ...$request->safe()->only(['name', 'target_url', 'repository_url']),
+            'cover_path' => $this->coverLibrary->resolveCoverForCreate(
+                $request->user(),
+                $request->file('cover'),
+                $request->input('cover_upload_id'),
+            ),
+        ]);
 
         return response()->json([
             'message' => 'System created successfully.',
@@ -48,7 +58,17 @@ class SystemController extends Controller
     {
         $this->authorize('update', $system);
 
-        $data = $request->safe()->only(['cover_path', 'name', 'target_url', 'repository_url']);
+        $data = $request->safe()->only(['name', 'target_url', 'repository_url']);
+
+        $newCoverPath = $this->coverLibrary->resolveCoverForUpdate(
+            $request->user(),
+            $request->file('cover'),
+            $request->input('cover_upload_id'),
+        );
+
+        if ($newCoverPath !== null) {
+            $data['cover_path'] = $newCoverPath;
+        }
 
         if ($data !== []) {
             $system->update($data);
@@ -64,7 +84,7 @@ class SystemController extends Controller
     {
         $this->authorize('delete', $system);
 
-        $system->delete();
+        $this->coverLibrary->releaseCoverForSystem($system);
 
         return response()->json([
             'message' => 'System deleted successfully.',

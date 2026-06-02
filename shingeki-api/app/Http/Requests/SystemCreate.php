@@ -2,11 +2,14 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesCoverSelection;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SystemCreate extends FormRequest
 {
+    use ValidatesCoverSelection;
+
     public function authorize(): bool
     {
         return true;
@@ -18,7 +21,7 @@ class SystemCreate extends FormRequest
     public function rules(): array
     {
         return [
-            'cover_path' => ['required', 'string', 'max:2048'],
+            ...$this->coverCreateRules(),
             'name' => ['required', 'string', 'max:255'],
             'target_url' => ['required', 'url', 'max:2048'],
             'repository_url' => ['required', 'url', 'max:2048'],
