@@ -44,3 +44,22 @@ export async function forwardToApi(
 
   return { status: response.status, data: response.data };
 }
+
+/** Encaminha multipart/form-data para a API Laravel. */
+export async function forwardFormToApi(
+  method: "post" | "put",
+  path: string,
+  formData: FormData,
+  options?: { token?: string },
+): Promise<{ status: number; data: unknown }> {
+  const api = await createServerApi(options?.token);
+
+  const response = await api.request({
+    method,
+    url: path,
+    data: formData,
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+  return { status: response.status, data: response.data };
+}

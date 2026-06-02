@@ -11,6 +11,10 @@ import type {
   SystemUpdateInput,
   SystemsResponse,
 } from "@/lib/contracts";
+import {
+  buildSystemCreateFormData,
+  buildSystemUpdateFormData,
+} from "@/lib/multipart";
 
 export function useSystems(projectId: string) {
   const query = useQuery({
@@ -61,7 +65,7 @@ export function useCreateSystem(projectId: string) {
     mutationFn: async (input: SystemCreateInput) => {
       const { data } = await apiClient.post<SystemResponse>(
         `/projects/${projectId}/systems`,
-        input,
+        buildSystemCreateFormData(input),
       );
       return data.system;
     },
@@ -69,6 +73,7 @@ export function useCreateSystem(projectId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.systems(projectId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 
@@ -85,16 +90,25 @@ export function useUpdateSystem(projectId: string, systemId: string) {
 
   const mutation = useMutation({
     mutationFn: async (input: SystemUpdateInput) => {
-      const { data } = await apiClient.put<SystemResponse>(
-        `/projects/${projectId}/systems/${systemId}`,
-        input,
-      );
+      const formData = buildSystemUpdateFormData(input);
+
+      const { data } = formData
+        ? await apiClient.put<SystemResponse>(
+            `/projects/${projectId}/systems/${systemId}`,
+            formData,
+          )
+        : await apiClient.put<SystemResponse>(
+            `/projects/${projectId}/systems/${systemId}`,
+            input,
+          );
+
       return data.system;
     },
     onSuccess: (system: System) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.systems(projectId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
       queryClient.setQueryData(queryKeys.system(projectId, systemId), system);
     },
   });
@@ -119,6 +133,7 @@ export function useDeleteSystem(projectId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.systems(projectId),
       });
+      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 

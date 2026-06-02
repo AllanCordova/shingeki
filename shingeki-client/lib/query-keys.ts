@@ -5,6 +5,8 @@
 export const queryKeys = {
   me: ["me"] as const,
 
+  coverUploads: ["cover-uploads"] as const,
+
   projects: ["projects"] as const,
   project: (projectId: string) => ["projects", projectId] as const,
 
