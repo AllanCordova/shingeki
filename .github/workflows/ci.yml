@@ -35,7 +35,11 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Run Laravel Pint
+      - name: Fix code style (Laravel Pint)
+        if: ${{ hashFiles('shingeki-api/vendor/bin/pint') != '' }}
+        run: vendor/bin/pint
+
+      - name: Verify code style (Laravel Pint)
         if: ${{ hashFiles('shingeki-api/vendor/bin/pint') != '' }}
         run: vendor/bin/pint --test
 
