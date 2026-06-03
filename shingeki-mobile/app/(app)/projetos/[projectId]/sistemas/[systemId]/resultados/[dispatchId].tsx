@@ -1,8 +1,9 @@
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useResults } from "@/lib/hooks/use-results";
 import { formatDate } from "@/lib/utils";
 import {
+  AppScrollView,
   Badge,
   Card,
   CardContent,
@@ -59,7 +60,7 @@ export default function ResultsDetailScreen() {
   );
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-6 px-4 pb-8">
+    <AppScrollView contentContainerClassName="gap-6 px-4 pb-8">
       <Link href={`/projetos/${pid}/sistemas/${sid}`} asChild>
         <Pressable className="active:opacity-80">
           <Text className="text-sm text-muted-foreground">← Voltar ao sistema</Text>
@@ -149,6 +150,6 @@ export default function ResultsDetailScreen() {
           )}
         </>
       )}
-    </ScrollView>
+    </AppScrollView>
   );
 }

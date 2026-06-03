@@ -1,8 +1,7 @@
 import { z } from "zod";
 import type { Timestamps } from "./common";
-import { createWithCoverSchema, updateWithCoverSchema } from "./cover-selection";
 
-export const projectCreateSchema = createWithCoverSchema({
+export const projectCreateSchema = z.object({
   name: z
     .string()
     .min(1, "Informe o nome do projeto.")
@@ -10,7 +9,7 @@ export const projectCreateSchema = createWithCoverSchema({
   description: z.string().min(1, "Informe a descricao."),
 });
 
-export const projectUpdateSchema = updateWithCoverSchema({
+export const projectUpdateSchema = z.object({
   name: z
     .string()
     .min(1, "Informe o nome do projeto.")
@@ -25,7 +24,7 @@ export type ProjectUpdateInput = z.infer<typeof projectUpdateSchema>;
 export interface Project extends Timestamps {
   id: string;
   user_id: string;
-  cover_path: string;
+  cover_path: string | null;
   name: string;
   description: string;
 }

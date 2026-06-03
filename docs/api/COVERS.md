@@ -12,14 +12,16 @@ CRUD de entidades: [PROJECTS-AND-SYSTEMS.md](PROJECTS-AND-SYSTEMS.md).
 
 ## Seleção de capa (create / update)
 
-Envie **apenas um** dos campos por requisição:
+Capa é **opcional** no create. Projeto ou sistema pode ser criado só com `name` / `description` (e URLs no sistema); `cover_path` fica `null`.
+
+Envie **apenas um** dos campos de capa por requisição (quando quiser definir capa):
 
 | Campo | Create | Update |
 |-------|--------|--------|
 | `cover` | arquivo imagem (PNG, JPG, WebP), máx. 5 MB | opcional |
 | `cover_upload_id` | UUID existente na biblioteca do usuário | opcional |
 
-Regras: `required_without` no create; `prohibits` impede enviar os dois juntos.
+Regras: `prohibits` impede enviar `cover` e `cover_upload_id` juntos. Upload de capa no **client web**; o app mobile consome a API em JSON e apenas exibe capas já existentes.
 
 Ao enviar arquivo novo, a API registra entrada na biblioteca (`user_cover_uploads`).
 

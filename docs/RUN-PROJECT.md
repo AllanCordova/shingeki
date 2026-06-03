@@ -97,4 +97,4 @@ Ambos consomem a mesma API REST. Contratos HTTP e rotas: [API.md](API.md).
 ## Referência
 
 - Documentação da API: [API.md](API.md)
-- CI e lint antes de PR: [CI.md](CI.md)
+- CI e lint antes de PR: [ci/overview.md](ci/overview.md)

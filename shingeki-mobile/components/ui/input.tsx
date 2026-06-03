@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { TextInput, type TextInputProps } from "react-native";
+import { appMutedForegroundColor } from "@/lib/css-vars";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends TextInputProps {
@@ -14,7 +15,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   return (
     <TextInput
       ref={ref}
-      placeholderTextColor="#71717a"
+      placeholderTextColor={appMutedForegroundColor}
       className={cn(
         "h-10 w-full rounded-app border bg-surface px-3 text-sm text-foreground",
         hasError ? "border-danger" : "border-input",

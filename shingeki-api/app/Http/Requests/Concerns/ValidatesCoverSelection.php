@@ -13,16 +13,14 @@ trait ValidatesCoverSelection
     {
         return [
             'cover' => [
-                'required_without:cover_upload_id',
-                'prohibits:cover_upload_id',
                 'nullable',
+                'prohibits:cover_upload_id',
                 'image',
                 'max:5120',
             ],
             'cover_upload_id' => [
-                'required_without:cover',
-                'prohibits:cover',
                 'nullable',
+                'prohibits:cover',
                 'uuid',
                 Rule::exists('user_cover_uploads', 'id')->where(
                     fn ($query) => $query->where('user_id', $this->user()?->id),

@@ -64,7 +64,7 @@ class UserCoverLibraryService
         return $upload->path;
     }
 
-    public function resolveCoverForCreate(User $user, ?UploadedFile $file, ?string $coverUploadId): string
+    public function resolveCoverForCreate(User $user, ?UploadedFile $file, ?string $coverUploadId): ?string
     {
         if ($file !== null) {
             return $this->registerUpload($user, $file)->path;
@@ -74,9 +74,7 @@ class UserCoverLibraryService
             return $this->resolvePathFromUploadId($user, $coverUploadId);
         }
 
-        throw ValidationException::withMessages([
-            'cover' => ['Envie uma imagem ou selecione uma da biblioteca.'],
-        ]);
+        return null;
     }
 
     public function resolveCoverForUpdate(

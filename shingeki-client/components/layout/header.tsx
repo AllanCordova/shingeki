@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { UserAvatarLink } from "@/components/ui/user-avatar-link";
 import { useLogout, useMe } from "@/lib/hooks/use-auth";
 import { notify } from "@/lib/notify";
 import { ThemeToggle } from "./theme-toggle";
@@ -35,9 +36,12 @@ export function Header() {
         </Link>
         <div className="flex items-center gap-3">
           {user ? (
-            <span className="hidden text-sm text-muted-foreground sm:inline">
-              {user.name}
-            </span>
+            <>
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {user.name}
+              </span>
+              <UserAvatarLink name={user.name} avatarPath={user.avatar_path} />
+            </>
           ) : null}
           <ThemeToggle />
           <Button

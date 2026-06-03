@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Header } from "@/components/layout/header";
-import { Loading } from "@/components/ui";
+import { Loading, Screen } from "@/components/ui";
+import { stackContentStyle } from "@/lib/css-vars";
 import { hasToken } from "@/lib/api/auth-storage";
 import { useMe } from "@/lib/hooks/use-auth";
 
@@ -27,21 +27,24 @@ export default function AppLayout() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 bg-background">
+      <Screen>
         <Loading label="Carregando sessao..." />
-      </View>
+      </Screen>
     );
   }
 
   return (
-    <View className="flex-1 bg-background">
+    <Screen>
       <Header />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { paddingVertical: 24 },
+          contentStyle: {
+            ...stackContentStyle,
+            paddingVertical: 24,
+          },
         }}
       />
-    </View>
+    </Screen>
   );
 }

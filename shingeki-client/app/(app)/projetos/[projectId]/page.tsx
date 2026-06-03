@@ -9,16 +9,20 @@ import {
   useUpdateProject,
 } from "@/lib/hooks/use-projects";
 import { useCreateSystem, useSystems } from "@/lib/hooks/use-systems";
+import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
 import { ProjectForm } from "@/components/forms/project-form";
 import { SystemForm } from "@/components/forms/system-form";
 import { SystemCard } from "@/components/systems/system-card";
 import { notify } from "@/lib/notify";
+import { FORM_MODAL_SIZE } from "@/lib/ui";
 import type { SystemCreateInput } from "@/lib/contracts";
 import {
+  AddActionButton,
   Button,
   CoverHero,
   EmptyState,
   ErrorShow,
+  ImageUploadIcon,
   Loading,
   Modal,
 } from "@/components/ui";
@@ -41,6 +45,7 @@ export default function ProjectDetailPage() {
   const createSystem = useCreateSystem(projectId);
 
   const [editOpen, setEditOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [systemOpen, setSystemOpen] = useState(false);
 
@@ -80,6 +85,15 @@ export default function ProjectDetailPage() {
             </p>
           </div>
           <div className="flex shrink-0 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCoverOpen(true)}
+              aria-label="Trocar capa"
+              title="Trocar capa"
+              className="px-2.5"
+            >
+              <ImageUploadIcon />
+            </Button>
             <Button variant="outline" onClick={() => setEditOpen(true)}>
               Editar
             </Button>
@@ -93,7 +107,11 @@ export default function ProjectDetailPage() {
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Sistemas</h2>
-          <Button onClick={() => setSystemOpen(true)}>Novo sistema</Button>
+          <AddActionButton
+            onClick={() => setSystemOpen(true)}
+            aria-label="Novo sistema"
+            title="Novo sistema"
+          />
         </div>
 
         {loadingSystems ? (
@@ -105,7 +123,11 @@ export default function ProjectDetailPage() {
             title="Nenhum sistema cadastrado"
             description="Cadastre um sistema alvo para gerar assinatura e disparar ataques."
             action={
-              <Button onClick={() => setSystemOpen(true)}>Criar sistema</Button>
+              <AddActionButton
+                onClick={() => setSystemOpen(true)}
+                aria-label="Criar sistema"
+                title="Criar sistema"
+              />
             }
           />
         ) : (
@@ -121,10 +143,26 @@ export default function ProjectDetailPage() {
         )}
       </section>
 
+      <CoverUpdateModal
+        open={coverOpen}
+        onClose={() => setCoverOpen(false)}
+        currentCoverPath={project.cover_path}
+        isLoading={updateProject.isLoading}
+        error={updateProject.error}
+        onSubmit={async (values) => {
+          const ok = await notify.run(
+            () => updateProject.updateProject(values),
+            { success: "Capa atualizada." },
+          );
+          if (ok) setCoverOpen(false);
+        }}
+      />
+
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
         title="Editar projeto"
+        size={FORM_MODAL_SIZE}
       >
         <ProjectForm
           mode="edit"
@@ -151,6 +189,7 @@ export default function ProjectDetailPage() {
         open={systemOpen}
         onClose={() => setSystemOpen(false)}
         title="Novo sistema"
+        size={FORM_MODAL_SIZE}
       >
         <SystemForm
           isLoading={createSystem.isLoading}

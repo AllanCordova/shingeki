@@ -2,8 +2,6 @@
 
 Guia para levantar o client Next.js no navegador.
 
-**Pré-requisito:** API em execução — [RUN-PROJECT.md](RUN-PROJECT.md) (seções 1–3).
-
 ## Requisitos
 
 - Itens de [RUN-PROJECT.md](RUN-PROJECT.md#requisitos)
@@ -56,9 +54,4 @@ cd shingeki-client
 npm run build
 npm start
 ```
-
-## 4. Lint antes do PR
-
-Ver [CI.md](CI.md) — jobs do GitHub Actions e comandos locais (`npm run lint`, `composer lint`, `composer test`).
-
-Contratos HTTP (capas, projetos, ataques, etc.): [API.md](API.md).
+Contratos HTTP: [API.md](API.md).

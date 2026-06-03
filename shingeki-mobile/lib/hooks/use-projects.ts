@@ -1,6 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
-import { requestMultipart } from "@/lib/api/multipart-request";
 import type { ApiError } from "@/lib/api/error-handler";
 import { queryKeys } from "@/lib/query-keys";
 import type {
@@ -10,10 +9,6 @@ import type {
   ProjectUpdateInput,
   ProjectsResponse,
 } from "@/lib/contracts";
-import {
-  buildProjectCreateFormData,
-  buildProjectUpdateFormData,
-} from "@/lib/multipart";
 
 export function useProjects() {
   const query = useQuery({
@@ -59,16 +54,11 @@ export function useCreateProject() {
 
   const mutation = useMutation({
     mutationFn: async (input: ProjectCreateInput) => {
-      const data = await requestMultipart<ProjectResponse>(
-        "POST",
-        "/projects",
-        buildProjectCreateFormData(input),
-      );
+      const { data } = await apiClient.post<ProjectResponse>("/projects", input);
       return data.project;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 
@@ -85,23 +75,14 @@ export function useUpdateProject(projectId: string) {
 
   const mutation = useMutation({
     mutationFn: async (input: ProjectUpdateInput) => {
-      const formData = buildProjectUpdateFormData(input);
-
-      const data = formData
-        ? await requestMultipart<ProjectResponse>(
-            "PUT",
-            `/projects/${projectId}`,
-            formData,
-          )
-        : (
-            await apiClient.put<ProjectResponse>(`/projects/${projectId}`, input)
-          ).data;
-
+      const { data } = await apiClient.put<ProjectResponse>(
+        `/projects/${projectId}`,
+        input,
+      );
       return data.project;
     },
     onSuccess: (project: Project) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
       queryClient.setQueryData(queryKeys.project(projectId), project);
     },
   });
@@ -124,7 +105,6 @@ export function useDeleteProject() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-      queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 

@@ -8,14 +8,12 @@ use Illuminate\Support\Str;
 
 class CoverImageService
 {
-    private const string STORAGE_DIR = 'covers';
-
-    public function store(UploadedFile $file): string
+    public function store(UploadedFile $file, string $directory = 'covers'): string
     {
         $filename = Str::uuid().'.'.$file->guessExtension();
-        $file->storeAs(self::STORAGE_DIR, $filename, 'public');
+        $file->storeAs($directory, $filename, 'public');
 
-        return '/storage/'.self::STORAGE_DIR.'/'.$filename;
+        return '/storage/'.$directory.'/'.$filename;
     }
 
     public function delete(?string $coverPath): void

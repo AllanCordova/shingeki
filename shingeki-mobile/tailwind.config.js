@@ -2,7 +2,6 @@
 module.exports = {
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
-  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -35,8 +34,8 @@ module.exports = {
         },
       },
       borderRadius: {
-        app: "var(--radius)",
-        "t-app": "var(--radius)",
+        app: 10,
+        "t-app": 10,
       },
     },
   },

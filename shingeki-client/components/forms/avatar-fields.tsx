@@ -1,29 +1,24 @@
+"use client";
+
 import { Controller, type Control, type FieldErrors } from "react-hook-form";
+import type { UpdateProfileFormInput } from "@/lib/contracts";
 import {
   useCoverUploads,
   useDeleteCoverUpload,
 } from "@/lib/hooks/use-cover-uploads";
-import type { CoverImageAsset } from "@/lib/contracts/cover-asset";
 import { CoverUpload, ErrorShow } from "@/components/ui";
 
-export type CoverFieldValues = {
-  cover?: CoverImageAsset;
-  cover_upload_id?: string;
-};
-
-interface CoverFieldsProps {
-  control: Control<CoverFieldValues>;
-  errors: FieldErrors<CoverFieldValues>;
-  currentCoverPath?: string | null;
-  isEdit?: boolean;
+interface AvatarFieldsProps {
+  control: Control<UpdateProfileFormInput>;
+  errors: FieldErrors<UpdateProfileFormInput>;
+  currentAvatarPath?: string | null;
 }
 
-export function CoverFields({
+export function AvatarFields({
   control,
   errors,
-  currentCoverPath,
-  isEdit = false,
-}: CoverFieldsProps) {
+  currentAvatarPath,
+}: AvatarFieldsProps) {
   const {
     uploads,
     count,
@@ -43,18 +38,31 @@ export function CoverFields({
       {libraryQueryError ? <ErrorShow error={libraryQueryError} /> : null}
 
       <Controller
-        name="cover"
+        name="avatar"
         control={control}
-        render={({ field: coverField }) => (
+        render={({ field: avatarField }) => (
           <Controller
-            name="cover_upload_id"
+            name="avatar_upload_id"
             control={control}
             render={({ field: libraryField }) => (
               <CoverUpload
-                value={coverField.value ?? null}
-                onChange={(asset) => coverField.onChange(asset)}
+                label="Foto de perfil"
+                layout="avatar"
+                tabs={["library", "file"]}
+                value={avatarField.value ?? null}
+                onChange={(file) => {
+                  avatarField.onChange(file);
+                  if (file) {
+                    libraryField.onChange(undefined);
+                  }
+                }}
                 selectedUploadId={libraryField.value ?? null}
-                onSelectUpload={(id) => libraryField.onChange(id)}
+                onSelectUpload={(id) => {
+                  libraryField.onChange(id);
+                  if (id) {
+                    avatarField.onChange(undefined);
+                  }
+                }}
                 libraryUploads={uploads}
                 libraryCount={count}
                 libraryLimit={limit}
@@ -65,15 +73,9 @@ export function CoverFields({
                 }}
                 isRemovingLibrary={isRemovingLibrary}
                 removeLibraryError={removeLibraryError}
-                currentCoverPath={currentCoverPath}
-                error={errors.cover?.message}
-                libraryError={errors.cover_upload_id?.message}
-                required={!isEdit}
-                hint={
-                  isEdit
-                    ? "Envie uma nova imagem ou escolha outra da biblioteca para trocar a capa."
-                    : "PNG, JPG ou WebP. Maximo 5 MB."
-                }
+                currentCoverPath={currentAvatarPath}
+                error={errors.avatar?.message}
+                libraryError={errors.avatar_upload_id?.message}
               />
             )}
           />

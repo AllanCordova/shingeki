@@ -35,10 +35,13 @@ function validSystemFields(array $overrides = []): array
  */
 function postSystem(Project $project, array $fields = [], ?UploadedFile $cover = null)
 {
-    return test()->post(systemsIndexUrl($project), [
-        ...validSystemFields($fields),
-        'cover' => $cover ?? UploadedFile::fake()->create('cover.jpg', 100, 'image/jpeg'),
-    ]);
+    $payload = validSystemFields($fields);
+
+    if ($cover !== null) {
+        $payload['cover'] = $cover;
+    }
+
+    return test()->post(systemsIndexUrl($project), $payload);
 }
 
 /**
@@ -141,7 +144,7 @@ describe('POST /api/projects/{project}/systems', function () {
 
         Sanctum::actingAs($user);
 
-        $response = postSystem($project);
+        $response = postSystem($project, [], fakeCover());
 
         $response
             ->assertCreated()
@@ -180,15 +183,16 @@ describe('POST /api/projects/{project}/systems', function () {
         postSystem($project)->assertNotFound();
     });
 
-    test('rejects missing cover', function () {
+    test('creates a system without cover', function () {
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
 
         Sanctum::actingAs($user);
 
         $this->post(systemsIndexUrl($project), validSystemFields())
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['cover']);
+            ->assertCreated()
+            ->assertJsonPath('system.cover_path', null)
+            ->assertJsonPath('system.name', 'Main API');
     });
 
     test('rejects invalid target_url', function () {

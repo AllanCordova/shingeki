@@ -13,8 +13,8 @@ interface CoverHeroProps {
 }
 
 /**
- * Capa em largura total (hero) para paginas de detalhe.
- * Quebra o max-width do <main> com o truque viewport center.
+ * Hero de capa para paginas de detalhe.
+ * Mobile: largura total da viewport. Desktop: alinhado ao container (max-w-5xl).
  */
 export function CoverHero({
   coverPath,
@@ -29,19 +29,20 @@ export function CoverHero({
   return (
     <section
       className={cn(
-        "relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 -mt-8",
+        "relative -mt-8",
+        "left-1/2 w-screen max-w-[100vw] -translate-x-1/2",
+        "md:left-auto md:w-full md:max-w-none md:translate-x-0 md:overflow-hidden md:rounded-lg",
         className,
       )}
     >
       <div
         className={cn(
-          "relative min-h-[12rem] sm:min-h-[14rem] md:min-h-[16rem]",
-          hasImage ? "bg-surface-muted" : "border-b border-border bg-surface-muted/40",
+          "relative min-h-[15rem] md:min-h-[30rem]",
+          hasImage ? "bg-surface-muted" : "border-b border-border bg-surface-muted/40 md:border md:border-border",
         )}
       >
         {hasImage ? (
           <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src!}
               alt={alt}
@@ -50,13 +51,17 @@ export function CoverHero({
               onError={() => setFailed(true)}
             />
             <div
-              className="absolute inset-0 bg-gradient-to-t from-background via-background/75 to-background/20"
+              className={cn(
+                "absolute inset-0",
+                "bg-gradient-to-t from-background from-35% to-transparent to-75%",
+                "dark:from-background dark:via-background/80 dark:to-background/25",
+              )}
               aria-hidden
             />
           </>
         ) : null}
 
-        <div className="relative z-10 mx-auto flex h-full min-h-[inherit] w-full max-w-5xl flex-col justify-end px-4 pb-6 pt-8">
+        <div className="relative z-10 flex h-full min-h-[inherit] w-full flex-col justify-end px-4 pb-6 pt-8 md:px-6">
           {children}
         </div>
       </div>

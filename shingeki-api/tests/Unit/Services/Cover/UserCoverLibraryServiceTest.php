@@ -65,11 +65,10 @@ test('resolveCoverForCreate uses new file or library id', function () {
         ->and($fromLibrary)->toBe('/storage/covers/existing.jpg');
 });
 
-test('resolveCoverForCreate throws when neither file nor library id provided', function () {
+test('resolveCoverForCreate returns null when no cover is provided', function () {
     $user = User::factory()->create();
 
-    expect(fn () => $this->service->resolveCoverForCreate($user, null, null))
-        ->toThrow(ValidationException::class);
+    expect($this->service->resolveCoverForCreate($user, null, null))->toBeNull();
 });
 
 test('resolvePathFromUploadId throws for unknown id', function () {

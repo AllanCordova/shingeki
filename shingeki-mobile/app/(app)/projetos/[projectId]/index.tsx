@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import type { SystemCreateInput } from "@/lib/contracts";
 import {
@@ -13,6 +13,8 @@ import { SystemForm } from "@/components/forms/system-form";
 import { SystemCard } from "@/components/systems/system-card";
 import { notify } from "@/lib/notify";
 import {
+  AddActionButton,
+  AppScrollView,
   Button,
   CoverHero,
   EmptyState,
@@ -57,7 +59,7 @@ export default function ProjectDetailScreen() {
   };
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-8 pb-8">
+    <AppScrollView contentContainerClassName="gap-8 pb-8">
       <CoverHero coverPath={project.cover_path} alt={`Capa de ${project.name}`}>
         <Link href="/projetos" asChild>
           <Text className="mb-4 text-sm text-white/75">
@@ -85,7 +87,10 @@ export default function ProjectDetailScreen() {
       <View className="gap-4 px-4">
         <View className="flex-row items-center justify-between">
           <Text className="text-lg font-semibold text-foreground">Sistemas</Text>
-          <Button onPress={() => setSystemOpen(true)}>Novo sistema</Button>
+          <AddActionButton
+            onPress={() => setSystemOpen(true)}
+            accessibilityLabel="Novo sistema"
+          />
         </View>
 
         {loadingSystems ? (
@@ -97,7 +102,10 @@ export default function ProjectDetailScreen() {
             title="Nenhum sistema cadastrado"
             description="Cadastre um sistema alvo para gerar assinatura e disparar ataques."
             action={
-              <Button onPress={() => setSystemOpen(true)}>Criar sistema</Button>
+              <AddActionButton
+                onPress={() => setSystemOpen(true)}
+                accessibilityLabel="Criar sistema"
+              />
             }
           />
         ) : (
@@ -116,7 +124,6 @@ export default function ProjectDetailScreen() {
       >
         <ProjectForm
           mode="edit"
-          currentCoverPath={project.cover_path}
           isLoading={updateProject.isLoading}
           error={updateProject.error}
           submitLabel="Salvar alteracoes"
@@ -175,6 +182,6 @@ export default function ProjectDetailScreen() {
           }}
         />
       </Modal>
-    </ScrollView>
+    </AppScrollView>
   );
 }

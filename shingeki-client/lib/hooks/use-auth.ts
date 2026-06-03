@@ -8,9 +8,10 @@ import type {
   LoginInput,
   MeResponse,
   RegisterInput,
-  UpdateProfileInput,
+  UpdateProfileFormInput,
   User,
 } from "@/lib/contracts";
+import { buildProfileUpdateFormData } from "@/lib/multipart";
 
 async function fetchMe(): Promise<User> {
   const { data } = await apiClient.get<MeResponse>("/auth/me");
@@ -107,8 +108,11 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (input: UpdateProfileInput) => {
-      const { data } = await apiClient.put<MeResponse>("/auth/me", input);
+    mutationFn: async (input: UpdateProfileFormInput) => {
+      const formData = buildProfileUpdateFormData(input);
+      const { data } = await apiClient.put<MeResponse>("/auth/me", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       return data.user;
     },
     onSuccess: (user) => {

@@ -30,14 +30,16 @@ Lista projetos do usuário (mais recentes primeiro).
 
 ### POST /api/projects
 
-**Content-Type:** `multipart/form-data`
+Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional).
 
 | Campo | Obrigatório | Descrição |
 |-------|-------------|-----------|
 | `name` | sim | máx. 255 |
 | `description` | sim | texto |
-| `cover` | um dos dois | arquivo imagem, máx. 5 MB |
-| `cover_upload_id` | um dos dois | UUID da biblioteca do usuário |
+| `cover` | não | arquivo imagem, máx. 5 MB (web) |
+| `cover_upload_id` | não | UUID da biblioteca do usuário (web) |
+
+Sem `cover` nem `cover_upload_id`, `cover_path` fica `null`.
 
 **Resposta `201`:**
 
@@ -103,14 +105,14 @@ Base: `/api/projects/{project}/systems`
 
 ### POST /api/projects/{project}/systems
 
-**Content-Type:** `multipart/form-data`
+Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional).
 
 | Campo | Obrigatório |
 |-------|-------------|
 | `name` | sim |
 | `target_url` | sim (URL válida) |
 | `repository_url` | sim (URL válida) |
-| `cover` ou `cover_upload_id` | sim (mesmas regras do projeto) |
+| `cover` / `cover_upload_id` | não (opcional; web) |
 
 **Resposta `201`:** `{ "message": "...", "system": { ... } }`
 

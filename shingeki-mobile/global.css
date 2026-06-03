@@ -4,29 +4,6 @@
 
 @layer base {
   :root {
-    --background: 255 255 255;
-    --foreground: 10 10 10;
-    --surface: 255 255 255;
-    --surface-muted: 244 244 245;
-    --border: 228 228 231;
-    --input: 212 212 216;
-    --ring: 10 10 10;
-    --primary: 10 10 10;
-    --primary-foreground: 250 250 250;
-    --primary-hover: 38 38 38;
-    --muted-foreground: 113 113 122;
-    --danger: 220 38 38;
-    --danger-foreground: 250 250 250;
-    --danger-surface: 254 242 242;
-    --success: 22 163 74;
-    --success-foreground: 250 250 250;
-    --success-surface: 240 253 244;
-    --warning: 217 119 6;
-    --warning-surface: 255 251 235;
-    --radius: 0.625rem;
-  }
-
-  .dark {
     --background: 10 10 10;
     --foreground: 250 250 250;
     --surface: 17 17 19;
