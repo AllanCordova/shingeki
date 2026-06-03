@@ -8,6 +8,6 @@ Bem-vindo à documentação do **Shingeki** — plataforma para detecção autom
 2. **[Como rodar o projeto](RUN-PROJECT.md)** — clone, API, Docker, credenciais do seed.
 3. **[Desenvolvimento web](WEB-DEVELOPMENT.md)** ou **[mobile](MOBILE-DEVELOPMENT.md)** — client escolhido.
 4. **[API REST](API.md)** — rotas, erros e guias por módulo.
-5. **[CI](CI.md)** — lint e testes antes de abrir PR.
+5. **[CI](ci/overview.md)** — lint e testes antes de abrir PR.
 
 Repositório: [github.com/AllanCordova/shingeki](https://github.com/AllanCordova/shingeki).

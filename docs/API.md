@@ -19,7 +19,7 @@ O token é retornado em `POST /api/auth/register` e `POST /api/auth/login` (Lara
 | Tipo | `Content-Type` | Uso |
 |------|----------------|-----|
 | JSON | `application/json` | Auth, assinaturas, disparo de ataque |
-| Multipart | `multipart/form-data` | Projetos e sistemas com capa (`cover` ou `cover_upload_id`) |
+| Multipart | `multipart/form-data` | Projetos e sistemas **com** capa opcional (`cover` ou `cover_upload_id`); criação/atualização sem capa pode usar JSON |
 
 ## Respostas de erro comuns
 
@@ -34,9 +34,9 @@ Exemplo de validação:
 
 ```json
 {
-  "message": "The cover field is required.",
+  "message": "The name field is required.",
   "errors": {
-    "cover": ["The cover field is required."]
+    "name": ["The name field is required."]
   }
 }
 ```
