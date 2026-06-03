@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
 const AUTH_REGISTER = '/api/auth/register';
@@ -25,6 +27,7 @@ function userJsonStructure(): array
         'id',
         'name',
         'email',
+        'avatar_path',
         'role',
         'created_at',
         'updated_at',
@@ -290,6 +293,25 @@ describe('PUT /api/auth/me', function () {
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['current_password']);
+    });
+
+    test('updates avatar from uploaded image', function () {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $this->put(AUTH_ME, [
+            'name' => 'User With Avatar',
+            'avatar' => UploadedFile::fake()->create('avatar.jpg', 100, 'image/jpeg'),
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.name', 'User With Avatar');
+
+        $avatarPath = $user->fresh()->avatar_path;
+
+        expect($avatarPath)->toMatch('#^/storage/avatars/[a-f0-9\-]+\.jpg$#');
     });
 
     test('requires authentication', function () {

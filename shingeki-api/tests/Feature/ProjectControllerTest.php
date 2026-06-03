@@ -36,10 +36,13 @@ function fakeCover(): UploadedFile
  */
 function postProject(array $fields = [], ?UploadedFile $cover = null)
 {
-    return test()->post(PROJECTS_STORE, [
-        ...validProjectFields($fields),
-        'cover' => $cover ?? fakeCover(),
-    ]);
+    $payload = validProjectFields($fields);
+
+    if ($cover !== null) {
+        $payload['cover'] = $cover;
+    }
+
+    return test()->post(PROJECTS_STORE, $payload);
 }
 
 /**
@@ -138,7 +141,7 @@ describe('POST /api/projects', function () {
 
         Sanctum::actingAs($user);
 
-        $response = postProject();
+        $response = postProject([], fakeCover());
 
         $response
             ->assertCreated()
@@ -174,12 +177,15 @@ describe('POST /api/projects', function () {
         ]);
     });
 
-    test('rejects missing cover', function () {
-        Sanctum::actingAs(User::factory()->create());
+    test('creates a project without cover', function () {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
 
         $this->post(PROJECTS_STORE, validProjectFields())
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['cover']);
+            ->assertCreated()
+            ->assertJsonPath('project.cover_path', null)
+            ->assertJsonPath('project.name', 'Pentest Project');
     });
 
     test('rejects missing name', function () {
