@@ -1,8 +1,7 @@
 import { z } from "zod";
 import type { Timestamps } from "./common";
-import { createWithCoverSchema, updateWithCoverSchema } from "./cover-selection";
 
-export const systemCreateSchema = createWithCoverSchema({
+export const systemCreateSchema = z.object({
   name: z
     .string()
     .min(1, "Informe o nome do sistema.")
@@ -17,7 +16,7 @@ export const systemCreateSchema = createWithCoverSchema({
     .max(2048, "A URL do repositorio e muito longa."),
 });
 
-export const systemUpdateSchema = updateWithCoverSchema({
+export const systemUpdateSchema = z.object({
   name: z
     .string()
     .min(1, "Informe o nome do sistema.")
@@ -39,7 +38,7 @@ export type SystemUpdateInput = z.infer<typeof systemUpdateSchema>;
 export interface System extends Timestamps {
   id: string;
   project_id: string;
-  cover_path: string;
+  cover_path: string | null;
   name: string;
   target_url: string;
   repository_url: string;

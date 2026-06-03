@@ -3,6 +3,14 @@
 import { useEffect, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
+export type ModalSize = "md" | "lg" | "xl";
+
+const sizeClasses: Record<ModalSize, string> = {
+  md: "max-w-lg",
+  lg: "max-w-3xl",
+  xl: "max-w-4xl",
+};
+
 interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -10,6 +18,8 @@ interface ModalProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  /** Largura do painel. Padrao `md`. Formularios com capa: `xl`. */
+  size?: ModalSize;
   className?: string;
 }
 
@@ -21,6 +31,7 @@ export function Modal({
   description,
   children,
   footer,
+  size = "md",
   className,
 }: ModalProps) {
   useEffect(() => {
@@ -54,12 +65,13 @@ export function Modal({
       />
       <div
         className={cn(
-          "relative z-10 w-full max-w-lg rounded-app border border-border bg-surface shadow-xl",
+          "relative z-10 flex max-h-[min(90vh,880px)] w-full flex-col overflow-hidden rounded-app border border-border bg-surface shadow-xl",
+          sizeClasses[size],
           className,
         )}
       >
         {(title || description) && (
-          <div className="flex flex-col gap-1 border-b border-border p-5">
+          <div className="flex shrink-0 flex-col gap-1 border-b border-border p-5">
             {title ? (
               <h2 className="text-base font-semibold text-foreground">
                 {title}
@@ -70,9 +82,9 @@ export function Modal({
             ) : null}
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
         {footer ? (
-          <div className="flex items-center justify-end gap-2 border-t border-border p-5">
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border p-5">
             {footer}
           </div>
         ) : null}

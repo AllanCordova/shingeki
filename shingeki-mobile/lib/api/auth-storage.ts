@@ -18,7 +18,7 @@ export async function clearToken(): Promise<void> {
   try {
     await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
   } catch {
-    // ignore
+    return;
   }
 }
 

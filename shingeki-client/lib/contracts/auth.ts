@@ -58,7 +58,17 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
-/* ------------------------------- Respostas ------------------------------- */
+export const updateProfileFormSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Informe o nome.")
+    .max(255, "O nome deve ter no maximo 255 caracteres."),
+  avatar: z.instanceof(File).optional(),
+  avatar_upload_id: z.string().uuid().optional(),
+  remove_avatar: z.boolean().optional(),
+});
+
+export type UpdateProfileFormInput = z.infer<typeof updateProfileFormSchema>;
 
 export type UserRole = "user" | "admin";
 
@@ -66,6 +76,7 @@ export interface User extends Timestamps {
   id: string;
   name: string;
   email: string;
+  avatar_path: string | null;
   role: UserRole;
 }
 

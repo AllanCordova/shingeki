@@ -2,6 +2,7 @@ export * from "./common";
 export * from "./auth";
 export * from "./cover-file";
 export * from "./cover-selection";
+export * from "./cover-stock-image";
 export * from "./cover-upload";
 export * from "./project";
 export * from "./system";

@@ -8,12 +8,21 @@ import {
   useSystem,
   useUpdateSystem,
 } from "@/lib/hooks/use-systems";
+import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
 import { SystemForm } from "@/components/forms/system-form";
 import { SignaturePanel } from "@/components/signature/signature-panel";
 import { AttackForm } from "@/components/attack/attack-form";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { notify } from "@/lib/notify";
-import { Button, CoverHero, ErrorShow, Loading, Modal } from "@/components/ui";
+import { FORM_MODAL_SIZE } from "@/lib/ui";
+import {
+  Button,
+  CoverHero,
+  ErrorShow,
+  ImageUploadIcon,
+  Loading,
+  Modal,
+} from "@/components/ui";
 
 export default function SystemDetailPage() {
   const { projectId, systemId } = useParams<{
@@ -30,6 +39,7 @@ export default function SystemDetailPage() {
   const deleteSystem = useDeleteSystem(projectId);
 
   const [editOpen, setEditOpen] = useState(false);
+  const [coverOpen, setCoverOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (isLoading) return <Loading label="Carregando sistema..." />;
@@ -70,6 +80,15 @@ export default function SystemDetailPage() {
             </a>
           </div>
           <div className="flex shrink-0 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCoverOpen(true)}
+              aria-label="Trocar capa"
+              title="Trocar capa"
+              className="px-2.5"
+            >
+              <ImageUploadIcon />
+            </Button>
             <Button variant="outline" onClick={() => setEditOpen(true)}>
               Editar
             </Button>
@@ -87,10 +106,26 @@ export default function SystemDetailPage() {
 
       <DispatchesList projectId={projectId} systemId={systemId} />
 
+      <CoverUpdateModal
+        open={coverOpen}
+        onClose={() => setCoverOpen(false)}
+        currentCoverPath={system.cover_path}
+        isLoading={updateSystem.isLoading}
+        error={updateSystem.error}
+        onSubmit={async (values) => {
+          const ok = await notify.run(
+            () => updateSystem.updateSystem(values),
+            { success: "Capa atualizada." },
+          );
+          if (ok) setCoverOpen(false);
+        }}
+      />
+
       <Modal
         open={editOpen}
         onClose={() => setEditOpen(false)}
         title="Editar sistema"
+        size={FORM_MODAL_SIZE}
       >
         <SystemForm
           mode="edit"

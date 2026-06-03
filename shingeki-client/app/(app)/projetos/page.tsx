@@ -6,8 +6,9 @@ import { useUiStore } from "@/lib/stores/ui-store";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ProjectCard } from "@/components/projects/project-card";
 import { notify } from "@/lib/notify";
+import { FORM_MODAL_SIZE } from "@/lib/ui";
 import {
-  Button,
+  AddActionButton,
   EmptyState,
   ErrorShow,
   Loading,
@@ -51,7 +52,11 @@ export default function ProjetosPage() {
             Organize seus sistemas e testes de seguranca.
           </p>
         </div>
-        <Button onClick={handleOpen}>Novo projeto</Button>
+        <AddActionButton
+          onClick={handleOpen}
+          aria-label="Novo projeto"
+          title="Novo projeto"
+        />
       </div>
 
       {isLoading ? (
@@ -62,7 +67,13 @@ export default function ProjetosPage() {
         <EmptyState
           title="Nenhum projeto ainda"
           description="Crie seu primeiro projeto para comecar a cadastrar sistemas."
-          action={<Button onClick={handleOpen}>Criar projeto</Button>}
+          action={
+            <AddActionButton
+              onClick={handleOpen}
+              aria-label="Criar projeto"
+              title="Criar projeto"
+            />
+          }
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -77,6 +88,7 @@ export default function ProjetosPage() {
         onClose={handleClose}
         title="Novo projeto"
         description="Preencha os dados do projeto."
+        size={FORM_MODAL_SIZE}
       >
         <ProjectForm
           isLoading={isCreating}

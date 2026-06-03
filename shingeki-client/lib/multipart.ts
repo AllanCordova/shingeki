@@ -1,3 +1,4 @@
+import type { UpdateProfileFormInput } from "./contracts/auth";
 import type { ProjectCreateInput, ProjectUpdateInput } from "./contracts/project";
 import type { SystemCreateInput, SystemUpdateInput } from "./contracts/system";
 
@@ -83,4 +84,31 @@ export function buildSystemUpdateFormData(
   }
 
   return hasField ? formData : null;
+}
+
+type AvatarPayload = {
+  avatar?: File;
+  avatar_upload_id?: string;
+  remove_avatar?: boolean;
+};
+
+function appendAvatarFields(formData: FormData, avatar: AvatarPayload): void {
+  if (avatar.avatar) {
+    formData.append("avatar", avatar.avatar);
+  }
+  if (avatar.avatar_upload_id) {
+    formData.append("avatar_upload_id", avatar.avatar_upload_id);
+  }
+  if (avatar.remove_avatar) {
+    formData.append("remove_avatar", "1");
+  }
+}
+
+export function buildProfileUpdateFormData(
+  input: UpdateProfileFormInput,
+): FormData {
+  const formData = new FormData();
+  formData.append("name", input.name);
+  appendAvatarFields(formData, input);
+  return formData;
 }

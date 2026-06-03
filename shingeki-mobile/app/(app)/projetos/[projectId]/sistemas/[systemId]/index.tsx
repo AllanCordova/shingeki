@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Linking, ScrollView, Text, View } from "react-native";
+import { Linking, Text, View } from "react-native";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import {
   useDeleteSystem,
@@ -11,7 +11,14 @@ import { SignaturePanel } from "@/components/signature/signature-panel";
 import { AttackForm } from "@/components/attack/attack-form";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { notify } from "@/lib/notify";
-import { Button, CoverHero, ErrorShow, Loading, Modal } from "@/components/ui";
+import {
+  AppScrollView,
+  Button,
+  CoverHero,
+  ErrorShow,
+  Loading,
+  Modal,
+} from "@/components/ui";
 
 export default function SystemDetailScreen() {
   const { projectId, systemId } = useLocalSearchParams<{
@@ -43,7 +50,7 @@ export default function SystemDetailScreen() {
   };
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-8 pb-8">
+    <AppScrollView contentContainerClassName="gap-8 pb-8">
       <CoverHero coverPath={system.cover_path} alt={`Capa de ${system.name}`}>
         <Link href={`/projetos/${pid}`} asChild>
           <Text className="mb-4 text-sm text-white/75">
@@ -84,7 +91,6 @@ export default function SystemDetailScreen() {
       >
         <SystemForm
           mode="edit"
-          currentCoverPath={system.cover_path}
           isLoading={updateSystem.isLoading}
           error={updateSystem.error}
           submitLabel="Salvar alteracoes"
@@ -123,6 +129,6 @@ export default function SystemDetailScreen() {
           </Button>
         </View>
       </Modal>
-    </ScrollView>
+    </AppScrollView>
   );
 }

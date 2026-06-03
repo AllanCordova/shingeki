@@ -8,7 +8,7 @@ import type {
   LoginInput,
   MeResponse,
   RegisterInput,
-  UpdateProfileInput,
+  UpdateProfileNameInput,
   User,
 } from "@/lib/contracts";
 
@@ -109,7 +109,7 @@ export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (input: UpdateProfileInput) => {
+    mutationFn: async (input: UpdateProfileNameInput) => {
       const { data } = await apiClient.put<MeResponse>("/auth/me", input);
       return data.user;
     },
