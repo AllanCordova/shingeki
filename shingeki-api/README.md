@@ -1,15 +1,7 @@
-# Shingeki API
+# shingeki-api
 
-Backend Laravel do monorepo [Shingeki](../README.md).
+Backend Laravel do monorepo Shingeki.
 
-Documentação de setup, execução e endpoints: [README na raiz](../README.md).
+**Arquitetura:** [docs/architecture/shingeki-api.md](../docs/architecture/shingeki-api.md) · [site](https://allancordova.github.io/shingeki/architecture/shingeki-api/)
 
-## Desenvolvimento local
-
-```bash
-composer install
-cp ../.env.example ../.env
-cp ../.env .env
-php artisan key:generate
-composer test
-```
+**Como rodar e API HTTP:** [docs/RUN-PROJECT.md](../docs/RUN-PROJECT.md) · [docs/API.md](../docs/API.md)

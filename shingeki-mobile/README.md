@@ -1,13 +1,7 @@
 # shingeki-mobile
 
-App mobile Expo (React Native) espelhando o [shingeki-client](../shingeki-client): mesma estrutura de `lib/`, contratos Zod, React Query, Zustand e design system (NativeWind).
+App Expo (React Native) do monorepo Shingeki.
 
-Instruções completas para rodar no Android: **[docs/DESENVOLVIMENTO-ANDROID.md](../docs/DESENVOLVIMENTO-ANDROID.md)**.
+**Arquitetura:** [docs/architecture/shingeki-mobile.md](../docs/architecture/shingeki-mobile.md) · [site](https://allancordova.github.io/shingeki/architecture/shingeki-mobile/)
 
-Capas: galeria (`expo-image-picker`), biblioteca do usuário (`GET /cover-uploads`) e envio multipart (`cover` / `cover_upload_id`), alinhado ao web client.
-
-## Arquitetura
-
-- Chamadas **diretas** ao Laravel (sem BFF); token Sanctum em `expo-secure-store`
-- `lib/api/error-handler.ts` — erros 422 e mensagens traduzidas
-- Rotas em `app/(auth)` e `app/(app)/projetos/...`
+**Como rodar:** [docs/MOBILE-DEVELOPMENT.md](../docs/MOBILE-DEVELOPMENT.md)

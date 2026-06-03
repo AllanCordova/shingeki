@@ -1,4 +1,4 @@
-import { ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import type { ProjectCreateInput } from "@/lib/contracts";
 import { useProjects, useCreateProject } from "@/lib/hooks/use-projects";
 import { useUiStore } from "@/lib/stores/ui-store";
@@ -6,6 +6,8 @@ import { ProjectForm } from "@/components/forms/project-form";
 import { ProjectCard } from "@/components/projects/project-card";
 import { notify } from "@/lib/notify";
 import {
+  AddActionButton,
+  AppScrollView,
   Button,
   EmptyState,
   ErrorShow,
@@ -40,7 +42,7 @@ export default function ProjetosScreen() {
   };
 
   return (
-    <ScrollView className="flex-1" contentContainerClassName="gap-6 px-4 pb-8">
+    <AppScrollView contentContainerClassName="gap-6 px-4 pb-8">
       <View className="flex-row items-center justify-between">
         <View className="flex-1 gap-1">
           <Text className="text-2xl font-semibold tracking-tight text-foreground">
@@ -50,7 +52,10 @@ export default function ProjetosScreen() {
             Organize seus sistemas e testes de seguranca.
           </Text>
         </View>
-        <Button onPress={handleOpen}>Novo projeto</Button>
+        <AddActionButton
+          onPress={handleOpen}
+          accessibilityLabel="Novo projeto"
+        />
       </View>
 
       {isLoading ? (
@@ -61,7 +66,12 @@ export default function ProjetosScreen() {
         <EmptyState
           title="Nenhum projeto ainda"
           description="Crie seu primeiro projeto para comecar a cadastrar sistemas."
-          action={<Button onPress={handleOpen}>Criar projeto</Button>}
+          action={
+            <AddActionButton
+              onPress={handleOpen}
+              accessibilityLabel="Criar projeto"
+            />
+          }
         />
       ) : (
         <View className="gap-4">
@@ -91,6 +101,6 @@ export default function ProjetosScreen() {
           }}
         />
       </Modal>
-    </ScrollView>
+    </AppScrollView>
   );
 }

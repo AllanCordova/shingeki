@@ -1,4 +1,4 @@
-import { Controller, useForm, type Control, type FieldErrors } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { View } from "react-native";
 import {
@@ -9,16 +9,11 @@ import {
 } from "@/lib/contracts";
 import { applyApiFieldErrors } from "@/lib/forms";
 import type { ApiError } from "@/lib/api/error-handler";
-import {
-  CoverFields,
-  type CoverFieldValues,
-} from "@/components/forms/cover-fields";
 import { Button, ErrorShow, Field, Input } from "@/components/ui";
 
 interface SystemFormProps {
   mode?: "create" | "edit";
   defaultValues?: Partial<SystemCreateInput>;
-  currentCoverPath?: string | null;
   submitLabel?: string;
   isLoading: boolean;
   error: ApiError | null;
@@ -29,7 +24,6 @@ interface SystemFormProps {
 export function SystemForm({
   mode = "create",
   defaultValues,
-  currentCoverPath,
   submitLabel = "Salvar",
   isLoading,
   error,
@@ -49,8 +43,6 @@ export function SystemForm({
       name: defaultValues?.name ?? "",
       target_url: defaultValues?.target_url ?? "",
       repository_url: defaultValues?.repository_url ?? "",
-      cover: undefined,
-      cover_upload_id: undefined,
     },
   });
 
@@ -66,13 +58,6 @@ export function SystemForm({
   return (
     <View className="gap-4">
       {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
-
-      <CoverFields
-        control={control as Control<CoverFieldValues>}
-        errors={errors as FieldErrors<CoverFieldValues>}
-        currentCoverPath={currentCoverPath}
-        isEdit={isEdit}
-      />
 
       <Field label="Nome" error={errors.name?.message}>
         <Controller

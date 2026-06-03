@@ -12,16 +12,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: docs-${{ github.ref }}
+  group: docs-pages-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   deploy:
     name: Deploy MkDocs to GitHub Pages
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,5 +41,14 @@ jobs:
       - name: Install MkDocs
         run: pip install -r requirements-docs.txt
 
-      - name: Build and deploy
-        run: mkdocs gh-deploy --force
+      - name: Build site
+        run: mkdocs build --strict
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

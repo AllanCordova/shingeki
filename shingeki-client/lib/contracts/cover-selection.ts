@@ -53,3 +53,17 @@ export function createWithCoverSchema<T extends z.ZodRawShape>(base: T) {
 export function updateWithCoverSchema<T extends z.ZodRawShape>(base: T) {
   return withCoverSelection({ ...base, ...coverUpdateFields });
 }
+
+export const coverUpdateOnlySchema = withCoverSelection(
+  coverUpdateFields,
+).superRefine((data, ctx) => {
+  if (!data.cover && !data.cover_upload_id) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Envie uma imagem ou selecione uma da biblioteca.",
+      path: ["cover"],
+    });
+  }
+});
+
+export type CoverUpdateOnlyInput = z.infer<typeof coverUpdateOnlySchema>;

@@ -1,6 +1,7 @@
 site_name: Shingeki
 site_description: Documentação do projeto Shingeki — DAST, API Laravel e clients web/mobile
 site_url: https://allancordova.github.io/shingeki/
+dev_addr: 127.0.0.1:8001
 repo_url: https://github.com/AllanCordova/shingeki
 repo_name: AllanCordova/shingeki
 edit_uri: edit/main/docs/
@@ -28,6 +29,7 @@ theme:
     - search.suggest
     - search.highlight
     - toc.follow
+    - content.action.edit
 
 plugins:
   - search:
@@ -51,6 +53,13 @@ markdown_extensions:
 nav:
   - Início: index.md
   - Como rodar: RUN-PROJECT.md
+  - Arquitetura:
+    - Visão geral: ARCHITECTURE.md
+    - shingeki-api: architecture/shingeki-api.md
+    - shingeki-client: architecture/shingeki-client.md
+    - shingeki-mobile: architecture/shingeki-mobile.md
+    - shingeki-dast-worker: architecture/shingeki-dast-worker.md
+    - shingeki-vulnerable-target: architecture/shingeki-vulnerable-target.md
   - API:
     - Visão geral: API.md
     - Autenticação: api/AUTHENTICATION.md
@@ -61,7 +70,8 @@ nav:
   - Desenvolvimento:
     - Web (Next.js): WEB-DEVELOPMENT.md
     - Mobile (Expo): MOBILE-DEVELOPMENT.md
-  - CI: CI.md
+  - CI:
+    - Visão geral: ci/overview.md
 
 extra:
   social:

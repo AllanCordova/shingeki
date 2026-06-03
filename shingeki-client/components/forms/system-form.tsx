@@ -1,41 +1,58 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, type Control, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { systemCreateSchema, type SystemCreateInput } from "@/lib/contracts";
+import {
+  systemCreateSchema,
+  systemUpdateSchema,
+  type SystemCreateInput,
+  type SystemUpdateInput,
+} from "@/lib/contracts";
 import { applyApiFieldErrors } from "@/lib/forms";
 import type { ApiError } from "@/lib/api/error-handler";
+import {
+  CoverFields,
+  type CoverFieldValues,
+} from "@/components/forms/cover-fields";
 import { Button, ErrorShow, Field, Input } from "@/components/ui";
 
 interface SystemFormProps {
+  mode?: "create" | "edit";
   defaultValues?: Partial<SystemCreateInput>;
+  currentCoverPath?: string | null;
   submitLabel?: string;
   isLoading: boolean;
   error: ApiError | null;
-  onSubmit: (values: SystemCreateInput) => Promise<void>;
+  onSubmit: (values: SystemCreateInput | SystemUpdateInput) => Promise<void>;
   onCancel?: () => void;
 }
 
 export function SystemForm({
+  mode = "create",
   defaultValues,
+  currentCoverPath,
   submitLabel = "Salvar",
   isLoading,
   error,
   onSubmit,
   onCancel,
 }: SystemFormProps) {
+  const isEdit = mode === "edit";
+
   const {
     register,
     handleSubmit,
+    control,
     setError,
     formState: { errors },
-  } = useForm<SystemCreateInput>({
-    resolver: zodResolver(systemCreateSchema),
+  } = useForm<SystemCreateInput | SystemUpdateInput>({
+    resolver: zodResolver(isEdit ? systemUpdateSchema : systemCreateSchema),
     defaultValues: {
       name: defaultValues?.name ?? "",
-      cover_path: defaultValues?.cover_path ?? "",
       target_url: defaultValues?.target_url ?? "",
       repository_url: defaultValues?.repository_url ?? "",
+      cover: undefined,
+      cover_upload_id: undefined,
     },
   });
 
@@ -51,26 +68,19 @@ export function SystemForm({
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
 
+      <CoverFields
+        control={control as Control<CoverFieldValues>}
+        errors={errors as FieldErrors<CoverFieldValues>}
+        currentCoverPath={currentCoverPath}
+        isEdit={isEdit}
+      />
+
       <Field label="Nome" htmlFor="name" error={errors.name?.message}>
         <Input
           id="name"
           placeholder="Ex: API de pagamentos"
           hasError={Boolean(errors.name)}
           {...register("name")}
-        />
-      </Field>
-
-      <Field
-        label="Capa (URL da imagem)"
-        htmlFor="cover_path"
-        error={errors.cover_path?.message}
-        hint="Link direto da imagem (https://images.pexels.com/...), nao a pagina do site."
-      >
-        <Input
-          id="cover_path"
-          placeholder="https://images.pexels.com/photos/.../foto.jpeg"
-          hasError={Boolean(errors.cover_path)}
-          {...register("cover_path")}
         />
       </Field>
 

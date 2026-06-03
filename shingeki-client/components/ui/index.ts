@@ -1,5 +1,11 @@
 export { CoverImage } from "./cover-image";
 export { CoverHero } from "./cover-hero";
+export { CoverUpload } from "./cover-upload";
+export { CoverLibraryPicker } from "./cover-library-picker";
+export { CoverStockPicker } from "./cover-stock-picker";
+export { AddActionButton } from "./add-action-button";
+export { ImageUploadIcon, PlusIcon, TrashIcon } from "./icons";
+export { UserAvatarLink } from "./user-avatar-link";
 export { Button } from "./button";
 export { Input } from "./input";
 export { Textarea } from "./textarea";
