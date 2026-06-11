@@ -18,9 +18,12 @@ export type AttackCategory =
 
 export type AttackRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;
 
+export type AttackScanTypeValue = "DAST" | "SAST";
+
 export interface Attack extends Timestamps {
   id: string;
   user_id: string;
+  scan_type?: AttackScanTypeValue;
   category: AttackCategory;
   target_location: string;
   risk_level: AttackRiskLevel;
@@ -33,6 +36,7 @@ export interface AttackDispatch extends Timestamps {
   id: string;
   system_id: string;
   user_id: string;
+  scan_type?: AttackScanTypeValue;
   attacks_count: number;
   dispatched_at: string | null;
   completed_at: string | null;

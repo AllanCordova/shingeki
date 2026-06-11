@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useDispatches } from "@/lib/hooks/use-results";
 import { formatDate } from "@/lib/utils";
+import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
   Card,
@@ -58,9 +59,12 @@ export function DispatchesList({
                   className="flex items-center justify-between gap-4 py-3 transition-colors hover:bg-surface-muted"
                 >
                   <div className="flex flex-col gap-1">
-                    <span className="text-sm font-medium text-foreground">
-                      {formatDate(dispatch.dispatched_at)}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-foreground">
+                        {formatDate(dispatch.dispatched_at)}
+                      </span>
+                      <ScanTypeBadge scanType={dispatch.scan_type} />
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       {dispatch.attacks_count} ataque(s)
                       {dispatch.findings_count !== null
