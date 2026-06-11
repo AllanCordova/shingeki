@@ -59,6 +59,7 @@ nav:
     - shingeki-client: architecture/shingeki-client.md
     - shingeki-mobile: architecture/shingeki-mobile.md
     - shingeki-dast-worker: architecture/shingeki-dast-worker.md
+    - shingeki-sast-worker: architecture/shingeki-sast-worker.md
     - shingeki-vulnerable-target: architecture/shingeki-vulnerable-target.md
   - API:
     - Visão geral: API.md

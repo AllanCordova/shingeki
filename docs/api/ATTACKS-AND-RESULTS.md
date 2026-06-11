@@ -1,14 +1,14 @@
-# API — Ataques DAST e resultados
+# API — Ataques DAST/SAST e resultados
 
 Disparo assíncrono via RabbitMQ e consulta de achados. Voltar ao [índice da API](../API.md).
 
-Requer worker, filas e (para testes reais) alvo vulnerável. API e stack Docker: [RUN-PROJECT.md](../RUN-PROJECT.md).
+Requer workers, filas e (para DAST em laboratório) alvo vulnerável. API e stack Docker: [RUN-PROJECT.md](../RUN-PROJECT.md).
 
 ## Ambiente de laboratório
 
 ### Stack completa
 
-Na raiz do monorepo (MySQL, RabbitMQ, worker DAST e alvo vulnerável):
+Na raiz do monorepo (MySQL, RabbitMQ, workers DAST/SAST e alvo vulnerável):
 
 ```bash
 docker compose up -d --build
@@ -40,11 +40,11 @@ Valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (raiz, `shingeki-api` e container d
 
 Fluxo de assinaturas (gerar, validar, revogar): [SIGNATURES.md](SIGNATURES.md).
 
-## POST .../attacks/dispatch
+## POST .../attacks/dispatch (DAST)
 
 `POST /api/projects/{project}/systems/{system}/attacks/dispatch`
 
-Enfileira o catálogo de ataques para o sistema.
+Enfileira o catálogo **DAST** (`scan_type: DAST`) para o sistema. Publica na fila `attacks.dispatch`.
 
 **Body (JSON):**
 
@@ -58,11 +58,12 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
 
 ```json
 {
-  "message": "Attack catalog dispatched to processing queue.",
+  "message": "DAST attack catalog dispatched to processing queue.",
   "dispatch": {
     "id": "uuid",
     "system_id": "uuid",
     "user_id": "uuid",
+    "scan_type": "DAST",
     "attacks_count": 12,
     "dispatched_at": "...",
     "completed_at": null,
@@ -77,6 +78,7 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
     {
       "id": "uuid",
       "user_id": "uuid",
+      "scan_type": "DAST",
       "category": "...",
       "target_location": "...",
       "risk_level": "...",
@@ -91,6 +93,20 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
 **Resposta `403`:** token de assinatura inválido ou não autorizado.
 
 **Resposta `422`:** catálogo de ataques indisponível ou erro de configuração.
+
+## POST .../attacks/dispatch/sast (SAST)
+
+`POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast`
+
+Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [shingeki-sast-worker](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
+
+**Body (JSON):** igual ao dispatch DAST (`signature_token` obrigatório).
+
+**Pré-requisito:** o sistema deve ter `repository_url` preenchido (repositório Git público no MVP).
+
+**Resposta `202`:** igual ao DAST, com `scan_type: SAST` e mensagem `SAST attack catalog dispatched to processing queue.`
+
+**Resposta `422`:** `repository_url` ausente, catálogo SAST vazio ou erro de configuração.
 
 ## GET .../system-results
 

@@ -72,7 +72,8 @@ Exemplo de validação:
 - `POST /api/projects/{project}/systems/{system}/signatures/generate`
 - `POST /api/projects/{project}/systems/{system}/signatures/validate`
 - `POST /api/projects/{project}/systems/{system}/signatures/revoke`
-- `POST /api/projects/{project}/systems/{system}/attacks/dispatch`
+- `POST /api/projects/{project}/systems/{system}/attacks/dispatch` (DAST)
+- `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast` (SAST)
 - `GET /api/projects/{project}/systems/{system}/system-results`
 - `GET /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
 

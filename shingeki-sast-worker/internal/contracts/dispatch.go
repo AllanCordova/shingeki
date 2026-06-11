@@ -13,22 +13,15 @@ const (
 )
 
 type DispatchBatch struct {
-	Event          string       `json:"event"`
-	ScanType       string       `json:"scan_type"`
-	DispatchID     string       `json:"dispatch_id"`
-	SystemID       string       `json:"system_id"`
-	UserID         string       `json:"user_id"`
-	TargetURL      string       `json:"target_url"`
-	RepositoryURL  string       `json:"repository_url"`
-	Attacks        []AttackItem `json:"attacks"`
-	DispatchedAt   string       `json:"dispatched_at"`
-}
-
-func (b DispatchBatch) EffectiveScanType() string {
-	if b.ScanType == "" {
-		return ScanTypeDast
-	}
-	return b.ScanType
+	Event         string       `json:"event"`
+	ScanType      string       `json:"scan_type"`
+	DispatchID    string       `json:"dispatch_id"`
+	SystemID      string       `json:"system_id"`
+	UserID        string       `json:"user_id"`
+	TargetURL     string       `json:"target_url"`
+	RepositoryURL string       `json:"repository_url"`
+	Attacks       []AttackItem `json:"attacks"`
+	DispatchedAt  string       `json:"dispatched_at"`
 }
 
 type AttackItem struct {
@@ -50,6 +43,13 @@ func ParseDispatchBatch(data []byte) (DispatchBatch, error) {
 	return batch, nil
 }
 
+func (b DispatchBatch) EffectiveScanType() string {
+	if b.ScanType == "" {
+		return ScanTypeDast
+	}
+	return b.ScanType
+}
+
 func (b DispatchBatch) Validate() error {
 	if b.Event != EventDispatchBatch {
 		return fmt.Errorf("unexpected event %q, want %q", b.Event, EventDispatchBatch)
@@ -67,11 +67,11 @@ func (b DispatchBatch) Validate() error {
 	if scanType != ScanTypeDast && scanType != ScanTypeSast {
 		return fmt.Errorf("unexpected scan_type %q", scanType)
 	}
-	if scanType != ScanTypeDast {
-		return fmt.Errorf("dast worker only accepts scan_type %q, got %q", ScanTypeDast, scanType)
+	if scanType != ScanTypeSast {
+		return fmt.Errorf("sast worker only accepts scan_type %q, got %q", ScanTypeSast, scanType)
 	}
-	if b.TargetURL == "" {
-		return fmt.Errorf("target_url is required")
+	if b.RepositoryURL == "" {
+		return fmt.Errorf("repository_url is required")
 	}
 	if len(b.Attacks) == 0 {
 		return fmt.Errorf("attacks must not be empty")
@@ -109,4 +109,11 @@ func (b DispatchBatch) ParsedDispatchedAt() time.Time {
 		return time.Time{}
 	}
 	return t
+}
+
+func (b DispatchBatch) PrimaryAttackID() string {
+	if len(b.Attacks) == 0 {
+		return ""
+	}
+	return b.Attacks[0].AttackID
 }

@@ -3,37 +3,10 @@ package contracts_test
 import (
 	"testing"
 
-	"github.com/shingeki/dast-worker/internal/contracts"
+	"github.com/shingeki/sast-worker/internal/contracts"
 )
 
-func TestParseDispatchBatchValid(t *testing.T) {
-	raw := []byte(`{
-		"event": "attack.dispatch.batch",
-		"dispatch_id": "dispatch-1",
-		"system_id": "sys-1",
-		"user_id": "user-1",
-		"target_url": "https://example.com",
-		"repository_url": "https://github.com/org/repo",
-		"attacks": [{
-			"attack_id": "atk-1",
-			"category": "SQL_INJECTION",
-			"target_location": "FORM",
-			"risk_level": "HIGH",
-			"payload": {"field":"email","value":"' OR 1=1 --"}
-		}],
-		"dispatched_at": "2026-05-28T12:00:00Z"
-	}`)
-
-	batch, err := contracts.ParseDispatchBatch(raw)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if batch.SystemID != "sys-1" || len(batch.Attacks) != 1 {
-		t.Fatalf("unexpected batch: %+v", batch)
-	}
-}
-
-func TestParseDispatchBatchRejectsSast(t *testing.T) {
+func TestParseDispatchBatchValidSast(t *testing.T) {
 	raw := []byte(`{
 		"event": "attack.dispatch.batch",
 		"scan_type": "SAST",
@@ -47,14 +20,45 @@ func TestParseDispatchBatchRejectsSast(t *testing.T) {
 			"category": "SQL_INJECTION",
 			"target_location": "SOURCE_CODE",
 			"risk_level": "HIGH",
-			"payload": {"languages":["php"]}
+			"payload": {"languages":["php","typescript","javascript"]}
+		}],
+		"dispatched_at": "2026-05-28T12:00:00Z"
+	}`)
+
+	batch, err := contracts.ParseDispatchBatch(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if batch.SystemID != "sys-1" || len(batch.Attacks) != 1 {
+		t.Fatalf("unexpected batch: %+v", batch)
+	}
+	if batch.EffectiveScanType() != contracts.ScanTypeSast {
+		t.Fatalf("expected SAST scan type, got %q", batch.EffectiveScanType())
+	}
+}
+
+func TestParseDispatchBatchRejectsDast(t *testing.T) {
+	raw := []byte(`{
+		"event": "attack.dispatch.batch",
+		"scan_type": "DAST",
+		"dispatch_id": "dispatch-1",
+		"system_id": "sys-1",
+		"user_id": "user-1",
+		"target_url": "https://example.com",
+		"repository_url": "https://github.com/org/repo",
+		"attacks": [{
+			"attack_id": "atk-1",
+			"category": "SQL_INJECTION",
+			"target_location": "FORM",
+			"risk_level": "HIGH",
+			"payload": {"field":"email"}
 		}],
 		"dispatched_at": "2026-05-28T12:00:00Z"
 	}`)
 
 	_, err := contracts.ParseDispatchBatch(raw)
 	if err == nil {
-		t.Fatal("expected validation error for SAST batch on dast worker")
+		t.Fatal("expected validation error for DAST batch")
 	}
 }
 
@@ -63,10 +67,10 @@ func TestResultMessageValidate(t *testing.T) {
 		DispatchID:      "dispatch-1",
 		AttackID:        "atk-1",
 		SystemID:        "sys-1",
-		VulnerableRoute: "/login",
-		PayloadUsed:     "test",
+		VulnerableRoute: "src/app.php:42",
+		PayloadUsed:     "php.lang.security.sql-injection",
 		Evidence:        "proof",
-		HTTPRequest:     "GET / HTTP/1.1",
+		HTTPRequest:     "file: src/app.php",
 	}
 	if err := msg.Validate(); err != nil {
 		t.Fatalf("expected valid message: %v", err)
