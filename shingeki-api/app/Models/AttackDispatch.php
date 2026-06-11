@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AttackScanType;
 use Database\Factories\AttackDispatchFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -24,6 +25,7 @@ class AttackDispatch extends Model
     protected $fillable = [
         'system_id',
         'user_id',
+        'scan_type',
         'attacks_count',
         'dispatched_at',
         'completed_at',
@@ -37,6 +39,7 @@ class AttackDispatch extends Model
     protected function casts(): array
     {
         return [
+            'scan_type' => AttackScanType::class,
             'dispatched_at' => 'datetime',
             'completed_at' => 'datetime',
             'duration_ms' => 'integer',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttackScanType;
 use App\Http\Requests\AttackDispatch as AttackDispatchRequest;
 use App\Models\Attack;
 use App\Models\AttackDispatch;
@@ -24,6 +25,26 @@ class AttackController extends Controller
 
     public function dispatch(AttackDispatchRequest $request, Project $project, System $system): JsonResponse
     {
+        return $this->dispatchScan($request, $project, $system, AttackScanType::Dast);
+    }
+
+    public function dispatchSast(AttackDispatchRequest $request, Project $project, System $system): JsonResponse
+    {
+        if (blank($system->repository_url)) {
+            return response()->json([
+                'message' => 'System repository_url is required for SAST dispatch.',
+            ], 422);
+        }
+
+        return $this->dispatchScan($request, $project, $system, AttackScanType::Sast);
+    }
+
+    private function dispatchScan(
+        AttackDispatchRequest $request,
+        Project $project,
+        System $system,
+        AttackScanType $scanType,
+    ): JsonResponse {
         $this->authorize('create', [Attack::class, $system]);
 
         try {
@@ -39,7 +60,7 @@ class AttackController extends Controller
         }
 
         try {
-            $attacks = $this->attackCatalog->catalogAttacksOrFail();
+            $attacks = $this->attackCatalog->catalogAttacksOrFail($scanType);
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
@@ -49,6 +70,7 @@ class AttackController extends Controller
         $dispatch = AttackDispatch::create([
             'system_id' => $system->id,
             'user_id' => $request->user()->id,
+            'scan_type' => $scanType,
             'attacks_count' => $attacks->count(),
             'dispatched_at' => now(),
         ]);
@@ -58,10 +80,13 @@ class AttackController extends Controller
             $system,
             $request->user(),
             $attacks,
+            $scanType,
         );
 
+        $scanLabel = $scanType === AttackScanType::Sast ? 'SAST' : 'DAST';
+
         return response()->json([
-            'message' => 'Attack catalog dispatched to processing queue.',
+            'message' => "{$scanLabel} attack catalog dispatched to processing queue.",
             'dispatch' => $this->formatDispatch($dispatch),
             'attacks_count' => $attacks->count(),
             'attacks' => $attacks->map(fn (Attack $attack) => $this->formatAttack($attack)),
@@ -77,6 +102,7 @@ class AttackController extends Controller
             'id' => $dispatch->id,
             'system_id' => $dispatch->system_id,
             'user_id' => $dispatch->user_id,
+            'scan_type' => $dispatch->scan_type->value,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,
@@ -96,6 +122,7 @@ class AttackController extends Controller
         return [
             'id' => $attack->id,
             'user_id' => $attack->user_id,
+            'scan_type' => $attack->scan_type->value,
             'category' => $attack->category->value,
             'target_location' => $attack->target_location->value,
             'risk_level' => $attack->risk_level->value,

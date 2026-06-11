@@ -12,4 +12,5 @@ enum AttackTargetLocation: string
     case UrlPath = 'URL_PATH';
     case FileUpload = 'FILE_UPLOAD';
     case ApiEndpoint = 'API_ENDPOINT';
+    case SourceCode = 'SOURCE_CODE';
 }

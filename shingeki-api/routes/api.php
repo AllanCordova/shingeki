@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
+    Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
 
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);

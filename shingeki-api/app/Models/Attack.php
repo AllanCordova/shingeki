@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\AttackCategory;
 use App\Enums\AttackRiskLevel;
+use App\Enums\AttackScanType;
 use App\Enums\AttackTargetLocation;
 use Database\Factories\AttackFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -26,6 +27,7 @@ class Attack extends Model
      */
     protected $fillable = [
         'user_id',
+        'scan_type',
         'category',
         'payload',
         'target_location',
@@ -38,6 +40,7 @@ class Attack extends Model
     protected function casts(): array
     {
         return [
+            'scan_type' => AttackScanType::class,
             'category' => AttackCategory::class,
             'payload' => 'array',
             'target_location' => AttackTargetLocation::class,

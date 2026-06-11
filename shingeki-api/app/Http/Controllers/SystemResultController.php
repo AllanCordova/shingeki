@@ -55,6 +55,7 @@ class SystemResultController extends Controller
             'id' => $dispatch->id,
             'system_id' => $dispatch->system_id,
             'user_id' => $dispatch->user_id,
+            'scan_type' => $dispatch->scan_type->value,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,
@@ -87,6 +88,7 @@ class SystemResultController extends Controller
         if ($result->relationLoaded('attack') && $result->attack !== null) {
             $data['attack'] = [
                 'id' => $result->attack->id,
+                'scan_type' => $result->attack->scan_type->value,
                 'category' => $result->attack->category->value,
                 'target_location' => $result->attack->target_location->value,
                 'risk_level' => $result->attack->risk_level->value,

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AttackScanType;
 use App\Models\AttackDispatch;
 use App\Models\System;
 use App\Models\User;
@@ -22,6 +23,7 @@ class AttackDispatchFactory extends Factory
         return [
             'system_id' => System::factory(),
             'user_id' => User::factory(),
+            'scan_type' => AttackScanType::Dast,
             'attacks_count' => 3,
             'dispatched_at' => now(),
         ];
