@@ -3,7 +3,10 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { attackDispatchSchema, type AttackDispatchInput } from "@/lib/contracts";
-import { useDispatchAttack } from "@/lib/hooks/use-attack";
+import {
+  useDispatchAttack,
+  type AttackScanType,
+} from "@/lib/hooks/use-attack";
 import { applyApiFieldErrors } from "@/lib/forms";
 import { notify } from "@/lib/notify";
 import type { ApiError } from "@/lib/api/error-handler";
@@ -20,6 +23,11 @@ import {
   Input,
 } from "@/components/ui";
 
+const scanLabels: Record<AttackScanType, string> = {
+  dast: "DAST",
+  sast: "SAST",
+};
+
 export function AttackForm({
   projectId,
   systemId,
@@ -27,10 +35,8 @@ export function AttackForm({
   projectId: string;
   systemId: string;
 }) {
-  const { dispatchAttack, data, isLoading, error } = useDispatchAttack(
-    projectId,
-    systemId,
-  );
+  const { dispatchAttack, data, isLoading, pendingScanType, error } =
+    useDispatchAttack(projectId, systemId);
 
   const {
     register,
@@ -42,17 +48,21 @@ export function AttackForm({
     defaultValues: { signature_token: "" },
   });
 
-  const onSubmit = handleSubmit(async (values) => {
-    try {
-      const result = await dispatchAttack(values);
-      notify.success(
-        `${result.attacks_count} ataque(s) enfileirado(s) para processamento.`,
-      );
-    } catch (err) {
-      applyApiFieldErrors(err as ApiError, setError);
-      notify.fromApiError(err, "Nao foi possivel disparar os ataques.");
-    }
-  });
+  const submitScan = (scanType: AttackScanType) =>
+    handleSubmit(async (values) => {
+      try {
+        const result = await dispatchAttack(values, scanType);
+        notify.success(
+          `${result.attacks_count} ataque(s) ${scanLabels[scanType]} enfileirado(s) para processamento.`,
+        );
+      } catch (err) {
+        applyApiFieldErrors(err as ApiError, setError);
+        notify.fromApiError(
+          err,
+          `Nao foi possivel disparar o ataque ${scanLabels[scanType]}.`,
+        );
+      }
+    });
 
   return (
     <Card>
@@ -64,7 +74,7 @@ export function AttackForm({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+        <form className="flex flex-col gap-4" noValidate>
           {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
 
           <Field
@@ -82,13 +92,31 @@ export function AttackForm({
             />
           </Field>
 
-          <div className="flex items-center justify-between gap-3">
-            <Button type="submit" isLoading={isLoading}>
-              Disparar
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                isLoading={isLoading && pendingScanType === "dast"}
+                disabled={isLoading && pendingScanType !== "dast"}
+                onClick={() => void submitScan("dast")()}
+              >
+                Ataque DAST
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                isLoading={isLoading && pendingScanType === "sast"}
+                disabled={isLoading && pendingScanType !== "sast"}
+                onClick={() => void submitScan("sast")()}
+              >
+                Ataque SAST
+              </Button>
+            </div>
             {data ? (
               <Badge tone="success">
-                {data.attacks_count} ataque(s) enfileirado(s)
+                {data.attacks_count} ataque(s) {scanLabels[data.scanType]}{" "}
+                enfileirado(s)
               </Badge>
             ) : null}
           </div>

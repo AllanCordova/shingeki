@@ -46,6 +46,30 @@ services:
     networks:
       - shingeki
 
+  sast-worker:
+    build:
+      context: ./shingeki-sast-worker
+      dockerfile: deployments/Dockerfile
+    container_name: shingeki-sast-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+      - path: ./shingeki-sast-worker/.env
+        required: false
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_ATTACKS_DISPATCH_QUEUE: ${RABBITMQ_ATTACKS_SAST_DISPATCH_QUEUE:-attacks.sast.dispatch}
+      RABBITMQ_ATTACKS_RESULTS_QUEUE: ${RABBITMQ_ATTACKS_RESULTS_QUEUE:-attacks.results}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - shingeki
+
   dast-worker:
     build:
       context: ./shingeki-dast-worker

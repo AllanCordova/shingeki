@@ -6,10 +6,15 @@ import (
 	"time"
 )
 
-const EventDispatchBatch = "attack.dispatch.batch"
+const (
+	EventDispatchBatch = "attack.dispatch.batch"
+	ScanTypeDast       = "DAST"
+	ScanTypeSast       = "SAST"
+)
 
 type DispatchBatch struct {
 	Event          string       `json:"event"`
+	ScanType       string       `json:"scan_type"`
 	DispatchID     string       `json:"dispatch_id"`
 	SystemID       string       `json:"system_id"`
 	UserID         string       `json:"user_id"`
@@ -17,6 +22,13 @@ type DispatchBatch struct {
 	RepositoryURL  string       `json:"repository_url"`
 	Attacks        []AttackItem `json:"attacks"`
 	DispatchedAt   string       `json:"dispatched_at"`
+}
+
+func (b DispatchBatch) EffectiveScanType() string {
+	if b.ScanType == "" {
+		return ScanTypeDast
+	}
+	return b.ScanType
 }
 
 type AttackItem struct {
@@ -50,6 +62,13 @@ func (b DispatchBatch) Validate() error {
 	}
 	if b.UserID == "" {
 		return fmt.Errorf("user_id is required")
+	}
+	scanType := b.EffectiveScanType()
+	if scanType != ScanTypeDast && scanType != ScanTypeSast {
+		return fmt.Errorf("unexpected scan_type %q", scanType)
+	}
+	if scanType != ScanTypeDast {
+		return fmt.Errorf("dast worker only accepts scan_type %q, got %q", ScanTypeDast, scanType)
 	}
 	if b.TargetURL == "" {
 		return fmt.Errorf("target_url is required")

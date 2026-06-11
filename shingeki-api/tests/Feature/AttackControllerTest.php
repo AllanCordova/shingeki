@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AttackScanType;
 use App\Enums\SignatureStatus;
 use App\Models\Attack;
 use App\Models\AttackDispatch;
@@ -14,6 +15,11 @@ use Laravel\Sanctum\Sanctum;
 function attackDispatchUrl(Project $project, System $system): string
 {
     return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/dispatch';
+}
+
+function attackSastDispatchUrl(Project $project, System $system): string
+{
+    return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/dispatch/sast';
 }
 
 function validAttackDispatchPayload(string $signatureToken): array
@@ -35,6 +41,7 @@ describe('POST attacks/dispatch', function () {
 
         $admin = User::factory()->create(['email' => 'admin@admin.com']);
         $catalogAttacks = Attack::factory()->count(2)->for($admin)->create();
+        Attack::factory()->sast()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -55,6 +62,7 @@ describe('POST attacks/dispatch', function () {
                 Mockery::on(fn (System $queuedSystem) => $queuedSystem->is($system)),
                 Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
                 Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === $catalogAttacks->pluck('id')->all()),
+                AttackScanType::Dast,
             );
 
         $response = $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload($token));
@@ -62,18 +70,20 @@ describe('POST attacks/dispatch', function () {
         $response
             ->assertAccepted()
             ->assertJson([
-                'message' => 'Attack catalog dispatched to processing queue.',
+                'message' => 'DAST attack catalog dispatched to processing queue.',
                 'attacks_count' => 2,
             ])
             ->assertJsonStructure([
-                'dispatch' => ['id', 'system_id', 'user_id', 'attacks_count', 'dispatched_at'],
+                'dispatch' => ['id', 'system_id', 'user_id', 'scan_type', 'attacks_count', 'dispatched_at'],
                 'attacks' => [
-                    ['id', 'category', 'target_location', 'risk_level', 'payload'],
+                    ['id', 'scan_type', 'category', 'target_location', 'risk_level', 'payload'],
                 ],
-            ]);
+            ])
+            ->assertJsonPath('dispatch.scan_type', 'DAST');
 
         expect(Attack::query()->where('user_id', $user->id)->count())->toBe(0)
-            ->and(AttackDispatch::query()->where('system_id', $system->id)->count())->toBe(1);
+            ->and(AttackDispatch::query()->where('system_id', $system->id)->count())->toBe(1)
+            ->and(AttackDispatch::query()->where('system_id', $system->id)->first()?->scan_type)->toBe(AttackScanType::Dast);
     });
 
     test('returns unprocessable when catalog is empty', function () {
@@ -128,5 +138,72 @@ describe('POST attacks/dispatch', function () {
 
         $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload(str_repeat('e', 64)))
             ->assertNotFound();
+    });
+});
+
+describe('POST attacks/dispatch/sast', function () {
+    test('dispatches sast catalog attacks when signature is permitted', function () {
+        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
+
+        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->count(2)->for($admin)->create();
+        $sastAttack = Attack::factory()->sast()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'repository_url' => 'https://github.com/org/repo',
+        ]);
+        $token = str_repeat('s', 64);
+
+        Signature::factory()->for($user)->for($system)->permitted()->create([
+            'token' => $token,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once()
+            ->with(
+                Mockery::type(AttackDispatch::class),
+                Mockery::on(fn (System $queuedSystem) => $queuedSystem->is($system)),
+                Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
+                Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === [$sastAttack->id]),
+                AttackScanType::Sast,
+            );
+
+        $response = $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload($token));
+
+        $response
+            ->assertAccepted()
+            ->assertJson([
+                'message' => 'SAST attack catalog dispatched to processing queue.',
+                'attacks_count' => 1,
+            ])
+            ->assertJsonPath('dispatch.scan_type', 'SAST');
+    });
+
+    test('returns unprocessable when repository url is missing', function () {
+        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
+
+        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->sast()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $system->update(['repository_url' => '']);
+        $token = str_repeat('r', 64);
+
+        Signature::factory()->for($user)->for($system)->permitted()->create([
+            'token' => $token,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload($token))
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'System repository_url is required for SAST dispatch.');
     });
 });

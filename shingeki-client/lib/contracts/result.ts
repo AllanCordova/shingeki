@@ -1,5 +1,5 @@
 import type { Timestamps } from "./common";
-import type { AttackDispatch } from "./attack";
+import type { AttackDispatch, AttackScanTypeValue } from "./attack";
 
 export interface SystemResult extends Timestamps {
   id: string;
@@ -12,6 +12,7 @@ export interface SystemResult extends Timestamps {
   http_request: string | null;
   attack?: {
     id: string;
+    scan_type?: AttackScanTypeValue;
     category: string;
     target_location: string;
     risk_level: string;

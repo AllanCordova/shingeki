@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useResults } from "@/lib/hooks/use-results";
 import { formatDate } from "@/lib/utils";
+import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
   Card,
@@ -51,10 +52,11 @@ export default function ResultsDetailPage() {
       ) : (
         <>
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 Disparo {formatDate(dispatch?.dispatched_at)}
               </h1>
+              <ScanTypeBadge scanType={dispatch?.scan_type} />
               <Badge
                 tone={dispatch?.status === "completed" ? "success" : "warning"}
               >
@@ -93,6 +95,11 @@ export default function ResultsDetailPage() {
                       <CardTitle>
                         {result.attack?.category ?? "Vulnerabilidade"}
                       </CardTitle>
+                      <ScanTypeBadge
+                        scanType={
+                          result.attack?.scan_type ?? dispatch?.scan_type
+                        }
+                      />
                       {result.attack?.risk_level ? (
                         <Badge tone={riskTone(result.attack.risk_level)}>
                           {result.attack.risk_level}

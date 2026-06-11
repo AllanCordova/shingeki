@@ -2,6 +2,7 @@
 
 namespace App\Services\Attack;
 
+use App\Enums\AttackScanType;
 use App\Models\Attack;
 use Illuminate\Database\Eloquent\Collection;
 use RuntimeException;
@@ -11,9 +12,10 @@ class AttackCatalogService
     /**
      * @return Collection<int, Attack>
      */
-    public function catalogAttacks(): Collection
+    public function catalogAttacks(AttackScanType $scanType = AttackScanType::Dast): Collection
     {
         return Attack::query()
+            ->where('scan_type', $scanType)
             ->whereHas('user', function ($query): void {
                 $query->where('email', config('attacks.catalog_admin_email'));
             })
@@ -24,9 +26,9 @@ class AttackCatalogService
     /**
      * @return Collection<int, Attack>
      */
-    public function catalogAttacksOrFail(): Collection
+    public function catalogAttacksOrFail(AttackScanType $scanType = AttackScanType::Dast): Collection
     {
-        $attacks = $this->catalogAttacks();
+        $attacks = $this->catalogAttacks($scanType);
 
         if ($attacks->isEmpty()) {
             throw new RuntimeException('No catalog attacks are available for dispatch.');

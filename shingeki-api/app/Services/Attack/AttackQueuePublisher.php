@@ -2,6 +2,7 @@
 
 namespace App\Services\Attack;
 
+use App\Enums\AttackScanType;
 use App\Models\Attack;
 use App\Models\AttackDispatch;
 use App\Models\System;
@@ -20,13 +21,17 @@ class AttackQueuePublisher
         System $system,
         User $requestedBy,
         Collection $attacks,
+        AttackScanType $scanType = AttackScanType::Dast,
     ): void {
         $connection = $this->connection();
-        $connection->declareQueue(config('attacks.queues.dispatch'));
+        $dispatchQueue = $this->dispatchQueueFor($scanType);
+
+        $connection->declareQueue($dispatchQueue);
         $connection->declareQueue(config('attacks.queues.results'));
 
         $message = json_encode([
             'event' => 'attack.dispatch.batch',
+            'scan_type' => $scanType->value,
             'dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'user_id' => $requestedBy->id,
@@ -39,7 +44,15 @@ class AttackQueuePublisher
             'dispatched_at' => $dispatch->dispatched_at->toIso8601String(),
         ], JSON_THROW_ON_ERROR);
 
-        $this->connection()->pushRaw($message, config('attacks.queues.dispatch'));
+        $connection->pushRaw($message, $dispatchQueue);
+    }
+
+    private function dispatchQueueFor(AttackScanType $scanType): string
+    {
+        return match ($scanType) {
+            AttackScanType::Dast => config('attacks.queues.dispatch'),
+            AttackScanType::Sast => config('attacks.queues.sast_dispatch'),
+        };
     }
 
     /**
