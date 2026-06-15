@@ -4,7 +4,9 @@ use App\Http\Controllers\AttackController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoverUploadController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RemediationController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\StackController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\SystemResultController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +26,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('cover-uploads', [CoverUploadController::class, 'index']);
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
 
+    Route::get('stacks', [StackController::class, 'index']);
+
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('projects.systems', SystemController::class);
 
@@ -35,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
+    Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);
 
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);

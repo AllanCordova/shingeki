@@ -25,6 +25,8 @@ class SystemCreate extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'target_url' => ['required', 'url', 'max:2048'],
             'repository_url' => ['required', 'url', 'max:2048'],
+            'stack_ids' => ['required', 'array', 'min:1'],
+            'stack_ids.*' => ['uuid', 'exists:stacks,id'],
         ];
     }
 }

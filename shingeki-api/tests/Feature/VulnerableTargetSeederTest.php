@@ -2,8 +2,11 @@
 
 use App\Models\Project;
 use App\Models\Signature;
+use App\Models\Stack;
 use App\Models\System;
 use App\Models\User;
+use Database\Seeders\RemediationCatalogSeeder;
+use Database\Seeders\StackCatalogSeeder;
 use Database\Seeders\VulnerableTargetSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -17,6 +20,8 @@ test('vulnerable target seeder creates lab project system and permitted signatur
 
     User::factory()->create(['email' => 'test@example.com']);
 
+    $this->seed(StackCatalogSeeder::class);
+    $this->seed(RemediationCatalogSeeder::class);
     $this->seed(VulnerableTargetSeeder::class);
 
     $user = User::query()->where('email', 'test@example.com')->firstOrFail();
@@ -44,4 +49,10 @@ test('vulnerable target seeder creates lab project system and permitted signatur
     expect($signature)->not->toBeNull()
         ->and($signature->token)->toBe(str_repeat('b', 64))
         ->and($signature->status->value)->toBe('PERMITTED');
+
+    $vanillaPhp = Stack::query()->where('slug', 'vanilla_php')->firstOrFail();
+
+    expect($system->fresh()->stacks)->toHaveCount(1)
+        ->and($system->stacks->first()->id)->toBe($vanillaPhp->id)
+        ->and($system->stacks->first()->slug)->toBe('vanilla_php');
 });

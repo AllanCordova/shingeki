@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Project;
+use App\Models\Stack;
 use App\Models\System;
 use App\Models\User;
 use App\Models\UserCoverUpload;
@@ -21,12 +22,23 @@ function systemUrl(Project $project, System $system): string
 /**
  * @param  array<string, mixed>  $fields
  */
+function defaultStack(): Stack
+{
+    return Stack::query()->firstOrCreate(
+        ['slug' => 'laravel'],
+        ['name' => 'Laravel', 'languages' => ['php']],
+    );
+}
+
 function validSystemFields(array $overrides = []): array
 {
+    $stackId = $overrides['stack_ids'][0] ?? defaultStack()->id;
+
     return array_merge([
         'name' => 'Main API',
         'target_url' => 'https://app.example.com',
         'repository_url' => 'https://github.com/org/api',
+        'stack_ids' => [$stackId],
     ], $overrides);
 }
 
@@ -64,6 +76,7 @@ function systemJsonStructure(): array
         'name',
         'target_url',
         'repository_url',
+        'stacks',
         'created_at',
         'updated_at',
     ];

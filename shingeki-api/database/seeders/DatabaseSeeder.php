@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(AttackCatalogSeeder::class);
+        $this->call(StackCatalogSeeder::class);
+        $this->call(RemediationCatalogSeeder::class);
 
         $user = User::firstOrCreate(
             ['email' => 'test@example.com'],
