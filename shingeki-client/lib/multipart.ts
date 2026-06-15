@@ -53,6 +53,9 @@ export function buildSystemCreateFormData(input: SystemCreateInput): FormData {
   formData.append("name", input.name);
   formData.append("target_url", input.target_url);
   formData.append("repository_url", input.repository_url);
+  input.stack_ids.forEach((stackId) => {
+    formData.append("stack_ids[]", stackId);
+  });
   appendCoverFields(formData, input);
   return formData;
 }
@@ -80,6 +83,13 @@ export function buildSystemUpdateFormData(
 
   if (input.cover || input.cover_upload_id) {
     appendCoverFields(formData, input);
+    hasField = true;
+  }
+
+  if (input.stack_ids !== undefined) {
+    input.stack_ids.forEach((stackId) => {
+      formData.append("stack_ids[]", stackId);
+    });
     hasField = true;
   }
 

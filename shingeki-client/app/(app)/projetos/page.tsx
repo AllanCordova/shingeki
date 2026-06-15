@@ -90,19 +90,21 @@ export default function ProjetosPage() {
         description="Preencha os dados do projeto."
         size={FORM_MODAL_SIZE}
       >
-        <ProjectForm
-          isLoading={isCreating}
-          error={createError}
-          submitLabel="Criar projeto"
-          onCancel={handleClose}
-          onSubmit={async (values) => {
-            const ok = await notify.run(
-              () => createProject(values as ProjectCreateInput),
-              { success: "Projeto criado com sucesso." },
-            );
-            if (ok) handleClose();
-          }}
-        />
+        {isOpen ? (
+          <ProjectForm
+            isLoading={isCreating}
+            error={createError}
+            submitLabel="Criar projeto"
+            onCancel={handleClose}
+            onSubmit={async (values) => {
+              const ok = await notify.run(
+                () => createProject(values as ProjectCreateInput),
+                { success: "Projeto criado com sucesso." },
+              );
+              if (ok) handleClose();
+            }}
+          />
+        ) : null}
       </Modal>
     </div>
   );

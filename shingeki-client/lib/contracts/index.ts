@@ -9,3 +9,5 @@ export * from "./system";
 export * from "./signature";
 export * from "./attack";
 export * from "./result";
+export * from "./stack";
+export * from "./remediation";

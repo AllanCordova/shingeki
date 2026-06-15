@@ -164,25 +164,27 @@ export default function ProjectDetailPage() {
         title="Editar projeto"
         size={FORM_MODAL_SIZE}
       >
-        <ProjectForm
-          mode="edit"
-          isLoading={updateProject.isLoading}
-          error={updateProject.error}
-          submitLabel="Salvar alteracoes"
-          currentCoverPath={project.cover_path}
-          defaultValues={{
-            name: project.name,
-            description: project.description,
-          }}
-          onCancel={() => setEditOpen(false)}
-          onSubmit={async (values) => {
-            const ok = await notify.run(
-              () => updateProject.updateProject(values),
-              { success: "Projeto atualizado." },
-            );
-            if (ok) setEditOpen(false);
-          }}
-        />
+        {editOpen ? (
+          <ProjectForm
+            mode="edit"
+            isLoading={updateProject.isLoading}
+            error={updateProject.error}
+            submitLabel="Salvar alteracoes"
+            currentCoverPath={project.cover_path}
+            defaultValues={{
+              name: project.name,
+              description: project.description,
+            }}
+            onCancel={() => setEditOpen(false)}
+            onSubmit={async (values) => {
+              const ok = await notify.run(
+                () => updateProject.updateProject(values),
+                { success: "Projeto atualizado." },
+              );
+              if (ok) setEditOpen(false);
+            }}
+          />
+        ) : null}
       </Modal>
 
       <Modal
@@ -191,19 +193,21 @@ export default function ProjectDetailPage() {
         title="Novo sistema"
         size={FORM_MODAL_SIZE}
       >
-        <SystemForm
-          isLoading={createSystem.isLoading}
-          error={createSystem.error}
-          submitLabel="Criar sistema"
-          onCancel={() => setSystemOpen(false)}
-          onSubmit={async (values) => {
-            const ok = await notify.run(
-              () => createSystem.createSystem(values as SystemCreateInput),
-              { success: "Sistema criado." },
-            );
-            if (ok) setSystemOpen(false);
-          }}
-        />
+        {systemOpen ? (
+          <SystemForm
+            isLoading={createSystem.isLoading}
+            error={createSystem.error}
+            submitLabel="Criar sistema"
+            onCancel={() => setSystemOpen(false)}
+            onSubmit={async (values) => {
+              const ok = await notify.run(
+                () => createSystem.createSystem(values as SystemCreateInput),
+                { success: "Sistema criado." },
+              );
+              if (ok) setSystemOpen(false);
+            }}
+          />
+        ) : null}
       </Modal>
 
       <Modal

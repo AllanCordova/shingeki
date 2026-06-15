@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useResults } from "@/lib/hooks/use-results";
 import { formatDate } from "@/lib/utils";
+import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
@@ -112,7 +113,16 @@ export default function ResultsDetailPage() {
                       <Detail label="Rota vulneravel" value={result.vulnerable_route} />
                     ) : null}
                     {result.payload_used ? (
-                      <Detail label="Payload" value={result.payload_used} mono />
+                      <Detail
+                        label={
+                          (result.attack?.scan_type ?? dispatch?.scan_type) ===
+                          "SAST"
+                            ? "Regra"
+                            : "Payload"
+                        }
+                        value={result.payload_used}
+                        mono
+                      />
                     ) : null}
                     {result.evidence ? (
                       <Detail label="Evidencia" value={result.evidence} mono />
@@ -129,6 +139,14 @@ export default function ResultsDetailPage() {
               ))}
             </div>
           )}
+
+          {dispatch?.status === "completed" ? (
+            <RemediationPanel
+              projectId={projectId}
+              systemId={systemId}
+              dispatchId={dispatchId}
+            />
+          ) : null}
         </>
       )}
     </div>

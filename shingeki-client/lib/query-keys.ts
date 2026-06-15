@@ -7,6 +7,7 @@ export const queryKeys = {
 
   coverUploads: ["cover-uploads"] as const,
   coverStockImages: (query: string) => ["cover-stock-images", query] as const,
+  stacks: ["stacks"] as const,
 
   projects: ["projects"] as const,
   project: (projectId: string) => ["projects", projectId] as const,
