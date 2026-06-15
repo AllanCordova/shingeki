@@ -13,6 +13,7 @@ import { SystemForm } from "@/components/forms/system-form";
 import { SignaturePanel } from "@/components/signature/signature-panel";
 import { AttackForm } from "@/components/attack/attack-form";
 import { DispatchesList } from "@/components/results/dispatches-list";
+import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { notify } from "@/lib/notify";
 import { FORM_MODAL_SIZE } from "@/lib/ui";
 import {
@@ -106,6 +107,8 @@ export default function SystemDetailPage() {
 
       <DispatchesList projectId={projectId} systemId={systemId} />
 
+      <RemediationPanel projectId={projectId} systemId={systemId} />
+
       <CoverUpdateModal
         open={coverOpen}
         onClose={() => setCoverOpen(false)}
@@ -127,26 +130,29 @@ export default function SystemDetailPage() {
         title="Editar sistema"
         size={FORM_MODAL_SIZE}
       >
-        <SystemForm
-          mode="edit"
-          isLoading={updateSystem.isLoading}
-          error={updateSystem.error}
-          submitLabel="Salvar alteracoes"
-          currentCoverPath={system.cover_path}
-          defaultValues={{
-            name: system.name,
-            target_url: system.target_url,
-            repository_url: system.repository_url,
-          }}
-          onCancel={() => setEditOpen(false)}
-          onSubmit={async (values) => {
-            const ok = await notify.run(
-              () => updateSystem.updateSystem(values),
-              { success: "Sistema atualizado." },
-            );
-            if (ok) setEditOpen(false);
-          }}
-        />
+        {editOpen ? (
+          <SystemForm
+            mode="edit"
+            isLoading={updateSystem.isLoading}
+            error={updateSystem.error}
+            submitLabel="Salvar alteracoes"
+            currentCoverPath={system.cover_path}
+            defaultValues={{
+              name: system.name,
+              target_url: system.target_url,
+              repository_url: system.repository_url,
+              stack_ids: system.stacks?.map((stack) => stack.id) ?? [],
+            }}
+            onCancel={() => setEditOpen(false)}
+            onSubmit={async (values) => {
+              const ok = await notify.run(
+                () => updateSystem.updateSystem(values),
+                { success: "Sistema atualizado." },
+              );
+              if (ok) setEditOpen(false);
+            }}
+          />
+        ) : null}
       </Modal>
 
       <Modal

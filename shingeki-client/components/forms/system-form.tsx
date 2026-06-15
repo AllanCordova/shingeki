@@ -14,11 +14,12 @@ import {
   CoverFields,
   type CoverFieldValues,
 } from "@/components/forms/cover-fields";
+import { StackFields } from "@/components/forms/stack-fields";
 import { Button, ErrorShow, Field, Input } from "@/components/ui";
 
 interface SystemFormProps {
   mode?: "create" | "edit";
-  defaultValues?: Partial<SystemCreateInput>;
+  defaultValues?: Partial<SystemCreateInput> & { stack_ids?: string[] };
   currentCoverPath?: string | null;
   submitLabel?: string;
   isLoading: boolean;
@@ -51,6 +52,7 @@ export function SystemForm({
       name: defaultValues?.name ?? "",
       target_url: defaultValues?.target_url ?? "",
       repository_url: defaultValues?.repository_url ?? "",
+      stack_ids: defaultValues?.stack_ids ?? [],
       cover: undefined,
       cover_upload_id: undefined,
     },
@@ -67,13 +69,6 @@ export function SystemForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
-
-      <CoverFields
-        control={control as Control<CoverFieldValues>}
-        errors={errors as FieldErrors<CoverFieldValues>}
-        currentCoverPath={currentCoverPath}
-        isEdit={isEdit}
-      />
 
       <Field label="Nome" htmlFor="name" error={errors.name?.message}>
         <Input
@@ -110,6 +105,19 @@ export function SystemForm({
           {...register("repository_url")}
         />
       </Field>
+
+      <StackFields
+        control={control as Control<{ stack_ids: string[] }>}
+        errors={errors as FieldErrors<{ stack_ids: string[] }>}
+      />
+
+      <CoverFields
+        control={control as Control<CoverFieldValues>}
+        errors={errors as FieldErrors<CoverFieldValues>}
+        currentCoverPath={currentCoverPath}
+        isEdit={isEdit}
+        collapsible
+      />
 
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (

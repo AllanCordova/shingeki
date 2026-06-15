@@ -67,13 +67,6 @@ export function ProjectForm({
     <form onSubmit={submit} className="flex flex-col gap-4" noValidate>
       {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
 
-      <CoverFields
-        control={control as Control<CoverFieldValues>}
-        errors={errors as FieldErrors<CoverFieldValues>}
-        currentCoverPath={currentCoverPath}
-        isEdit={isEdit}
-      />
-
       <Field label="Nome" htmlFor="name" error={errors.name?.message}>
         <Input
           id="name"
@@ -95,6 +88,14 @@ export function ProjectForm({
           {...register("description")}
         />
       </Field>
+
+      <CoverFields
+        control={control as Control<CoverFieldValues>}
+        errors={errors as FieldErrors<CoverFieldValues>}
+        currentCoverPath={currentCoverPath}
+        isEdit={isEdit}
+        collapsible
+      />
 
       <div className="flex items-center justify-end gap-2">
         {onCancel ? (
