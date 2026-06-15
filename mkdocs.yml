@@ -65,9 +65,11 @@ nav:
     - Visão geral: API.md
     - Autenticação: api/AUTHENTICATION.md
     - Projetos e sistemas: api/PROJECTS-AND-SYSTEMS.md
+    - Stacks: api/STACKS.md
     - Capas: api/COVERS.md
     - Assinaturas: api/SIGNATURES.md
     - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
+    - Remediação: api/REMEDIATION.md
   - Desenvolvimento:
     - Web (Next.js): WEB-DEVELOPMENT.md
     - Mobile (Expo): MOBILE-DEVELOPMENT.md

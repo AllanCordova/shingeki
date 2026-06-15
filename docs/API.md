@@ -47,9 +47,11 @@ Exemplo de validação:
 |--------|------|
 | Autenticação | [api/AUTHENTICATION.md](api/AUTHENTICATION.md) |
 | Projetos e sistemas | [api/PROJECTS-AND-SYSTEMS.md](api/PROJECTS-AND-SYSTEMS.md) |
+| Stacks tecnológicas | [api/STACKS.md](api/STACKS.md) |
 | Capas e biblioteca | [api/COVERS.md](api/COVERS.md) |
 | Assinaturas digitais | [api/SIGNATURES.md](api/SIGNATURES.md) |
-| Ataques DAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
+| Ataques DAST/SAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
+| Remediação (snippets) | [api/REMEDIATION.md](api/REMEDIATION.md) |
 
 ## Índice de rotas
 
@@ -65,6 +67,7 @@ Exemplo de validação:
 - `PUT /api/auth/me`
 - `GET /api/cover-uploads`
 - `DELETE /api/cover-uploads/{coverUpload}`
+- `GET /api/stacks`
 - `GET|POST /api/projects`
 - `GET|PUT|DELETE /api/projects/{project}`
 - `GET|POST /api/projects/{project}/systems`
@@ -76,6 +79,7 @@ Exemplo de validação:
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast` (SAST)
 - `GET /api/projects/{project}/systems/{system}/system-results`
 - `GET /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
+- `POST /api/projects/{project}/systems/{system}/remediate`
 
 Recursos aninhados (`project`, `system`) são resolvidos por UUID e restritos ao dono (policies).
 
