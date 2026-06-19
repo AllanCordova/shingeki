@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AttackDispatch;
+use App\Models\DispatchProbe;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
@@ -37,10 +38,20 @@ class SystemResultController extends Controller
             ->latest()
             ->get();
 
+        $probes = DispatchProbe::query()
+            ->with('attack')
+            ->where('attack_dispatch_id', $attackDispatch->id)
+            ->latest()
+            ->get();
+
         return response()->json([
             'dispatch' => $this->formatDispatch($attackDispatch),
             'results' => $results
                 ->map(fn (SystemResult $result) => $this->formatResult($result))
+                ->values()
+                ->all(),
+            'probes' => $probes
+                ->map(fn (DispatchProbe $probe) => $this->formatProbe($probe))
                 ->values()
                 ->all(),
         ]);
@@ -51,6 +62,7 @@ class SystemResultController extends Controller
         $this->authorize('deleteBatch', $attackDispatch);
 
         $attackDispatch->systemResults()->delete();
+        $attackDispatch->dispatchProbes()->delete();
         $attackDispatch->delete();
 
         return response()->json([
@@ -63,6 +75,10 @@ class SystemResultController extends Controller
         $this->authorize('deleteAny', [SystemResult::class, $system]);
 
         SystemResult::query()
+            ->where('system_id', $system->id)
+            ->delete();
+
+        DispatchProbe::query()
             ->where('system_id', $system->id)
             ->delete();
 
@@ -90,6 +106,9 @@ class SystemResultController extends Controller
             'completed_at' => $dispatch->completed_at,
             'duration_ms' => $dispatch->duration_ms,
             'findings_count' => $dispatch->findings_count,
+            'probes_count' => $dispatch->probes_count,
+            'vectors_discovered' => $dispatch->vectors_discovered,
+            'jobs_planned' => $dispatch->jobs_planned,
             'status' => $dispatch->completed_at === null ? 'pending' : 'completed',
             'created_at' => $dispatch->created_at,
             'updated_at' => $dispatch->updated_at,
@@ -121,6 +140,39 @@ class SystemResultController extends Controller
                 'category' => $result->attack->category->value,
                 'target_location' => $result->attack->target_location->value,
                 'risk_level' => $result->attack->risk_level->value,
+            ];
+        }
+
+        return $data;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatProbe(DispatchProbe $probe): array
+    {
+        $data = [
+            'id' => $probe->id,
+            'attack_dispatch_id' => $probe->attack_dispatch_id,
+            'system_id' => $probe->system_id,
+            'attack_id' => $probe->attack_id,
+            'route' => $probe->route,
+            'payload_used' => $probe->payload_used,
+            'http_request' => $probe->http_request,
+            'outcome' => $probe->outcome->value,
+            'evidence' => $probe->evidence,
+            'error_message' => $probe->error_message,
+            'created_at' => $probe->created_at,
+            'updated_at' => $probe->updated_at,
+        ];
+
+        if ($probe->relationLoaded('attack') && $probe->attack !== null) {
+            $data['attack'] = [
+                'id' => $probe->attack->id,
+                'scan_type' => $probe->attack->scan_type->value,
+                'category' => $probe->attack->category->value,
+                'target_location' => $probe->attack->target_location->value,
+                'risk_level' => $probe->attack->risk_level->value,
             ];
         }
 

@@ -8,6 +8,7 @@ use App\Models\Stack;
 use App\Models\System;
 use App\Models\SystemResult;
 use App\Services\Remediation\RemediationResolver;
+use App\Services\Source\SourceContext;
 use App\Services\Source\SourceContextService;
 use Illuminate\Support\Collection;
 use RuntimeException;
@@ -198,7 +199,7 @@ class AiRemediationService
      */
     private function formatFindingResponse(
         SystemResult $result,
-        \App\Services\Source\SourceContext $source,
+        SourceContext $source,
         array $aiSuggestion,
         bool $cached,
     ): array {

@@ -21,7 +21,9 @@ class TargetSessionCaptureService
      *   ticket: string,
      *   mode: string,
      *   popup_url: string,
-     *   capture_callback_url: string|null
+     *   capture_callback_url: string|null,
+     *   target_origin: string,
+     *   client_origin: string,
      * }
      */
     public function start(User $user, System $system, string $clientOrigin): array
@@ -47,18 +49,25 @@ class TargetSessionCaptureService
                 'mode' => 'same_origin',
                 'popup_url' => $popupUrl,
                 'capture_callback_url' => null,
+                'target_origin' => $targetOrigin,
+                'client_origin' => $clientOrigin,
             ];
         }
 
         $loginUrl = $system->login_url ?? rtrim($system->target_url, '/').'/login.php';
-        $captureCallbackUrl = rtrim($system->target_url, '/').'/shingeki-capture.php?ticket='.$ticket->id;
-        $popupUrl = $this->appendQueryParam($loginUrl, 'next', $captureCallbackUrl);
+        $captureApiBase = rtrim((string) config('app.url'), '/').'/api';
+        $capturePath = '/shingeki-capture.php?ticket='.$ticket->id
+            .'&client_origin='.rawurlencode($clientOrigin)
+            .'&api_base='.rawurlencode($captureApiBase);
+        $popupUrl = $this->appendQueryParam($loginUrl, 'next', $capturePath);
 
         return [
             'ticket' => $ticket->id,
             'mode' => 'external',
             'popup_url' => $popupUrl,
-            'capture_callback_url' => $captureCallbackUrl,
+            'capture_callback_url' => rtrim($system->target_url, '/').$capturePath,
+            'target_origin' => $targetOrigin,
+            'client_origin' => $clientOrigin,
         ];
     }
 

@@ -221,6 +221,20 @@ describe('POST /api/projects/{project}/systems', function () {
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['target_url']);
     });
+
+    test('rejects docker internal hostnames in target_url', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->post(systemsIndexUrl($project), [
+            ...validSystemFields(['target_url' => 'http://host.docker.internal:8090']),
+            'cover' => UploadedFile::fake()->create('cover.jpg', 100, 'image/jpeg'),
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['target_url']);
+    });
 });
 
 describe('GET /api/projects/{project}/systems/{system}', function () {

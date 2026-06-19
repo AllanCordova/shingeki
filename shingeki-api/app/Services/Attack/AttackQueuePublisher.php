@@ -13,6 +13,10 @@ use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 
 class AttackQueuePublisher
 {
+    public function __construct(
+        private readonly WorkerTargetUrlResolver $targetUrlResolver,
+    ) {}
+
     /**
      * @param  Collection<int, Attack>  $attacks
      */
@@ -36,7 +40,7 @@ class AttackQueuePublisher
             'dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'user_id' => $requestedBy->id,
-            'target_url' => $system->target_url,
+            'target_url' => $this->targetUrlResolver->forWorker($system->target_url),
             'repository_url' => $system->repository_url,
             'attacks' => $attacks
                 ->map(fn (Attack $attack) => $this->formatAttackForQueue($attack))
