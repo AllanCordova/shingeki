@@ -2,30 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ListCatalogItems;
 use App\Http\Requests\StoreCatalogRemediation;
 use App\Http\Requests\UpdateCatalogRemediation;
+use App\Http\Controllers\Concerns\FormatsCatalogItem;
+use App\Http\Controllers\Concerns\FormatsPagination;
+use App\Http\Controllers\Concerns\ResolvesCatalogOwners;
 use App\Models\Remediation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class CatalogRemediationController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    use FormatsCatalogItem;
+    use FormatsPagination;
+    use ResolvesCatalogOwners;
+
+    public function index(ListCatalogItems $request): JsonResponse
     {
         $this->authorize('manageCatalog');
 
-        $remediations = Remediation::query()
+        $query = Remediation::query()
             ->with(['stack:id,slug,name', 'user:id,name,email,role'])
-            ->latest()
-            ->get();
+            ->latest();
+
+        if ($ownerUserId = $request->ownerUserId()) {
+            $query->where('user_id', $ownerUserId);
+        }
+
+        $remediations = $query->paginate(
+            perPage: $request->perPage(),
+            page: $request->page(),
+        );
 
         return response()->json([
             'remediations' => $remediations
+                ->getCollection()
                 ->map(fn (Remediation $remediation) => $this->formatRemediation($remediation, $request->user()))
                 ->values()
                 ->all(),
+            'pagination' => $this->formatPagination($remediations),
+            'owners' => $this->catalogOwnersFor(Remediation::class),
         ]);
     }
 
@@ -103,18 +121,13 @@ class CatalogRemediationController extends Controller
             'description' => $remediation->description,
             'code_snippet' => $remediation->code_snippet,
             'references' => $remediation->references ?? [],
-            'author' => $remediation->relationLoaded('user') && $remediation->user !== null
-                ? [
-                    'id' => $remediation->user->id,
-                    'name' => $remediation->user->name,
-                    'email' => $remediation->user->email,
-                    'role' => $remediation->user->role->value,
-                ]
-                : null,
-            'permissions' => [
-                'update' => Gate::forUser($viewer)->allows('updateCatalogRemediation', $remediation),
-                'delete' => Gate::forUser($viewer)->allows('deleteCatalogRemediation', $remediation),
-            ],
+            'author' => $this->formatCatalogAuthor($remediation),
+            'permissions' => $this->formatCatalogPermissions(
+                $viewer,
+                $remediation,
+                'updateCatalogRemediation',
+                'deleteCatalogRemediation',
+            ),
             'created_at' => $remediation->created_at,
             'updated_at' => $remediation->updated_at,
         ];

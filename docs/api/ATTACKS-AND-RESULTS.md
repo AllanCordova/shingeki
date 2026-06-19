@@ -26,8 +26,9 @@ O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 |----------|-------------|
 | Navegador, popup de login, assinatura | `http://127.0.0.1:8090` ou `http://localhost:8090` |
 | Worker DAST (Docker) | resolvido automaticamente para `http://vulnerable-target` |
+| API — manual proxy | `WorkerTargetUrlResolver::forManualProxy()` — URL do browser/lab (ver [MANUAL-PROXY.md](MANUAL-PROXY.md)) |
 
-**Importante:** nao cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames so existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila.
+**Importante:** nao cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames so existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila. Registros legados com `http://vulnerable-target` funcionam no manual proxy via reescrita automatica.
 
 ### Assinatura do sistema
 
@@ -84,6 +85,8 @@ A API busca a assinatura ativa do usuário para o sistema, verifica expiração 
 ```
 
 **Resposta `403`:** assinatura ausente, expirada ou ainda não permitida para ataques.
+
+Ao receber `202`, a API cria uma notificação `attack_dispatch` com status `pending`. Quando o consumer finaliza o batch, a notificação passa para `completed` ou `failed` e o sininho no client exibe o resultado. Ver [NOTIFICATIONS.md](NOTIFICATIONS.md).
 
 **Resposta `422`:** catálogo de ataques indisponível ou erro de configuração.
 

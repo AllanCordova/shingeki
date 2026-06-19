@@ -36,7 +36,7 @@ export function AttackForm({
     try {
       const result = await dispatchAttack(scanType);
       notify.success(
-        `${result.attacks_count} ataque(s) ${scanLabels[scanType]} enfileirado(s) para processamento.`,
+        `${result.attacks_count} ataque(s) ${scanLabels[scanType]} enfileirado(s). Acompanhe pelo sininho.`,
       );
     } catch (err) {
       notify.fromApiError(

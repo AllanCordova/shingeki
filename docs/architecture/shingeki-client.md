@@ -14,13 +14,14 @@ proxy.ts             # Proteção de rotas privadas; `/` é pública
 lib/
   api/               # Cliente HTTP (browser/servidor) + error-handler (mensagens em PT)
   contracts/         # Schemas Zod (formulários) + tipos de resposta da API
-  hooks/             # React Query por recurso (auth, projects, systems, cover-uploads, attack, results, signature, remediate)
+  hooks/             # React Query (auth, projects, systems, attack, results, notifications, manual-proxy, …)
+  catalog/           # list-query compartilhado para admin de catálogo
   stores/            # Zustand — tema e estado de UI
 components/
   ui/                # Primitivos (Button, Input, Modal, CoverUpload, CoverLibraryPicker, …)
   forms/             # Project, System, CoverFields, login/register
   landing/           # Página inicial pública (seções, nav, scroll)
-  projects/ systems/ signature/ attack/ results/ remediation/
+  projects/ systems/ signature/ attack/ results/ remediation/ notifications/ manual-proxy/
 ```
 
 ## BFF (Backend for Frontend)
@@ -67,7 +68,9 @@ components/
 | Dispatch | Sem campo de token — depende de assinatura validada no sistema |
 | Resultados | Lista com exclusão individual ou em massa (modais) |
 | Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
-| Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações e import CSV |
+| Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações, **paginação**, **filtro por autor** e import CSV |
+| Arsenal manual | `/projetos/.../sistemas/.../arsenal` — proxy HTTP, payload catalogado, mapa de rotas; link no hero do sistema |
+| Notificações | Sininho no header (`NotificationBell`); poll 20s; badge unread + pending; toasts após dispatch/import CSV |
 
 ## Paridade com o mobile
 

@@ -1,8 +1,8 @@
 import { forwardToApi } from "@/lib/api/server";
-import { respond } from "@/lib/api/route-helpers";
+import { forwardGetWithQuery, respond } from "@/lib/api/route-helpers";
 
-export async function GET() {
-  return respond(await forwardToApi("get", "/catalog/remediations"));
+export async function GET(request: Request) {
+  return forwardGetWithQuery(request, "/catalog/remediations");
 }
 
 export async function POST(request: Request) {

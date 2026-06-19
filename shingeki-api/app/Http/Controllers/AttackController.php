@@ -10,6 +10,7 @@ use App\Models\Project;
 use App\Models\System;
 use App\Services\Attack\AttackCatalogService;
 use App\Services\Attack\AttackQueuePublisher;
+use App\Services\Notification\UserNotificationService;
 use App\Services\Signature\SignatureAuthorizationService;
 use App\Services\TargetSession\TargetSessionService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -23,6 +24,7 @@ class AttackController extends Controller
         private readonly AttackCatalogService $attackCatalog,
         private readonly AttackQueuePublisher $attackQueuePublisher,
         private readonly TargetSessionService $targetSessionService,
+        private readonly UserNotificationService $userNotificationService,
     ) {}
 
     public function dispatch(AttackDispatchRequest $request, Project $project, System $system): JsonResponse
@@ -85,7 +87,9 @@ class AttackController extends Controller
             $this->targetSessionService->resolveQueueAuth($request->user(), $system),
         );
 
-        $scanLabel = $scanType === AttackScanType::Sast ? 'SAST' : 'DAST';
+        $this->userNotificationService->trackAttackDispatchPending($dispatch);
+
+        $scanLabel = $scanType->label();
         $targetSession = $this->targetSessionService->findActiveSession($request->user(), $system);
 
         return response()->json([

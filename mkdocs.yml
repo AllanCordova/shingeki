@@ -77,6 +77,8 @@ nav:
       - Assinaturas: api/SIGNATURES.md
       - Sessão do alvo: api/TARGET-SESSION.md
       - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
+      - Arsenal manual: api/MANUAL-PROXY.md
+      - Notificações: api/NOTIFICATIONS.md
     - Catálogo e remediação:
       - Catálogo global: api/CATALOG.md
       - Importação CSV: api/CATALOG-BULK-IMPORT.md

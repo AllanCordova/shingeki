@@ -39,4 +39,9 @@ enum UserRole: string
 
         return $this->isAdmin() || $ownerUserId === $actorUserId;
     }
+
+    public function canUseManualProxy(): bool
+    {
+        return $this->isAdmin() || $this === self::Specialist;
+    }
 }

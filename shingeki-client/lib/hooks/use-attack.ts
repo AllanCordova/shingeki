@@ -33,6 +33,7 @@ export function useDispatchAttack(projectId: string, systemId: string) {
       queryClient.invalidateQueries({
         queryKey: queryKeys.dispatches(projectId, systemId),
       });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notificationsAll });
     },
   });
 

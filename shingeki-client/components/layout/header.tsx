@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { UserAvatarLink } from "@/components/ui/user-avatar-link";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useLogout, useMe } from "@/lib/hooks/use-auth";
 import { notify } from "@/lib/notify";
 import { ThemeToggle } from "./theme-toggle";
@@ -40,6 +41,7 @@ export function Header() {
               <span className="hidden text-sm text-muted-foreground sm:inline">
                 {user.name}
               </span>
+              <NotificationBell enabled />
               <UserAvatarLink name={user.name} avatarPath={user.avatar_path} />
             </>
           ) : null}

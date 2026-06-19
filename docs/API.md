@@ -64,6 +64,8 @@ Use esta página como índice. Detalhes de cada módulo ficam nos guias abaixo (
 | Assinaturas digitais | [api/SIGNATURES.md](api/SIGNATURES.md) |
 | Sessão do alvo (DAST autenticado) | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Ataques DAST/SAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
+| Arsenal manual (proxy) | [api/MANUAL-PROXY.md](api/MANUAL-PROXY.md) |
+| Notificações in-app | [api/NOTIFICATIONS.md](api/NOTIFICATIONS.md) |
 
 ### Catálogo e remediação
 
@@ -110,6 +112,8 @@ Use esta página como índice. Detalhes de cada módulo ficam nos guias abaixo (
 - `DELETE /api/projects/{project}/systems/{system}/target-session`
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch` (DAST)
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast` (SAST)
+- `GET|POST /api/projects/{project}/systems/{system}/manual-proxy/send` e CRUD `/manual-proxy/routes` (`ADMIN`, `SPECIALIST`)
+- `GET /api/notifications`, `GET /api/notifications/unread-count`, `PATCH /api/notifications/{id}/read`, `POST /api/notifications/read-all`
 - `GET /api/projects/{project}/systems/{system}/system-results`
 - `DELETE /api/projects/{project}/systems/{system}/system-results`
 - `GET /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`

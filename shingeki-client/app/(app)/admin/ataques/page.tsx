@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { CatalogBulkImport } from "@/components/admin/catalog-bulk-import";
+import { CatalogOwnerFilter } from "@/components/admin/catalog-owner-filter";
 import { CatalogAttackForm } from "@/components/forms/catalog-attack-form";
 import {
   useCatalogAttacks,
@@ -11,6 +13,7 @@ import { useUiStore } from "@/lib/stores/ui-store";
 import { notify } from "@/lib/notify";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
 import {
   AddActionButton,
   Badge,
@@ -22,6 +25,7 @@ import {
   CardTitle,
   EmptyState,
   ErrorShow,
+  ListPagination,
   Loading,
   SidePanel,
 } from "@/components/ui";
@@ -30,14 +34,32 @@ const PANEL_KEY = "create-catalog-attack";
 
 export default function AdminAtaquesPage() {
   const queryClient = useQueryClient();
-  const { attacks, isLoading, isError, error, refetch } = useCatalogAttacks();
+  const [page, setPage] = useState(1);
+  const [ownerId, setOwnerId] = useState<string | null>(null);
+
+  const listParams = {
+    page,
+    per_page: DEFAULT_PAGE_SIZE,
+    user_id: ownerId,
+  };
+
+  const {
+    attacks,
+    pagination,
+    owners,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useCatalogAttacks(listParams);
   const {
     createAttack,
     isLoading: isCreating,
     error: createError,
     reset,
   } = useCreateCatalogAttack();
-  const { deleteAttack, isLoading: isDeleting } = useDeleteCatalogAttack();
+  const { deleteAttack, deletingId } = useDeleteCatalogAttack();
 
   const openModals = useUiStore((state) => state.openModals);
   const openModal = useUiStore((state) => state.openModal);
@@ -53,6 +75,14 @@ export default function AdminAtaquesPage() {
     reset();
     closeModal(PANEL_KEY);
   };
+
+  const handleOwnerChange = (userId: string | null) => {
+    setOwnerId(userId);
+    setPage(1);
+  };
+
+  const hasFilter = ownerId !== null;
+  const isEmpty = (pagination?.total ?? 0) === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -78,64 +108,86 @@ export default function AdminAtaquesPage() {
         importPath="/catalog/attacks/import"
         docsHint="CSV com ate 200 linhas. Baixe o template para ver colunas e valores aceitos."
         onCompleted={() => {
-          void queryClient.invalidateQueries({ queryKey: queryKeys.catalogAttacks });
+          void queryClient.invalidateQueries({ queryKey: queryKeys.catalogAttacksAll });
         }}
+      />
+
+      <CatalogOwnerFilter
+        owners={owners}
+        value={ownerId}
+        onChange={handleOwnerChange}
       />
 
       {isLoading ? (
         <Loading label="Carregando ataques..." />
       ) : isError ? (
         <ErrorShow error={error} onRetry={() => refetch()} />
-      ) : attacks.length === 0 ? (
+      ) : isEmpty ? (
         <EmptyState
-          title="Nenhum ataque cadastrado"
-          description="Adicione o primeiro vetor ao catalogo global."
+          title={hasFilter ? "Nenhum ataque deste autor" : "Nenhum ataque cadastrado"}
+          description={
+            hasFilter
+              ? "Tente outro autor ou volte para todos."
+              : "Adicione o primeiro vetor ao catalogo global."
+          }
           action={
-            <AddActionButton
-              onClick={handleOpen}
-              aria-label="Cadastrar ataque"
-              title="Cadastrar ataque"
-            />
+            hasFilter ? undefined : (
+              <AddActionButton
+                onClick={handleOpen}
+                aria-label="Cadastrar ataque"
+                title="Cadastrar ataque"
+              />
+            )
           }
         />
       ) : (
-        <div className="grid gap-4">
-          {attacks.map((attack) => (
-            <Card key={attack.id}>
-              <CardHeader className="flex flex-row items-start justify-between gap-4">
-                <div>
-                  <CardTitle className="text-base">{attack.category}</CardTitle>
-                  <CardDescription>
-                    {attack.scan_type} · {attack.target_location} ·{" "}
-                    {attack.risk_level}
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge tone="neutral">{attack.author?.name ?? "—"}</Badge>
-                  {attack.permissions.delete ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      isLoading={isDeleting}
-                      onClick={() =>
-                        void notify.run(
-                          () => deleteAttack(attack.id),
-                          { success: "Ataque removido." },
-                        )
-                      }
-                    >
-                      Remover
-                    </Button>
-                  ) : null}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <pre className="overflow-x-auto rounded-app bg-muted p-3 text-xs">
-                  {JSON.stringify(attack.payload, null, 2)}
-                </pre>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-4">
+            {attacks.map((attack) => (
+              <Card key={attack.id}>
+                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-base">{attack.category}</CardTitle>
+                    <CardDescription>
+                      {attack.scan_type} · {attack.target_location} ·{" "}
+                      {attack.risk_level}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge tone="neutral">{attack.author?.name ?? "—"}</Badge>
+                    {attack.permissions.delete ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        isLoading={deletingId === attack.id}
+                        onClick={() =>
+                          void notify.run(
+                            () => deleteAttack(attack.id),
+                            { success: "Ataque removido." },
+                          )
+                        }
+                      >
+                        Remover
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <pre className="overflow-x-auto rounded-app bg-muted p-3 text-xs">
+                    {JSON.stringify(attack.payload, null, 2)}
+                  </pre>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {pagination ? (
+            <ListPagination
+              pagination={pagination}
+              isFetching={isFetching}
+              onPageChange={setPage}
+            />
+          ) : null}
         </div>
       )}
 
