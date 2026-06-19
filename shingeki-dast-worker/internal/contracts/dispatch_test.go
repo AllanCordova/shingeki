@@ -33,6 +33,31 @@ func TestParseDispatchBatchValid(t *testing.T) {
 	}
 }
 
+func TestParseDispatchBatchRejectsSast(t *testing.T) {
+	raw := []byte(`{
+		"event": "attack.dispatch.batch",
+		"scan_type": "SAST",
+		"dispatch_id": "dispatch-1",
+		"system_id": "sys-1",
+		"user_id": "user-1",
+		"target_url": "https://example.com",
+		"repository_url": "https://github.com/org/repo",
+		"attacks": [{
+			"attack_id": "atk-1",
+			"category": "SQL_INJECTION",
+			"target_location": "SOURCE_CODE",
+			"risk_level": "HIGH",
+			"payload": {"languages":["php"]}
+		}],
+		"dispatched_at": "2026-05-28T12:00:00Z"
+	}`)
+
+	_, err := contracts.ParseDispatchBatch(raw)
+	if err == nil {
+		t.Fatal("expected validation error for SAST batch on dast worker")
+	}
+}
+
 func TestResultMessageValidate(t *testing.T) {
 	msg := contracts.ResultMessage{
 		DispatchID:      "dispatch-1",

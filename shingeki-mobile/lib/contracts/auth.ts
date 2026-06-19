@@ -35,7 +35,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type UpdateProfileNameInput = z.infer<typeof updateProfileNameSchema>;
 
-export type UserRole = "user" | "admin";
+export type UserRole = "USER" | "ADMIN" | "SPECIALIST";
 
 export interface User extends Timestamps {
   id: string;

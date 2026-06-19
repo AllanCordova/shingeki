@@ -4,6 +4,9 @@ Backend em [`shingeki-api/`](../shingeki-api/). Todas as rotas abaixo usam o pre
 
 **Base URL local:** `http://127.0.0.1:8000/api`
 
+!!! tip "Navegação"
+    Use a **aba API** no topo e a **sidebar** (Conta e recursos, Scan e segurança, Catálogo e remediação) para ir direto a um módulo. Esta página resume rotas e erros comuns. Voltar ao [início](index.md).
+
 ## Autenticação
 
 Rotas protegidas exigem header:
@@ -26,7 +29,7 @@ O token é retornado em `POST /api/auth/register` e `POST /api/auth/login` (Lara
 | Status | Situação |
 |--------|----------|
 | `401` | Token ausente, inválido ou credenciais incorretas no login |
-| `403` | Sem permissão (policy) ou token de assinatura não autorizado no dispatch |
+| `403` | Sem permissão (policy), papel insuficiente (`USER` em rotas de catálogo) ou assinatura ausente/expirada/não permitida no dispatch |
 | `404` | Recurso inexistente ou fora do escopo do usuário |
 | `422` | Validação (`errors` por campo) ou regra de negócio (ex.: capa em uso na biblioteca) |
 
@@ -43,13 +46,33 @@ Exemplo de validação:
 
 ## Documentação por módulo
 
+Use esta página como índice. Detalhes de cada módulo ficam nos guias abaixo (também acessíveis pela **busca** do site, `Ctrl+K`).
+
+### Conta e recursos
+
 | Módulo | Guia |
 |--------|------|
-| Autenticação | [api/AUTHENTICATION.md](api/AUTHENTICATION.md) |
+| Autenticação e papéis | [api/AUTHENTICATION.md](api/AUTHENTICATION.md) |
 | Projetos e sistemas | [api/PROJECTS-AND-SYSTEMS.md](api/PROJECTS-AND-SYSTEMS.md) |
+| Stacks tecnológicas | [api/STACKS.md](api/STACKS.md) |
 | Capas e biblioteca | [api/COVERS.md](api/COVERS.md) |
+
+### Scan e segurança
+
+| Módulo | Guia |
+|--------|------|
 | Assinaturas digitais | [api/SIGNATURES.md](api/SIGNATURES.md) |
-| Ataques DAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
+| Sessão do alvo (DAST autenticado) | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
+| Ataques DAST/SAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
+
+### Catálogo e remediação
+
+| Módulo | Guia |
+|--------|------|
+| Catálogo global (ataques e medicações) | [api/CATALOG.md](api/CATALOG.md) |
+| Importação CSV do catálogo | [api/CATALOG-BULK-IMPORT.md](api/CATALOG-BULK-IMPORT.md) |
+| Remediação (snippets) | [api/REMEDIATION.md](api/REMEDIATION.md) |
+| Remediação com IA | [api/REMEDIATION.md](api/REMEDIATION.md#post-remediateai) |
 
 ## Índice de rotas
 
@@ -57,6 +80,7 @@ Exemplo de validação:
 
 - `POST /api/auth/register`
 - `POST /api/auth/login`
+- `POST /api/target-session/capture/{ticket}`
 
 ### Protegidas (`auth:sanctum`)
 
@@ -65,6 +89,14 @@ Exemplo de validação:
 - `PUT /api/auth/me`
 - `GET /api/cover-uploads`
 - `DELETE /api/cover-uploads/{coverUpload}`
+- `GET /api/stacks`
+- `GET|POST|PUT|DELETE /api/catalog/attacks` e `/api/catalog/attacks/{attack}` (`ADMIN`, `SPECIALIST`)
+- `GET|POST|PUT|DELETE /api/catalog/remediations` e `/api/catalog/remediations/{remediation}` (`ADMIN`, `SPECIALIST`)
+- `GET /api/catalog/attacks/import/template`
+- `POST /api/catalog/attacks/import`
+- `GET /api/catalog/remediations/import/template`
+- `POST /api/catalog/remediations/import`
+- `GET /api/catalog/imports/{import}` (somente imports do próprio usuário)
 - `GET|POST /api/projects`
 - `GET|PUT|DELETE /api/projects/{project}`
 - `GET|POST /api/projects/{project}/systems`
@@ -72,9 +104,18 @@ Exemplo de validação:
 - `POST /api/projects/{project}/systems/{system}/signatures/generate`
 - `POST /api/projects/{project}/systems/{system}/signatures/validate`
 - `POST /api/projects/{project}/systems/{system}/signatures/revoke`
-- `POST /api/projects/{project}/systems/{system}/attacks/dispatch`
+- `GET /api/projects/{project}/systems/{system}/target-session`
+- `POST /api/projects/{project}/systems/{system}/target-session`
+- `POST /api/projects/{project}/systems/{system}/target-session/connect/start`
+- `DELETE /api/projects/{project}/systems/{system}/target-session`
+- `POST /api/projects/{project}/systems/{system}/attacks/dispatch` (DAST)
+- `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast` (SAST)
 - `GET /api/projects/{project}/systems/{system}/system-results`
+- `DELETE /api/projects/{project}/systems/{system}/system-results`
 - `GET /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
+- `DELETE /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
+- `POST /api/projects/{project}/systems/{system}/remediate`
+- `POST /api/projects/{project}/systems/{system}/remediate/ai` (throttle 10/min)
 
 Recursos aninhados (`project`, `system`) são resolvidos por UUID e restritos ao dono (policies).
 

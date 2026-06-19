@@ -80,8 +80,9 @@ export function SignaturePanel({
       <CardHeader>
         <CardTitle>Assinatura do sistema</CardTitle>
         <CardDescription>
-          Gere um token, instale no HTML do alvo (meta tag) e valide a posse
-          antes de disparar ataques.
+          Gere um token, instale a meta tag no HTML do alvo e valide a
+          instalacao. O token fica salvo no sistema — nao e necessario informa-lo
+          ao disparar ataques.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">

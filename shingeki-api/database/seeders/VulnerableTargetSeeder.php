@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\SignatureStatus;
 use App\Models\Project;
 use App\Models\Signature;
+use App\Models\Stack;
 use App\Models\System;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -51,6 +52,14 @@ class VulnerableTargetSeeder extends Seeder
                 'repository_url' => 'https://github.com/shingeki/vulnerable-target',
             ],
         );
+
+        $vanillaPhp = Stack::query()->where('slug', 'vanilla_php')->first();
+
+        if ($vanillaPhp !== null) {
+            $system->stacks()->sync([
+                $vanillaPhp->id => ['is_primary' => true],
+            ]);
+        }
 
         Signature::query()->updateOrCreate(
             [

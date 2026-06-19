@@ -270,7 +270,7 @@ export function CoverUpload({
               onRemove={onRemoveLibraryUpload}
               isRemoving={isRemovingLibrary}
               removeError={removeLibraryError}
-              disabled={Boolean(value) || isPickingStock}
+              disabled={isPickingStock}
             />
           ) : null}
 
@@ -287,7 +287,7 @@ export function CoverUpload({
               onPick={handlePickStockImage}
               isPicking={isPickingStock}
               pickError={stockPickError}
-              disabled={Boolean(selectedUploadId)}
+              disabled={isPickingStock}
             />
           ) : null}
 

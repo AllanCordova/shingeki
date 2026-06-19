@@ -1,14 +1,6 @@
-import { z } from "zod";
 import type { Timestamps } from "./common";
 
-export const attackDispatchSchema = z.object({
-  signature_token: z
-    .string()
-    .min(1, "Informe o token de assinatura.")
-    .length(64, "O token de assinatura deve ter exatamente 64 caracteres."),
-});
-
-export type AttackDispatchInput = z.infer<typeof attackDispatchSchema>;
+export type AttackDispatchInput = Record<string, never>;
 
 export type AttackCategory =
   | "SQL_INJECTION"

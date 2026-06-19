@@ -110,8 +110,46 @@
   border-color: var(--border);
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Landing page — minimalista, alinhado ao tema P&B do app */
+.landing-page {
+  color-scheme: dark;
+}
+
+/* Seção clara: texto sempre escuro (ignora tema dark do app) */
+.landing-section--light {
+  color-scheme: light;
+  color: #0a0a0a;
+  --foreground: #0a0a0a;
+  --muted-foreground: #71717a;
+}
+
+.landing-section--light .landing-vignette-local {
+  background: radial-gradient(
+    ellipse 100% 85% at 50% 50%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.06) 100%
+  );
+}
+
+.landing-serif {
+  font-family: Georgia, "Times New Roman", Times, serif;
+}
+
+.landing-vignette {
+  background: radial-gradient(
+    ellipse 100% 85% at 50% 50%,
+    transparent 50%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  pointer-events: none;
 }

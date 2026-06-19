@@ -1,14 +1,14 @@
-# API — Ataques DAST e resultados
+# API — Ataques DAST/SAST e resultados
 
 Disparo assíncrono via RabbitMQ e consulta de achados. Voltar ao [índice da API](../API.md).
 
-Requer worker, filas e (para testes reais) alvo vulnerável. API e stack Docker: [RUN-PROJECT.md](../RUN-PROJECT.md).
+Requer workers, filas e (para DAST em laboratório) alvo vulnerável. API e stack Docker: [RUN-PROJECT.md](../RUN-PROJECT.md).
 
 ## Ambiente de laboratório
 
 ### Stack completa
 
-Na raiz do monorepo (MySQL, RabbitMQ, worker DAST e alvo vulnerável):
+Na raiz do monorepo (MySQL, RabbitMQ, workers DAST/SAST e alvo vulnerável):
 
 ```bash
 docker compose up -d --build
@@ -17,52 +17,46 @@ php artisan migrate --seed
 php artisan serve
 php artisan queue:listen --tries=1
 php artisan attacks:consume-results
+php artisan catalog:consume-imports
 ```
 
 O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 
 | Contexto | URL do alvo |
 |----------|-------------|
-| Host (navegador, `php artisan serve`) | http://127.0.0.1:8090 |
-| Rede Docker (worker DAST) | http://vulnerable-target |
+| Navegador, popup de login, assinatura | `http://127.0.0.1:8090` ou `http://localhost:8090` |
+| Worker DAST (Docker) | resolvido automaticamente para `http://vulnerable-target` |
 
-Cadastre o sistema no app com a URL da coluna que corresponde a onde a API roda. O seed cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** apontando para o alvo.
+**Importante:** nao cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames so existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila.
 
-### Token de assinatura
+### Assinatura do sistema
 
-Valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (raiz, `shingeki-api` e container do alvo). Exemplo padrão dos repositórios:
+Antes de disparar ataques, gere e valide a assinatura do sistema (meta tag no HTML do alvo). A API resolve automaticamente o token ativo e permitido — **não é necessário enviar `signature_token` no body do dispatch**.
 
-```json
-{
-  "signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-}
-```
+No alvo de laboratório, o valor da meta tag vem de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (raiz, `shingeki-api` e container do alvo). Fluxo completo: [SIGNATURES.md](SIGNATURES.md).
 
-Fluxo de assinaturas (gerar, validar, revogar): [SIGNATURES.md](SIGNATURES.md).
-
-## POST .../attacks/dispatch
+## POST .../attacks/dispatch (DAST)
 
 `POST /api/projects/{project}/systems/{system}/attacks/dispatch`
 
-Enfileira o catálogo de ataques para o sistema.
+Enfileira o catálogo **DAST** (`scan_type: DAST`) para o sistema. Publica na fila `attacks.dispatch`.
 
-**Body (JSON):**
+O lote inclui ataques cujo autor tem papel `ADMIN` ou `SPECIALIST` no catálogo global ([CATALOG.md](CATALOG.md)).
 
-| Campo | Regras |
-|-------|--------|
-| `signature_token` | obrigatório, string, exatamente 64 caracteres |
+**Body (JSON):** vazio (`{}`) ou omitido.
 
-O token deve corresponder à assinatura **permitida** (validada no HTML do alvo).
+A API busca a assinatura ativa do usuário para o sistema, verifica expiração e status **permitido** (validado no HTML do alvo).
 
 **Resposta `202`:**
 
 ```json
 {
-  "message": "Attack catalog dispatched to processing queue.",
+  "message": "DAST attack catalog dispatched to processing queue.",
   "dispatch": {
     "id": "uuid",
     "system_id": "uuid",
     "user_id": "uuid",
+    "scan_type": "DAST",
     "attacks_count": 12,
     "dispatched_at": "...",
     "completed_at": null,
@@ -77,6 +71,7 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
     {
       "id": "uuid",
       "user_id": "uuid",
+      "scan_type": "DAST",
       "category": "...",
       "target_location": "...",
       "risk_level": "...",
@@ -88,9 +83,23 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
 }
 ```
 
-**Resposta `403`:** token de assinatura inválido ou não autorizado.
+**Resposta `403`:** assinatura ausente, expirada ou ainda não permitida para ataques.
 
 **Resposta `422`:** catálogo de ataques indisponível ou erro de configuração.
+
+## POST .../attacks/dispatch/sast (SAST)
+
+`POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast`
+
+Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [shingeki-sast-worker](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
+
+**Body (JSON):** vazio, igual ao dispatch DAST.
+
+**Pré-requisito:** o sistema deve ter `repository_url` preenchido (repositório Git público no MVP).
+
+**Resposta `202`:** igual ao DAST, com `scan_type: SAST` e mensagem `SAST attack catalog dispatched to processing queue.`
+
+**Resposta `422`:** `repository_url` ausente, catálogo SAST vazio ou erro de configuração.
 
 ## GET .../system-results
 
@@ -154,13 +163,42 @@ Detalhe de um dispatch com achados.
 
 O parâmetro de rota é o UUID do `AttackDispatch` (nome da rota: `attack_dispatch`).
 
+## DELETE .../system-results/{attack_dispatch}
+
+`DELETE /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
+
+Remove um disparo e todos os `system_results` associados.
+
+**Resposta `200`:**
+
+```json
+{
+  "message": "Attack dispatch deleted successfully."
+}
+```
+
+**Resposta `403`:** sem permissão (mesma policy de visualização do batch).
+
+## DELETE .../system-results
+
+`DELETE /api/projects/{project}/systems/{system}/system-results`
+
+Remove **todos** os dispatches e achados do sistema.
+
+**Resposta `200`:**
+
+```json
+{
+  "message": "All attack dispatches deleted successfully."
+}
+```
+
 ## Exemplo com curl
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/projects/{projectId}/systems/{systemId}/attacks/dispatch" \
   -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{"signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}'
+  -H "Content-Type: application/json"
 ```
 
 Substitua IDs após `GET /api/projects` (seed cria **Pentest Lab** / **Vulnerable PHP Target**).

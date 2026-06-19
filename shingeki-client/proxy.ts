@@ -10,20 +10,24 @@ import { AUTH_COOKIE } from "@/lib/config";
 
 const PUBLIC_ROUTES = ["/login", "/registro"];
 
+function isPublicRoute(pathname: string): boolean {
+  if (pathname === "/") return true;
+  if (pathname.startsWith("/conectar-alvo")) return true;
+  return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
+}
+
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const hasSession = Boolean(request.cookies.get(AUTH_COOKIE)?.value);
-  const isPublicRoute = PUBLIC_ROUTES.some((route) =>
-    pathname.startsWith(route),
-  );
+  const isPublic = isPublicRoute(pathname);
 
-  if (!hasSession && !isPublicRoute) {
+  if (!hasSession && !isPublic) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  if (hasSession && isPublicRoute) {
+  if (hasSession && PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
     return NextResponse.redirect(new URL("/projetos", request.url));
   }
 

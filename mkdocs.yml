@@ -24,8 +24,12 @@ theme:
         name: Modo claro
   features:
     - content.code.copy
+    - navigation.tabs
+    - navigation.tabs.sticky
     - navigation.sections
-    - navigation.expand
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
     - search.suggest
     - search.highlight
     - toc.follow
@@ -51,23 +55,34 @@ markdown_extensions:
       alternate_style: true
 
 nav:
-  - Início: index.md
-  - Como rodar: RUN-PROJECT.md
+  - Shingeki:
+    - Início: index.md
+    - Como rodar: RUN-PROJECT.md
   - Arquitetura:
     - Visão geral: ARCHITECTURE.md
     - shingeki-api: architecture/shingeki-api.md
     - shingeki-client: architecture/shingeki-client.md
     - shingeki-mobile: architecture/shingeki-mobile.md
     - shingeki-dast-worker: architecture/shingeki-dast-worker.md
+    - shingeki-sast-worker: architecture/shingeki-sast-worker.md
     - shingeki-vulnerable-target: architecture/shingeki-vulnerable-target.md
   - API:
     - Visão geral: API.md
-    - Autenticação: api/AUTHENTICATION.md
-    - Projetos e sistemas: api/PROJECTS-AND-SYSTEMS.md
-    - Capas: api/COVERS.md
-    - Assinaturas: api/SIGNATURES.md
-    - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
-  - Desenvolvimento:
+    - Conta e recursos:
+      - Autenticação: api/AUTHENTICATION.md
+      - Projetos e sistemas: api/PROJECTS-AND-SYSTEMS.md
+      - Stacks: api/STACKS.md
+      - Capas: api/COVERS.md
+    - Scan e segurança:
+      - Assinaturas: api/SIGNATURES.md
+      - Sessão do alvo: api/TARGET-SESSION.md
+      - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
+    - Catálogo e remediação:
+      - Catálogo global: api/CATALOG.md
+      - Importação CSV: api/CATALOG-BULK-IMPORT.md
+      - Remediação: api/REMEDIATION.md
+  - Clientes:
+    - Visão geral: CLIENTS.md
     - Web (Next.js): WEB-DEVELOPMENT.md
     - Mobile (Expo): MOBILE-DEVELOPMENT.md
   - CI:

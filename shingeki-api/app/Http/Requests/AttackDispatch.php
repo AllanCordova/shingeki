@@ -17,8 +17,6 @@ class AttackDispatch extends FormRequest
      */
     public function rules(): array
     {
-        return [
-            'signature_token' => ['required', 'string', 'size:64'],
-        ];
+        return [];
     }
 }

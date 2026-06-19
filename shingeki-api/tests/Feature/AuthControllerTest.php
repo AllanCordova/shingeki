@@ -53,7 +53,7 @@ describe('POST /api/auth/register', function () {
                 'user' => [
                     'name' => 'Test User',
                     'email' => 'user@example.com',
-                    'role' => 'user',
+                    'role' => 'USER',
                 ],
             ])
             ->assertJsonStructure([
@@ -64,7 +64,7 @@ describe('POST /api/auth/register', function () {
 
         $this->assertDatabaseHas('users', [
             'email' => 'user@example.com',
-            'role' => 'user',
+            'role' => 'USER',
         ]);
 
         expect($response->json('token'))->toBeString()->not->toBeEmpty();
@@ -199,7 +199,7 @@ describe('GET /api/auth/me', function () {
                     'id' => $user->id,
                     'name' => 'Authenticated User',
                     'email' => 'me@example.com',
-                    'role' => 'user',
+                    'role' => 'USER',
                 ],
             ])
             ->assertJsonStructure(['user' => userJsonStructure()]);

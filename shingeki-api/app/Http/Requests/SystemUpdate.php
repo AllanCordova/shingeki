@@ -3,12 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidatesCoverSelection;
+use App\Http\Requests\Concerns\ValidatesTargetUrl;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SystemUpdate extends FormRequest
 {
     use ValidatesCoverSelection;
+    use ValidatesTargetUrl;
 
     public function authorize(): bool
     {
@@ -23,8 +25,11 @@ class SystemUpdate extends FormRequest
         return [
             ...$this->coverUpdateRules(),
             'name' => ['sometimes', 'string', 'max:255'],
-            'target_url' => ['sometimes', 'url', 'max:2048'],
+            'target_url' => $this->browserTargetUrlRules(required: false),
+            'login_url' => $this->browserLoginUrlRules(),
             'repository_url' => ['sometimes', 'url', 'max:2048'],
+            'stack_ids' => ['sometimes', 'array', 'min:1'],
+            'stack_ids.*' => ['uuid', 'exists:stacks,id'],
         ];
     }
 }

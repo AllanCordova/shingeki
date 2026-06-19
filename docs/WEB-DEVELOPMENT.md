@@ -1,6 +1,6 @@
 # Desenvolvimento — Web (Next.js)
 
-Guia para levantar o client Next.js no navegador.
+Guia para levantar o client Next.js no navegador. Índice de clients: [CLIENTS.md](CLIENTS.md).
 
 ## Requisitos
 
@@ -43,7 +43,7 @@ cd shingeki-client
 npm run dev
 ```
 
-Abra http://localhost:3000 e faça login com as credenciais do seed ([RUN-PROJECT.md](RUN-PROJECT.md#credenciais-do-seed)).
+Abra http://localhost:3000 — a raiz (`/`) exibe a **landing pública**; após login, acesse `/projetos` ou use o header. Credenciais do seed: [RUN-PROJECT.md](RUN-PROJECT.md#credenciais-do-seed).
 
 O client usa o BFF em `/api` e repassa requisições para a Laravel via `API_BASE_URL`.
 
@@ -54,4 +54,16 @@ cd shingeki-client
 npm run build
 npm start
 ```
+
 Contratos HTTP: [API.md](API.md).
+
+## 4. Remediação com IA (opcional)
+
+Para testar **Sugerir com IA** no client, configure na API (`shingeki-api/.env`):
+
+```bash
+AI_PROVIDER=gemini
+GEMINI_API_KEY=sua-chave
+```
+
+Alternativa Groq: `AI_PROVIDER=groq` e `GROQ_API_KEY`. Detalhes: [api/REMEDIATION.md](api/REMEDIATION.md#post-remediateai).

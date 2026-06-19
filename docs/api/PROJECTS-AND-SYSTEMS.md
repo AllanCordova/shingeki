@@ -96,6 +96,9 @@ Base: `/api/projects/{project}/systems`
       "name": "Vulnerable PHP Target",
       "target_url": "http://127.0.0.1:8090",
       "repository_url": "https://github.com/...",
+      "stacks": [
+        { "id": "uuid", "slug": "laravel", "name": "Laravel", "languages": ["php"] }
+      ],
       "created_at": "...",
       "updated_at": "..."
     }
@@ -112,7 +115,10 @@ Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional
 | `name` | sim |
 | `target_url` | sim (URL válida) |
 | `repository_url` | sim (URL válida) |
+| `stack_ids` | sim (array de UUIDs; mínimo 1) — ver [STACKS.md](STACKS.md) |
 | `cover` / `cover_upload_id` | não (opcional; web) |
+
+Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID.
 
 **Resposta `201`:** `{ "message": "...", "system": { ... } }`
 
@@ -122,7 +128,7 @@ Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional
 
 ### PUT /api/projects/{project}/systems/{system}
 
-Campos opcionais: `name`, `target_url`, `repository_url`, `cover`, `cover_upload_id`.
+Campos opcionais: `name`, `target_url`, `repository_url`, `stack_ids` ([STACKS.md](STACKS.md)), `cover`, `cover_upload_id`.
 
 **Resposta `200`:** `{ "message": "...", "system": { ... } }`
 

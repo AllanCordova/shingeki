@@ -2,6 +2,7 @@
 
 namespace App\Services\Attack;
 
+use App\Enums\AttackScanType;
 use App\Models\Attack;
 use App\Models\AttackDispatch;
 use App\Models\System;
@@ -12,6 +13,10 @@ use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 
 class AttackQueuePublisher
 {
+    public function __construct(
+        private readonly WorkerTargetUrlResolver $targetUrlResolver,
+    ) {}
+
     /**
      * @param  Collection<int, Attack>  $attacks
      */
@@ -20,26 +25,45 @@ class AttackQueuePublisher
         System $system,
         User $requestedBy,
         Collection $attacks,
+        AttackScanType $scanType = AttackScanType::Dast,
+        ?array $targetAuth = null,
     ): void {
         $connection = $this->connection();
-        $connection->declareQueue(config('attacks.queues.dispatch'));
+        $dispatchQueue = $this->dispatchQueueFor($scanType);
+
+        $connection->declareQueue($dispatchQueue);
         $connection->declareQueue(config('attacks.queues.results'));
 
-        $message = json_encode([
+        $payload = [
             'event' => 'attack.dispatch.batch',
+            'scan_type' => $scanType->value,
             'dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'user_id' => $requestedBy->id,
-            'target_url' => $system->target_url,
+            'target_url' => $this->targetUrlResolver->forWorker($system->target_url),
             'repository_url' => $system->repository_url,
             'attacks' => $attacks
                 ->map(fn (Attack $attack) => $this->formatAttackForQueue($attack))
                 ->values()
                 ->all(),
             'dispatched_at' => $dispatch->dispatched_at->toIso8601String(),
-        ], JSON_THROW_ON_ERROR);
+        ];
 
-        $this->connection()->pushRaw($message, config('attacks.queues.dispatch'));
+        if ($targetAuth !== null) {
+            $payload['auth'] = $targetAuth;
+        }
+
+        $message = json_encode($payload, JSON_THROW_ON_ERROR);
+
+        $connection->pushRaw($message, $dispatchQueue);
+    }
+
+    private function dispatchQueueFor(AttackScanType $scanType): string
+    {
+        return match ($scanType) {
+            AttackScanType::Dast => config('attacks.queues.dispatch'),
+            AttackScanType::Sast => config('attacks.queues.sast_dispatch'),
+        };
     }
 
     /**

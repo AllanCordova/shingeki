@@ -14,16 +14,12 @@ class SignatureAuthorizationService
         private readonly SignatureStatusService $statusService,
     ) {}
 
-    public function assertPermittedToken(User $user, System $system, string $token): Signature
+    public function assertPermittedForSystem(User $user, System $system): Signature
     {
-        $signature = Signature::query()
-            ->where('user_id', $user->id)
-            ->where('system_id', $system->id)
-            ->where('token', $token)
-            ->first();
+        $signature = $this->findActiveSignature($user, $system);
 
         if ($signature === null) {
-            throw new AuthorizationException('Invalid signature token for this system.');
+            throw new AuthorizationException('No signature token found for this system.');
         }
 
         if ($this->statusService->isExpired($signature)) {
@@ -35,5 +31,15 @@ class SignatureAuthorizationService
         }
 
         return $signature;
+    }
+
+    private function findActiveSignature(User $user, System $system): ?Signature
+    {
+        return Signature::query()
+            ->where('user_id', $user->id)
+            ->where('system_id', $system->id)
+            ->where('token', '!=', '')
+            ->latest()
+            ->first();
     }
 }

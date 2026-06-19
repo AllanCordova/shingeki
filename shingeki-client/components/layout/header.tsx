@@ -27,9 +27,9 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
+      <div className="flex h-16 w-full items-center justify-between px-4 lg:px-6">
         <Link
-          href="/projetos"
+          href="/"
           className="text-lg font-semibold tracking-tight text-foreground"
         >
           shingeki

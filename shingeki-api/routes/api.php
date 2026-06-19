@@ -1,12 +1,22 @@
 <?php
 
+use App\Http\Controllers\AiRemediationController;
 use App\Http\Controllers\AttackController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogAttackController;
+use App\Http\Controllers\CatalogAttackImportController;
+use App\Http\Controllers\CatalogImportController;
+use App\Http\Controllers\CatalogRemediationController;
+use App\Http\Controllers\CatalogRemediationImportController;
 use App\Http\Controllers\CoverUploadController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RemediationController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\StackController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\SystemResultController;
+use App\Http\Controllers\TargetSessionCaptureController;
+use App\Http\Controllers\TargetSessionController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -20,9 +30,23 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+Route::post('target-session/capture/{ticket}', [TargetSessionCaptureController::class, 'complete']);
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('cover-uploads', [CoverUploadController::class, 'index']);
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
+
+    Route::get('stacks', [StackController::class, 'index']);
+
+    Route::middleware('role:ADMIN,SPECIALIST')->prefix('catalog')->group(function () {
+        Route::apiResource('attacks', CatalogAttackController::class);
+        Route::apiResource('remediations', CatalogRemediationController::class);
+        Route::get('attacks/import/template', [CatalogAttackImportController::class, 'template']);
+        Route::post('attacks/import', [CatalogAttackImportController::class, 'store']);
+        Route::get('remediations/import/template', [CatalogRemediationImportController::class, 'template']);
+        Route::post('remediations/import', [CatalogRemediationImportController::class, 'store']);
+        Route::get('imports/{import}', [CatalogImportController::class, 'show']);
+    });
 
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('projects.systems', SystemController::class);
@@ -33,8 +57,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/revoke', [SignatureController::class, 'revoke']);
     });
 
+    Route::prefix('projects/{project}/systems/{system}/target-session')->group(function () {
+        Route::get('/', [TargetSessionController::class, 'show']);
+        Route::post('/', [TargetSessionController::class, 'store']);
+        Route::post('/connect/start', [TargetSessionController::class, 'connectStart']);
+        Route::delete('/', [TargetSessionController::class, 'destroy']);
+    });
+
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
+    Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
+    Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);
+    Route::post('projects/{project}/systems/{system}/remediate/ai', [AiRemediationController::class, 'remediate'])
+        ->middleware('throttle:10,1');
 
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
+    Route::delete('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'deleteAll']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);
+    Route::delete('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'destroy']);
 });

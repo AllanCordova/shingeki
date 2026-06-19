@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\User;
@@ -23,13 +24,15 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(AttackCatalogSeeder::class);
+        $this->call(StackCatalogSeeder::class);
+        $this->call(RemediationCatalogSeeder::class);
 
         $user = User::firstOrCreate(
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
                 'password' => Hash::make('password'),
-                'role' => 'user',
+                'role' => UserRole::Specialist,
             ],
         );
 
