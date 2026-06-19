@@ -9,6 +9,7 @@ use App\Http\Controllers\CatalogImportController;
 use App\Http\Controllers\CatalogRemediationController;
 use App\Http\Controllers\CatalogRemediationImportController;
 use App\Http\Controllers\CoverUploadController;
+use App\Http\Controllers\ManualProxyController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RemediationController;
 use App\Http\Controllers\SignatureController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\SystemController;
 use App\Http\Controllers\SystemResultController;
 use App\Http\Controllers\TargetSessionCaptureController;
 use App\Http\Controllers\TargetSessionController;
+use App\Http\Controllers\UserNotificationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -37,6 +39,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
 
     Route::get('stacks', [StackController::class, 'index']);
+
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [UserNotificationController::class, 'index']);
+        Route::get('/unread-count', [UserNotificationController::class, 'unreadCount']);
+        Route::post('/read-all', [UserNotificationController::class, 'markAllRead']);
+        Route::patch('/{userNotification}/read', [UserNotificationController::class, 'markRead']);
+    });
 
     Route::middleware('role:ADMIN,SPECIALIST')->prefix('catalog')->group(function () {
         Route::apiResource('attacks', CatalogAttackController::class);
@@ -62,6 +71,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [TargetSessionController::class, 'store']);
         Route::post('/connect/start', [TargetSessionController::class, 'connectStart']);
         Route::delete('/', [TargetSessionController::class, 'destroy']);
+    });
+
+    Route::prefix('projects/{project}/systems/{system}/manual-proxy')->middleware('role:ADMIN,SPECIALIST')->group(function () {
+        Route::post('/send', [ManualProxyController::class, 'send'])->middleware('throttle:30,1');
+        Route::get('/routes', [ManualProxyController::class, 'indexRoutes']);
+        Route::post('/routes', [ManualProxyController::class, 'storeRoute']);
+        Route::put('/routes/{manualRouteMap}', [ManualProxyController::class, 'updateRoute']);
+        Route::delete('/routes/{manualRouteMap}', [ManualProxyController::class, 'destroyRoute']);
     });
 
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);

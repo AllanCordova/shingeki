@@ -28,6 +28,25 @@ class WorkerTargetUrlResolver
         return $targetUrl;
     }
 
+    public function forManualProxy(string $targetUrl): string
+    {
+        $targetUrl = rtrim(trim($targetUrl), '/');
+
+        $canonical = rtrim((string) config('attacks.vulnerable_target_url'), '/');
+        $workerOverride = config('attacks.vulnerable_target_worker_url');
+
+        if (
+            is_string($workerOverride)
+            && $workerOverride !== ''
+            && $canonical !== ''
+            && $this->refersToSameLabTarget($targetUrl, rtrim($workerOverride, '/'))
+        ) {
+            return $canonical;
+        }
+
+        return $targetUrl;
+    }
+
     private function refersToSameLabTarget(string $left, string $right): bool
     {
         if ($left === '' || $right === '') {

@@ -140,6 +140,28 @@ describe('POST /api/catalog/attacks', function () {
             'delete' => false,
         ]);
     });
+
+    test('paginates catalog attacks and filters by owner', function () {
+        $ownerA = User::factory()->specialist()->create();
+        $ownerB = User::factory()->admin()->create();
+        actingAsSpecialist();
+
+        Attack::factory()->count(3)->create(['user_id' => $ownerA->id]);
+        Attack::factory()->count(2)->create(['user_id' => $ownerB->id]);
+
+        $this->getJson(CATALOG_ATTACKS.'?page=1&per_page=2')
+            ->assertOk()
+            ->assertJsonCount(2, 'attacks')
+            ->assertJsonPath('pagination.current_page', 1)
+            ->assertJsonPath('pagination.per_page', 2)
+            ->assertJsonPath('pagination.total', 5)
+            ->assertJsonPath('pagination.last_page', 3);
+
+        $this->getJson(CATALOG_ATTACKS.'?user_id='.$ownerB->id)
+            ->assertOk()
+            ->assertJsonCount(2, 'attacks')
+            ->assertJsonPath('pagination.total', 2);
+    });
 });
 
 describe('POST /api/catalog/remediations', function () {
@@ -224,6 +246,35 @@ describe('POST /api/catalog/remediations', function () {
             'update' => false,
             'delete' => false,
         ]);
+    });
+
+    test('paginates catalog remediations and filters by owner', function () {
+        $ownerA = User::factory()->specialist()->create();
+        $ownerB = User::factory()->admin()->create();
+        $stack = Stack::factory()->create();
+        actingAsSpecialist();
+
+        Remediation::factory()->count(3)->create([
+            'user_id' => $ownerA->id,
+            'stack_id' => $stack->id,
+        ]);
+        Remediation::factory()->count(2)->create([
+            'user_id' => $ownerB->id,
+            'stack_id' => $stack->id,
+        ]);
+
+        $this->getJson(CATALOG_REMEDIATIONS.'?page=1&per_page=2')
+            ->assertOk()
+            ->assertJsonCount(2, 'remediations')
+            ->assertJsonPath('pagination.current_page', 1)
+            ->assertJsonPath('pagination.per_page', 2)
+            ->assertJsonPath('pagination.total', 5)
+            ->assertJsonPath('pagination.last_page', 3);
+
+        $this->getJson(CATALOG_REMEDIATIONS.'?user_id='.$ownerB->id)
+            ->assertOk()
+            ->assertJsonCount(2, 'remediations')
+            ->assertJsonPath('pagination.total', 2);
     });
 });
 

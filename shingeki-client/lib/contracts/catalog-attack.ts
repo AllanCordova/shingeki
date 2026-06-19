@@ -1,43 +1,34 @@
 import { z } from "zod";
 import type { Attack } from "./attack";
 import type { Timestamps } from "./common";
+import type { CatalogAuthor, CatalogListResponseMeta } from "./catalog-list";
+import { zJsonObjectString } from "./zod-helpers";
 
 export const catalogAttackCreateSchema = z.object({
   scan_type: z.enum(["DAST", "SAST"]),
   category: z.string().min(1, "Informe a categoria."),
   target_location: z.string().min(1, "Informe o alvo do payload."),
   risk_level: z.enum(["LOW", "MEDIUM", "HIGH"]),
-  payload_json: z
-    .string()
-    .min(1, "Informe o payload JSON.")
-    .refine((value) => {
-      try {
-        const parsed = JSON.parse(value) as unknown;
-        return typeof parsed === "object" && parsed !== null && !Array.isArray(parsed);
-      } catch {
-        return false;
-      }
-    }, "Payload deve ser um objeto JSON valido."),
+  payload_json: zJsonObjectString("Payload deve ser um objeto JSON valido.").refine(
+    (value) => value.length > 0,
+    "Informe o payload JSON.",
+  ),
 });
 
 export type CatalogAttackCreateInput = z.infer<typeof catalogAttackCreateSchema>;
 
-export interface CatalogAttackAuthor {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+/** @deprecated Use CatalogAuthor */
+export type CatalogAttackAuthor = CatalogAuthor;
 
 export interface CatalogAttack extends Attack {
-  author: CatalogAttackAuthor | null;
+  author: CatalogAuthor | null;
   permissions: {
     update: boolean;
     delete: boolean;
   };
 }
 
-export interface CatalogAttacksResponse {
+export interface CatalogAttacksResponse extends CatalogListResponseMeta {
   attacks: CatalogAttack[];
 }
 

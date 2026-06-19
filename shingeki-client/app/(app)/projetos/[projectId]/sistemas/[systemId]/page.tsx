@@ -12,19 +12,23 @@ import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
 import { SystemForm } from "@/components/forms/system-form";
 import { SignaturePanel } from "@/components/signature/signature-panel";
 import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
+import { SystemDetailHero } from "@/components/system/system-detail-hero";
 import { AttackForm } from "@/components/attack/attack-form";
+import { canUseManualProxy } from "@/lib/auth/roles";
+import { useMe } from "@/lib/hooks/use-auth";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { notify } from "@/lib/notify";
 import { FORM_MODAL_SIZE } from "@/lib/ui";
+import { cn } from "@/lib/utils";
 import {
   Button,
-  CoverHero,
   ErrorShow,
   ImageUploadIcon,
   Loading,
   Modal,
 } from "@/components/ui";
+import { ShieldAlertIcon } from "@/components/ui/icons";
 
 export default function SystemDetailPage() {
   const { projectId, systemId } = useParams<{
@@ -39,6 +43,7 @@ export default function SystemDetailPage() {
   );
   const updateSystem = useUpdateSystem(projectId, systemId);
   const deleteSystem = useDeleteSystem(projectId);
+  const { user } = useMe();
 
   const [editOpen, setEditOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
@@ -58,30 +63,30 @@ export default function SystemDetailPage() {
     router.refresh();
   };
 
+  const arsenalHref = `/projetos/${projectId}/sistemas/${systemId}/arsenal`;
+
   return (
     <div className="flex flex-col gap-8">
-      <CoverHero coverPath={system.cover_path} alt={`Capa de ${system.name}`}>
-        <Link
-          href={`/projetos/${projectId}`}
-          className="mb-4 inline-block text-sm text-muted-foreground hover:text-foreground"
-        >
-          ← Voltar ao projeto
-        </Link>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {system.name}
-            </h1>
-            <a
-              href={system.target_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-block text-sm text-muted-foreground underline hover:text-foreground sm:text-base"
-            >
-              {system.target_url}
-            </a>
-          </div>
-          <div className="flex shrink-0 gap-2">
+      <SystemDetailHero
+        system={system}
+        backHref={`/projetos/${projectId}`}
+        backLabel="← Voltar ao projeto"
+        actions={
+          <>
+            {canUseManualProxy(user) ? (
+              <Link
+                href={arsenalHref}
+                className={cn(
+                  "inline-flex items-center justify-center gap-2 rounded-app font-medium transition-colors",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                  "border border-border bg-surface text-foreground hover:bg-surface-muted",
+                  "h-10 px-4 text-sm",
+                )}
+              >
+                <ShieldAlertIcon className="h-4 w-4" />
+                Arsenal manual
+              </Link>
+            ) : null}
             <Button
               variant="outline"
               onClick={() => setCoverOpen(true)}
@@ -97,9 +102,9 @@ export default function SystemDetailPage() {
             <Button variant="danger" onClick={() => setDeleteOpen(true)}>
               Excluir
             </Button>
-          </div>
-        </div>
-      </CoverHero>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <SignaturePanel projectId={projectId} systemId={systemId} />

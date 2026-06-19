@@ -17,3 +17,4 @@ export interface PaginationMeta {
 }
 
 export const DEFAULT_PAGE_SIZE = 25;
+export const NOTIFICATION_BELL_PAGE_SIZE = 10;

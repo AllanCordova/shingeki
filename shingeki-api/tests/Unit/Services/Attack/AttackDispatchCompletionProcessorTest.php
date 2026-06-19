@@ -13,7 +13,7 @@ test('process marks dispatch as completed', function () {
     $system = System::factory()->create();
     $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
 
-    $updated = (new AttackDispatchCompletionProcessor)->process([
+    $updated = app(AttackDispatchCompletionProcessor::class)->process([
         'event' => AttackDispatchCompletionProcessor::EVENT,
         'dispatch_id' => $dispatch->id,
         'system_id' => $system->id,
