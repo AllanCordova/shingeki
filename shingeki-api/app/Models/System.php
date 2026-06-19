@@ -27,6 +27,7 @@ class System extends Model
         'cover_path',
         'name',
         'target_url',
+        'login_url',
         'repository_url',
     ];
 

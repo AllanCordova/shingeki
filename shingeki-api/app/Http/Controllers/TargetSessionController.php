@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Enums\TargetAuthType;
+use App\Http\Requests\StartTargetSessionCapture;
 use App\Http\Requests\StoreTargetSession;
 use App\Models\Project;
 use App\Models\System;
+use App\Services\TargetSession\TargetSessionCaptureService;
 use App\Services\TargetSession\TargetSessionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,6 +16,7 @@ class TargetSessionController extends Controller
 {
     public function __construct(
         private readonly TargetSessionService $targetSessionService,
+        private readonly TargetSessionCaptureService $captureService,
     ) {}
 
     public function show(Request $request, Project $project, System $system): JsonResponse
@@ -73,6 +76,25 @@ class TargetSessionController extends Controller
 
         return response()->json([
             'message' => 'Target session removed successfully.',
+        ]);
+    }
+
+    public function connectStart(
+        StartTargetSessionCapture $request,
+        Project $project,
+        System $system,
+    ): JsonResponse {
+        $this->authorize('manageTargetSession', $system);
+
+        $payload = $this->captureService->start(
+            $request->user(),
+            $system,
+            $request->validated('client_origin'),
+        );
+
+        return response()->json([
+            'message' => 'Target session capture started.',
+            ...$payload,
         ]);
     }
 }

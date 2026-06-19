@@ -31,7 +31,7 @@ class SystemController extends Controller
         $this->authorize('create', [System::class, $project]);
 
         $system = $project->systems()->create([
-            ...$request->safe()->only(['name', 'target_url', 'repository_url']),
+            ...$request->safe()->only(['name', 'target_url', 'login_url', 'repository_url']),
             'cover_path' => $this->coverLibrary->resolveCoverForCreate(
                 $request->user(),
                 $request->file('cover'),
@@ -63,7 +63,7 @@ class SystemController extends Controller
     {
         $this->authorize('update', $system);
 
-        $data = $request->safe()->only(['name', 'target_url', 'repository_url']);
+        $data = $request->safe()->only(['name', 'target_url', 'login_url', 'repository_url']);
 
         $newCoverPath = $this->coverLibrary->resolveCoverForUpdate(
             $request->user(),
@@ -128,6 +128,7 @@ class SystemController extends Controller
             'cover_path' => $system->cover_path,
             'name' => $system->name,
             'target_url' => $system->target_url,
+            'login_url' => $system->login_url,
             'repository_url' => $system->repository_url,
             'stacks' => $system->relationLoaded('stacks')
                 ? $system->stacks

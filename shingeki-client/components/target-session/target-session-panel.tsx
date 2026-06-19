@@ -1,11 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { useEffect, useState } from "react";
 import {
   useRevokeTargetSession,
+  useStartTargetSessionConnect,
   useStoreTargetSession,
   useTargetSession,
 } from "@/lib/hooks/use-target-session";
@@ -19,18 +17,12 @@ import {
   CardHeader,
   CardTitle,
   ErrorShow,
-  Field,
-  Input,
   Loading,
-  Textarea,
 } from "@/components/ui";
 
-const targetSessionSchema = z.object({
-  auth_type: z.enum(["cookie", "bearer"]),
-  credential: z.string().min(1, "Informe o cookie ou token de acesso."),
-});
-
-type TargetSessionFormInput = z.infer<typeof targetSessionSchema>;
+const TARGET_SESSION_CONNECTED = "shingeki-target-session-connected";
+const POPUP_FEATURES =
+  "popup=yes,width=520,height=720,menubar=no,toolbar=no,location=yes,status=no";
 
 export function TargetSessionPanel({
   projectId,
@@ -43,41 +35,47 @@ export function TargetSessionPanel({
     projectId,
     systemId,
   );
-  const storeSession = useStoreTargetSession(projectId, systemId);
+  const startConnect = useStartTargetSessionConnect(projectId, systemId);
   const revokeSession = useRevokeTargetSession(projectId, systemId);
-  const [showForm, setShowForm] = useState(false);
+  const storeSession = useStoreTargetSession(projectId, systemId);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { errors },
-  } = useForm<TargetSessionFormInput>({
-    resolver: zodResolver(targetSessionSchema),
-    defaultValues: {
-      auth_type: "cookie",
-      credential: "",
-    },
-  });
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== TARGET_SESSION_CONNECTED) return;
 
-  const authType = watch("auth_type");
+      void refetch();
+      notify.success("Sessao do alvo conectada.");
+    };
 
-  const onSubmit = handleSubmit(async (values) => {
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [refetch]);
+
+  const handleConnect = async () => {
     try {
-      await storeSession.storeSession(values);
-      reset({ auth_type: values.auth_type, credential: "" });
-      setShowForm(false);
-      notify.success("Sessao do alvo importada para os testes DAST.");
+      const result = await startConnect.startConnect();
+      const popup = window.open(result.popup_url, "shingeki-target-login", POPUP_FEATURES);
+
+      if (!popup) {
+        notify.error("Permita pop-ups para conectar a sessao do alvo.");
+        return;
+      }
+
+      if (result.mode === "external") {
+        notify.success("Faca login na janela aberta. A sessao sera capturada automaticamente.");
+      } else {
+        notify.success("Faca login na janela aberta para conectar a sessao.");
+      }
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel importar a sessao do alvo.");
+      notify.fromApiError(err, "Nao foi possivel iniciar a conexao com o alvo.");
     }
-  });
+  };
 
   const handleRevoke = async () => {
     try {
       await revokeSession.revokeSession();
-      setShowForm(false);
       notify.success("Sessao do alvo removida.");
     } catch (err) {
       notify.fromApiError(err, "Nao foi possivel remover a sessao do alvo.");
@@ -89,13 +87,13 @@ export function TargetSessionPanel({
       <CardHeader>
         <CardTitle>Sessao do alvo</CardTitle>
         <CardDescription>
-          Importe cookie ou token apos login no alvo para o DAST acessar rotas
-          autenticadas. OAuth completo sera adicionado em uma fase posterior.
+          Conecte a sessao autenticada do alvo para o DAST testar rotas protegidas.
+          Uma janela separada abrira para voce fazer login — sem copiar cookies manualmente.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {error ? <ErrorShow error={error} onRetry={() => refetch()} /> : null}
-        {storeSession.error ? <ErrorShow error={storeSession.error} /> : null}
+        {startConnect.error ? <ErrorShow error={startConnect.error} /> : null}
 
         {isLoading ? (
           <Loading label="Carregando sessao..." />
@@ -117,9 +115,10 @@ export function TargetSessionPanel({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowForm((value) => !value)}
+                isLoading={startConnect.isLoading}
+                onClick={() => void handleConnect()}
               >
-                Atualizar sessao
+                Reconectar
               </Button>
               <Button
                 type="button"
@@ -135,77 +134,67 @@ export function TargetSessionPanel({
         ) : (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              Faca login no alvo, copie o header Cookie ou Authorization do
-              DevTools e cole abaixo.
+              Clique abaixo, faca login na janela que abrir e aguarde a confirmacao
+              de conexao.
             </p>
-            <Button type="button" onClick={() => setShowForm(true)}>
-              Importar sessao
+            <Button
+              type="button"
+              isLoading={startConnect.isLoading}
+              onClick={() => void handleConnect()}
+            >
+              Conectar ao alvo
             </Button>
           </div>
         )}
 
-        {showForm ? (
-          <form className="flex flex-col gap-4 border-t border-border pt-4" noValidate>
-            <Field label="Tipo" htmlFor="auth_type">
+        <div className="border-t border-border pt-4">
+          <button
+            type="button"
+            className="text-sm text-muted-foreground underline hover:text-foreground"
+            onClick={() => setShowAdvanced((value) => !value)}
+          >
+            {showAdvanced ? "Ocultar importacao manual" : "Importacao manual (avancado)"}
+          </button>
+
+          {showAdvanced ? (
+            <form
+              className="mt-4 flex flex-col gap-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const form = event.currentTarget;
+                const formData = new FormData(form);
+                void storeSession
+                  .storeSession({
+                    auth_type: formData.get("auth_type") as "cookie" | "bearer",
+                    credential: String(formData.get("credential") ?? ""),
+                  })
+                  .then(() => notify.success("Sessao importada manualmente."))
+                  .catch((err) =>
+                    notify.fromApiError(err, "Nao foi possivel importar a sessao."),
+                  );
+              }}
+            >
               <select
-                id="auth_type"
+                name="auth_type"
                 className="w-full rounded-app border border-border bg-surface px-3 py-2 text-sm"
-                {...register("auth_type")}
+                defaultValue="cookie"
               >
                 <option value="cookie">Cookie</option>
                 <option value="bearer">Bearer token</option>
               </select>
-            </Field>
-
-            <Field
-              label={authType === "cookie" ? "Valor do Cookie" : "Token Bearer"}
-              htmlFor="credential"
-              error={errors.credential?.message}
-              hint={
-                authType === "cookie"
-                  ? "Ex.: laravel_session=...; XSRF-TOKEN=..."
-                  : "Cole o token com ou sem o prefixo Bearer."
-              }
-            >
-              {authType === "cookie" ? (
-                <Textarea
-                  id="credential"
-                  rows={4}
-                  className="font-mono text-xs"
-                  hasError={Boolean(errors.credential)}
-                  {...register("credential")}
-                />
-              ) : (
-                <Input
-                  id="credential"
-                  className="font-mono"
-                  hasError={Boolean(errors.credential)}
-                  {...register("credential")}
-                />
-              )}
-            </Field>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                isLoading={storeSession.isLoading}
-                onClick={() => void onSubmit()}
-              >
-                Salvar sessao
+              <textarea
+                name="credential"
+                rows={3}
+                className="w-full rounded-app border border-border bg-surface px-3 py-2 font-mono text-xs"
+                placeholder="Cole o cookie ou token apenas se souber o que esta fazendo."
+                required
+              />
+              <Button type="submit" variant="outline" isLoading={storeSession.isLoading}>
+                Importar manualmente
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => {
-                  setShowForm(false);
-                  reset();
-                }}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        ) : null}
+            </form>
+          ) : null}
+        </div>
       </CardContent>
     </Card>
   );

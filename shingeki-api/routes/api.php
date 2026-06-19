@@ -10,6 +10,7 @@ use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\StackController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\SystemResultController;
+use App\Http\Controllers\TargetSessionCaptureController;
 use App\Http\Controllers\TargetSessionController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +24,8 @@ Route::prefix('auth')->group(function () {
         Route::put('/me', [AuthController::class, 'update']);
     });
 });
+
+Route::post('target-session/capture/{ticket}', [TargetSessionCaptureController::class, 'complete']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('cover-uploads', [CoverUploadController::class, 'index']);
@@ -42,6 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('projects/{project}/systems/{system}/target-session')->group(function () {
         Route::get('/', [TargetSessionController::class, 'show']);
         Route::post('/', [TargetSessionController::class, 'store']);
+        Route::post('/connect/start', [TargetSessionController::class, 'connectStart']);
         Route::delete('/', [TargetSessionController::class, 'destroy']);
     });
 

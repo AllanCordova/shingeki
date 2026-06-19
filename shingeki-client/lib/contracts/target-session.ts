@@ -8,6 +8,14 @@ export interface TargetSessionStatus {
   updated_at?: string;
 }
 
+export type TargetSessionConnectStartResponse = {
+  message: string;
+  ticket: string;
+  mode: "same_origin" | "external";
+  popup_url: string;
+  capture_callback_url: string | null;
+};
+
 export interface StoreTargetSessionInput {
   auth_type: TargetAuthType;
   credential: string;

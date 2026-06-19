@@ -24,6 +24,7 @@ class SystemUpdate extends FormRequest
             ...$this->coverUpdateRules(),
             'name' => ['sometimes', 'string', 'max:255'],
             'target_url' => ['sometimes', 'url', 'max:2048'],
+            'login_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
             'repository_url' => ['sometimes', 'url', 'max:2048'],
             'stack_ids' => ['sometimes', 'array', 'min:1'],
             'stack_ids.*' => ['uuid', 'exists:stacks,id'],

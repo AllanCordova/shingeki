@@ -24,6 +24,7 @@ class SystemCreate extends FormRequest
             ...$this->coverCreateRules(),
             'name' => ['required', 'string', 'max:255'],
             'target_url' => ['required', 'url', 'max:2048'],
+            'login_url' => ['sometimes', 'nullable', 'url', 'max:2048'],
             'repository_url' => ['required', 'url', 'max:2048'],
             'stack_ids' => ['required', 'array', 'min:1'],
             'stack_ids.*' => ['uuid', 'exists:stacks,id'],

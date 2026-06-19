@@ -1,10 +1,50 @@
 # API — Sessao do alvo (DAST autenticado)
 
-Importacao manual de cookie ou Bearer token para o worker DAST acessar rotas protegidas. Voltar ao [indice da API](../API.md).
+Conecta a sessao autenticada do alvo para o worker DAST acessar rotas protegidas. Voltar ao [indice da API](../API.md).
 
-OAuth 2.0 com redirect ficara para uma fase posterior; esta API cobre a **Fase 1** (importar sessao apos login manual no alvo).
+## Fluxo recomendado (popup)
+
+1. Client chama `POST .../target-session/connect/start` com `client_origin`.
+2. Abre `popup_url` em janela separada.
+3. Usuario faz login no alvo.
+4. Sessao e capturada automaticamente:
+   - **Mesma origem** (`target_url` = URL do client): pagina `/conectar-alvo`.
+   - **Alvo externo**: redirect para `/shingeki-capture.php?ticket=...` no alvo (incluido no lab).
+5. Popup fecha e o client atualiza o status via `postMessage`.
+
+Importacao manual (`POST .../target-session`) permanece disponivel apenas como opcao avancada.
 
 Base: `/api/projects/{project}/systems/{system}/target-session`
+
+## POST .../target-session/connect/start
+
+Inicia captura via popup.
+
+**Body (JSON):**
+
+| Campo | Regras |
+|-------|--------|
+| `client_origin` | URL do client (ex.: `http://localhost:3000`) |
+
+**Resposta `200`:**
+
+```json
+{
+  "message": "Target session capture started.",
+  "ticket": "uuid",
+  "mode": "same_origin",
+  "popup_url": "http://localhost:3000/conectar-alvo?ticket=...",
+  "capture_callback_url": null
+}
+```
+
+Para alvos externos, `mode` e `external` e `capture_callback_url` aponta para `/shingeki-capture.php` no alvo.
+
+## POST /api/target-session/capture/{ticket}
+
+Rota publica (sem Sanctum). Finaliza a captura usando o ticket de curta duracao.
+
+**Body (JSON):** `cookie` ou `authorization`.
 
 ## GET .../target-session
 
@@ -86,9 +126,6 @@ A resposta do dispatch inclui `target_session_connected: true|false`.
 
 ## Client web
 
-Na pagina do sistema, use **Importar sessao** apos login no alvo:
+Na pagina do sistema, clique **Conectar ao alvo**, faca login na janela que abrir e aguarde a confirmacao.
 
-1. Abra DevTools → Network ou Application → Cookies.
-2. Copie o header `Cookie` ou o token `Authorization`.
-3. Cole no painel **Sessao do alvo**.
-4. Dispare o DAST normalmente.
+Campo opcional `login_url` no sistema sobrescreve a URL de login usada no popup externo.

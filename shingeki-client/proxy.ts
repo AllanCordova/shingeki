@@ -12,6 +12,7 @@ const PUBLIC_ROUTES = ["/login", "/registro"];
 
 function isPublicRoute(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (pathname.startsWith("/conectar-alvo")) return true;
   return PUBLIC_ROUTES.some((route) => pathname.startsWith(route));
 }
 

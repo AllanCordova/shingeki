@@ -22,6 +22,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($user) {
             $message = 'Welcome, '.htmlspecialchars((string) $user['email'], ENT_QUOTES).'!';
+
+            $next = $_GET['next'] ?? $_POST['next'] ?? null;
+            if (is_string($next) && $next !== '') {
+                header('Location: '.$next);
+                exit;
+            }
         } else {
             $error = 'Invalid credentials.';
         }
@@ -40,6 +46,9 @@ if ($error !== null) {
 
 ?>
 <form method="post" action="/login.php">
+    <?php if (! empty($_GET['next'])): ?>
+        <input type="hidden" name="next" value="<?= htmlspecialchars((string) $_GET['next'], ENT_QUOTES) ?>">
+    <?php endif; ?>
     <label>
         Email
         <input type="text" name="email" value="guest@vuln.local">

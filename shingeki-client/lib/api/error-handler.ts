@@ -54,6 +54,10 @@ const MESSAGE_TRANSLATIONS: Record<string, string> = {
     "Sessao do alvo removida com sucesso.",
   "No target session found for this system.":
     "Nenhuma sessao do alvo encontrada para este sistema.",
+  "Target session captured successfully.":
+    "Sessao do alvo conectada com sucesso.",
+  "Target session capture started.":
+    "Captura de sessao iniciada.",
 };
 
 /** Traducao de mensagens de validacao do Laravel (heuristica por padrao). */
