@@ -68,6 +68,7 @@ nav:
     - Stacks: api/STACKS.md
     - Capas: api/COVERS.md
     - Assinaturas: api/SIGNATURES.md
+    - Sessao do alvo: api/TARGET-SESSION.md
     - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
     - Remediação: api/REMEDIATION.md
   - Desenvolvimento:

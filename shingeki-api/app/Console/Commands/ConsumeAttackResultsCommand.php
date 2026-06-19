@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\AttackDispatch;
+use App\Models\DispatchProbe;
 use App\Models\SystemResult;
 use App\Services\Attack\AttackResultsMessageHandler;
 use Illuminate\Console\Command;
@@ -50,7 +51,11 @@ class ConsumeAttackResultsCommand extends Command
                 }
 
                 if ($processed instanceof AttackDispatch) {
-                    $this->info("Marked dispatch [{$processed->id}] as completed in {$processed->duration_ms}ms with {$processed->findings_count} findings.");
+                    $this->info("Marked dispatch [{$processed->id}] as completed in {$processed->duration_ms}ms with {$processed->findings_count} findings and {$processed->probes_count} probes.");
+                }
+
+                if ($processed instanceof DispatchProbe) {
+                    $this->info("Stored dispatch probe [{$processed->id}] for attack [{$processed->attack_id}] with outcome [{$processed->outcome->value}].");
                 }
 
                 $job->delete();

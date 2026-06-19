@@ -92,6 +92,7 @@ services:
       CHROME_PATH: /usr/bin/chromium
       DISCOVERY_ROD_NO_SANDBOX: "true"
       DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
+      TARGET_LOCALHOST_REWRITE: host.docker.internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -111,6 +112,8 @@ services:
       - "${VULNERABLE_TARGET_PORT:-8090}:80"
     environment:
       SHINGEKI_SIGNATURE_TOKEN: ${VULNERABLE_TARGET_SIGNATURE_TOKEN}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - vulnerable_data:/var/www/data
     healthcheck:

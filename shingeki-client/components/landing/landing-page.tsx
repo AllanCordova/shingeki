@@ -7,10 +7,7 @@ import { LandingHeader } from "./landing-header";
 import { LANDING_SECTIONS } from "./landing-sections";
 import { ScrollBackground } from "./scroll-background";
 import { SectionNav } from "./section-nav";
-import {
-  useActiveSection,
-  useSectionBackgroundOpacities,
-} from "./use-active-section";
+import { useLandingScrollState } from "./use-active-section";
 
 interface LandingPageProps {
   isAuthenticated?: boolean;
@@ -21,8 +18,7 @@ export function LandingPage({ isAuthenticated = false }: LandingPageProps) {
     () => LANDING_SECTIONS.map((section) => section.id),
     [],
   );
-  const activeId = useActiveSection(sectionIds);
-  const backgroundOpacities = useSectionBackgroundOpacities(sectionIds);
+  const { activeId, opacities } = useLandingScrollState(sectionIds);
 
   const activeSection =
     LANDING_SECTIONS.find((section) => section.id === activeId) ??
@@ -32,7 +28,7 @@ export function LandingPage({ isAuthenticated = false }: LandingPageProps) {
     <div className="landing-page relative min-h-screen">
       <ScrollBackground
         sections={LANDING_SECTIONS}
-        opacities={backgroundOpacities}
+        opacities={opacities}
       />
 
       <LandingHeader
@@ -58,7 +54,7 @@ export function LandingPage({ isAuthenticated = false }: LandingPageProps) {
 
       <footer
         className={cn(
-          "relative z-10 px-6 py-10 text-center text-xs transition-colors duration-700 sm:px-10 lg:pl-[15rem]",
+          "relative z-10 px-6 py-10 text-center text-xs transition-colors duration-500 sm:px-10 lg:pl-[15rem]",
           activeSection.navTheme === "light"
             ? "text-[#71717a]"
             : "text-white/40",

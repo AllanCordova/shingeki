@@ -29,14 +29,14 @@ func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine
 	}
 }
 
-func (e *CompositeEngine) Discover(ctx context.Context, targetURL string) ([]contracts.AttackVector, error) {
-	vectors, err := e.static.Discover(ctx, targetURL)
+func (e *CompositeEngine) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
+	vectors, err := e.static.Discover(ctx, targetURL, authHeaders)
 	if err != nil {
 		return nil, err
 	}
 
 	if e.cfg.RodEnabled && len(vectors) < e.cfg.MinVectorsForRod {
-		dynamicVectors, rodErr := e.dynamic.Discover(ctx, targetURL)
+		dynamicVectors, rodErr := e.dynamic.Discover(ctx, targetURL, authHeaders)
 		if rodErr != nil {
 			e.logger.Warn("dynamic discovery failed", "error", rodErr)
 		} else {

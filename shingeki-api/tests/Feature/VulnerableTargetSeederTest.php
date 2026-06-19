@@ -14,7 +14,7 @@ uses(RefreshDatabase::class);
 
 test('vulnerable target seeder creates lab project system and permitted signature', function () {
     config([
-        'attacks.vulnerable_target_url' => 'http://vulnerable-target',
+        'attacks.vulnerable_target_url' => 'http://127.0.0.1:8090',
         'attacks.vulnerable_target_signature_token' => str_repeat('b', 64),
     ]);
 
@@ -39,7 +39,7 @@ test('vulnerable target seeder creates lab project system and permitted signatur
         ->first();
 
     expect($system)->not->toBeNull()
-        ->and($system->target_url)->toBe('http://vulnerable-target');
+        ->and($system->target_url)->toBe('http://127.0.0.1:8090');
 
     $signature = Signature::query()
         ->where('user_id', $user->id)

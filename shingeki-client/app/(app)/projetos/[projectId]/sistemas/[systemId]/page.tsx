@@ -11,6 +11,7 @@ import {
 import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
 import { SystemForm } from "@/components/forms/system-form";
 import { SignaturePanel } from "@/components/signature/signature-panel";
+import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
 import { AttackForm } from "@/components/attack/attack-form";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
@@ -104,6 +105,8 @@ export default function SystemDetailPage() {
         <SignaturePanel projectId={projectId} systemId={systemId} />
         <AttackForm projectId={projectId} systemId={systemId} />
       </div>
+
+      <TargetSessionPanel projectId={projectId} systemId={systemId} />
 
       <DispatchesList projectId={projectId} systemId={systemId} />
 

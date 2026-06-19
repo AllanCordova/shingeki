@@ -1,2 +1,3 @@
 RewriteEngine On
 RewriteRule ^browse/.*$ browse/index.php [L]
+RewriteRule ^app/browse/.*$ app/browse/index.php [L]

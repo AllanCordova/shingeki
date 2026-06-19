@@ -23,10 +23,10 @@ O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 
 | Contexto | URL do alvo |
 |----------|-------------|
-| Host (navegador, `php artisan serve`) | http://127.0.0.1:8090 |
-| Rede Docker (worker DAST) | http://vulnerable-target |
+| Navegador, popup de login, assinatura | `http://127.0.0.1:8090` ou `http://localhost:8090` |
+| Worker DAST (Docker) | resolvido automaticamente para `http://vulnerable-target` |
 
-Cadastre o sistema no app com a URL da coluna que corresponde a onde a API roda. O seed cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** apontando para o alvo.
+**Importante:** nao cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames so existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila.
 
 ### Assinatura do sistema
 

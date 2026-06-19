@@ -38,6 +38,11 @@ class SystemPolicy
         return $this->belongsToParentProject($system);
     }
 
+    public function manageTargetSession(User $user, System $system): bool
+    {
+        return $this->belongsToParentProject($system);
+    }
+
     private function userOwnsProject(User $user, Project $project): bool
     {
         return $user->id === $project->user_id;

@@ -27,6 +27,7 @@ class System extends Model
         'cover_path',
         'name',
         'target_url',
+        'login_url',
         'repository_url',
     ];
 
@@ -48,6 +49,11 @@ class System extends Model
     public function attackDispatches(): HasMany
     {
         return $this->hasMany(AttackDispatch::class);
+    }
+
+    public function targetSessions(): HasMany
+    {
+        return $this->hasMany(SystemTargetSession::class);
     }
 
     public function stacks(): BelongsToMany
