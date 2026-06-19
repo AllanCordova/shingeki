@@ -103,4 +103,46 @@ describe('POST systems/remediate', function () {
             ->assertJsonPath('dispatch_id', $targetDispatch->id)
             ->assertJsonPath('findings_count', 1);
     });
+
+    test('paginates findings when page and per_page are provided', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $stack = Stack::factory()->laravel()->create();
+        $system->stacks()->attach($stack->id, ['is_primary' => true]);
+
+        Remediation::factory()->for($stack)->create([
+            'attack_category' => AttackCategory::SqlInjection,
+        ]);
+
+        $attack = Attack::factory()->for($user)->create([
+            'category' => AttackCategory::SqlInjection,
+        ]);
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'scan_type' => AttackScanType::Dast,
+            'completed_at' => now(),
+        ]);
+
+        foreach (range(1, 3) as $index) {
+            SystemResult::factory()
+                ->for($system)
+                ->for($attack)
+                ->create(['attack_dispatch_id' => $dispatch->id]);
+        }
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(remediateUrl($project, $system), [
+            'dispatch_id' => $dispatch->id,
+            'page' => 2,
+            'per_page' => 1,
+        ])
+            ->assertOk()
+            ->assertJsonPath('findings_count', 3)
+            ->assertJsonCount(1, 'findings')
+            ->assertJsonPath('findings_pagination.current_page', 2)
+            ->assertJsonPath('findings_pagination.per_page', 1)
+            ->assertJsonPath('findings_pagination.total', 3)
+            ->assertJsonPath('findings_pagination.last_page', 3);
+    });
 });

@@ -1,6 +1,6 @@
 # Architecture
 
-Visão da arquitetura do monorepo Shingeki. 
+Visão da arquitetura do monorepo Shingeki. Voltar ao [início](index.md).
 
 ## Visão geral
 
@@ -29,6 +29,7 @@ flowchart TB
 | `shingeki-client` | [architecture/shingeki-client.md](architecture/shingeki-client.md) |
 | `shingeki-mobile` | [architecture/shingeki-mobile.md](architecture/shingeki-mobile.md) |
 | `shingeki-dast-worker` | [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md) |
+| `shingeki-sast-worker` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
 | `shingeki-vulnerable-target` | [architecture/shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |
 
 ## Fluxo de um disparo DAST

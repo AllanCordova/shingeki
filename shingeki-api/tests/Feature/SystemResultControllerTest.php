@@ -1,7 +1,9 @@
 <?php
 
+use App\Enums\DispatchProbeOutcome;
 use App\Models\Attack;
 use App\Models\AttackDispatch;
+use App\Models\DispatchProbe;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
@@ -127,6 +129,106 @@ describe('GET system-results/{attack_dispatch}', function () {
 
         $this->getJson(systemResultShowUrl($project, $system, $dispatch))
             ->assertNotFound();
+    });
+
+    test('paginates probes and returns outcome counts', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $attack = Attack::factory()->create();
+
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => now(),
+            'probes_count' => 30,
+        ]);
+
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->count(20)->create([
+            'outcome' => DispatchProbeOutcome::Clean,
+        ]);
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->count(8)->create([
+            'outcome' => DispatchProbeOutcome::Vulnerable,
+        ]);
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->count(2)->create([
+            'outcome' => DispatchProbeOutcome::Error,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(systemResultShowUrl($project, $system, $dispatch).'?page=1&per_page=10')
+            ->assertOk()
+            ->assertJsonPath('probes_pagination.current_page', 1)
+            ->assertJsonPath('probes_pagination.per_page', 10)
+            ->assertJsonPath('probes_pagination.total', 30)
+            ->assertJsonCount(10, 'probes')
+            ->assertJsonPath('probe_counts.all', 30)
+            ->assertJsonPath('probe_counts.vulnerable', 8)
+            ->assertJsonPath('probe_counts.clean', 20)
+            ->assertJsonPath('probe_counts.error', 2);
+    });
+
+    test('filters probes by vulnerable outcome', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $attack = Attack::factory()->create();
+
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => now(),
+        ]);
+
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->count(5)->create([
+            'outcome' => DispatchProbeOutcome::Clean,
+        ]);
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->count(3)->create([
+            'outcome' => DispatchProbeOutcome::Vulnerable,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(systemResultShowUrl($project, $system, $dispatch).'?filter=vulnerable')
+            ->assertOk()
+            ->assertJsonPath('filter', 'vulnerable')
+            ->assertJsonPath('probes_pagination.total', 3)
+            ->assertJsonCount(3, 'probes')
+            ->assertJsonPath('probes.0.outcome', 'vulnerable');
+    });
+
+    test('filters probes by clean outcome', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $attack = Attack::factory()->create();
+
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => now(),
+        ]);
+
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->count(4)->create([
+            'outcome' => DispatchProbeOutcome::Clean,
+        ]);
+        DispatchProbe::factory()->for($dispatch)->for($system)->for($attack)->create([
+            'outcome' => DispatchProbeOutcome::Vulnerable,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(systemResultShowUrl($project, $system, $dispatch).'?filter=clean')
+            ->assertOk()
+            ->assertJsonPath('filter', 'clean')
+            ->assertJsonPath('probes_pagination.total', 4)
+            ->assertJsonPath('probes.0.outcome', 'clean');
+    });
+
+    test('rejects invalid probe filter', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(systemResultShowUrl($project, $system, $dispatch).'?filter=unknown')
+            ->assertUnprocessable();
     });
 });
 

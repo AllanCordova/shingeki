@@ -17,6 +17,7 @@ php artisan migrate --seed
 php artisan serve
 php artisan queue:listen --tries=1
 php artisan attacks:consume-results
+php artisan catalog:consume-imports
 ```
 
 O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
@@ -39,6 +40,8 @@ No alvo de laboratório, o valor da meta tag vem de `VULNERABLE_TARGET_SIGNATURE
 `POST /api/projects/{project}/systems/{system}/attacks/dispatch`
 
 Enfileira o catálogo **DAST** (`scan_type: DAST`) para o sistema. Publica na fila `attacks.dispatch`.
+
+O lote inclui ataques cujo autor tem papel `ADMIN` ou `SPECIALIST` no catálogo global ([CATALOG.md](CATALOG.md)).
 
 **Body (JSON):** vazio (`{}`) ou omitido.
 

@@ -70,7 +70,7 @@ export const updateProfileFormSchema = z.object({
 
 export type UpdateProfileFormInput = z.infer<typeof updateProfileFormSchema>;
 
-export type UserRole = "user" | "admin";
+export type UserRole = "USER" | "ADMIN" | "SPECIALIST";
 
 export interface User extends Timestamps {
   id: string;

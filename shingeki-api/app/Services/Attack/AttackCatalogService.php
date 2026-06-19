@@ -3,6 +3,7 @@
 namespace App\Services\Attack;
 
 use App\Enums\AttackScanType;
+use App\Enums\UserRole;
 use App\Models\Attack;
 use Illuminate\Database\Eloquent\Collection;
 use RuntimeException;
@@ -17,7 +18,10 @@ class AttackCatalogService
         return Attack::query()
             ->where('scan_type', $scanType)
             ->whereHas('user', function ($query): void {
-                $query->where('email', config('attacks.catalog_admin_email'));
+                $query->whereIn('role', array_map(
+                    static fn (UserRole $role): string => $role->value,
+                    UserRole::catalogManagers(),
+                ));
             })
             ->orderBy('created_at')
             ->get();

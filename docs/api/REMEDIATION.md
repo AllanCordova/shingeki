@@ -74,11 +74,12 @@ Gera snippets de correção para os achados de um disparo concluído.
 
 ## Lookup de snippets (`remediations`)
 
-O catálogo associa cada snippet a uma `stack_id` e critérios de match:
+O catálogo associa cada snippet a uma `stack_id`, critérios de match e `user_id` (autor). Gerenciamento via [CATALOG.md](CATALOG.md) e import CSV em [CATALOG-BULK-IMPORT.md](CATALOG-BULK-IMPORT.md).
 
 | Coluna | Uso |
 |--------|-----|
 | `stack_id` | Framework/stack (ver [STACKS.md](STACKS.md)) |
+| `user_id` | Autor do snippet (ownership na API de catálogo) |
 | `scan_type` | `DAST`, `SAST` ou `null` (ambos) |
 | `attack_category` | Match DAST; fallback SAST |
 | `semgrep_rule_id` | Match exato SAST (`payload_used` = `check_id` Semgrep) |

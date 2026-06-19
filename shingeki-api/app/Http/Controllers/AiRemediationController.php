@@ -2,17 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FormatsPagination;
+use App\Http\Controllers\Concerns\ResolvesRemediationDispatch;
 use App\Http\Requests\RemediateSystemAi;
-use App\Models\AttackDispatch;
 use App\Models\Project;
 use App\Models\System;
-use App\Models\SystemResult;
 use App\Services\Ai\AiRemediationService;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 class AiRemediationController extends Controller
 {
+    use FormatsPagination;
+    use ResolvesRemediationDispatch;
+
     public function __construct(
         private readonly AiRemediationService $aiRemediationService,
     ) {}
@@ -24,37 +27,31 @@ class AiRemediationController extends Controller
         $system->load('stacks');
 
         if ($system->stacks->isEmpty()) {
-            return response()->json([
-                'message' => 'Configure at least one technology stack on the system before remediating.',
-            ], 422);
+            return $this->emptyStacksResponse();
         }
 
         $dispatch = $this->resolveDispatch($system, $request->validated('dispatch_id'));
 
         if ($dispatch === null) {
-            return response()->json([
-                'message' => 'No completed attack dispatch is available to remediate.',
-            ], 422);
+            return $this->missingDispatchResponse();
         }
 
-        $results = SystemResult::query()
-            ->with(['attack', 'attackDispatch'])
-            ->where('system_id', $system->id)
-            ->where('attack_dispatch_id', $dispatch->id)
-            ->latest()
-            ->get();
+        $results = $this->paginatedDispatchResults(
+            $system,
+            $dispatch,
+            $request->page(),
+            $request->perPage(),
+        );
 
-        if ($results->isEmpty()) {
-            return response()->json([
-                'message' => 'No findings are available to remediate for the selected dispatch.',
-            ], 422);
+        if ($results->total() === 0) {
+            return $this->emptyFindingsResponse();
         }
 
         try {
             $generated = $this->aiRemediationService->generate(
                 $system,
                 $dispatch,
-                $results,
+                collect($results->items()),
                 $request->validated('finding_ids'),
                 (bool) $request->boolean('regenerate'),
             );
@@ -70,32 +67,10 @@ class AiRemediationController extends Controller
             'dispatch_id' => $dispatch->id,
             'provider' => $generated['provider'],
             'model' => $generated['model'],
-            'stacks' => $system->stacks
-                ->map(fn ($stack) => [
-                    'id' => $stack->id,
-                    'slug' => $stack->slug,
-                    'name' => $stack->name,
-                ])
-                ->values()
-                ->all(),
-            'findings_count' => count($generated['findings']),
+            'stacks' => $this->formatSystemStacks($system),
+            'findings_count' => $results->total(),
             'findings' => $generated['findings'],
+            'findings_pagination' => $this->formatPagination($results),
         ]);
-    }
-
-    private function resolveDispatch(System $system, ?string $dispatchId): ?AttackDispatch
-    {
-        if (is_string($dispatchId)) {
-            return AttackDispatch::query()
-                ->where('system_id', $system->id)
-                ->whereKey($dispatchId)
-                ->first();
-        }
-
-        return AttackDispatch::query()
-            ->where('system_id', $system->id)
-            ->whereNotNull('completed_at')
-            ->latest('dispatched_at')
-            ->first();
     }
 }

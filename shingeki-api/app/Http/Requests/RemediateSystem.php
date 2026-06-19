@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\PaginatedListRequest;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RemediateSystem extends FormRequest
 {
+    use PaginatedListRequest;
     public function authorize(): bool
     {
         return true;
@@ -19,6 +21,7 @@ class RemediateSystem extends FormRequest
     {
         return [
             'dispatch_id' => ['sometimes', 'uuid'],
+            ...$this->pageRules(),
         ];
     }
 }

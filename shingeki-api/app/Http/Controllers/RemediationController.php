@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FormatsPagination;
+use App\Http\Controllers\Concerns\ResolvesRemediationDispatch;
 use App\Http\Requests\RemediateSystem;
-use App\Models\AttackDispatch;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
@@ -12,6 +13,9 @@ use Illuminate\Http\JsonResponse;
 
 class RemediationController extends Controller
 {
+    use FormatsPagination;
+    use ResolvesRemediationDispatch;
+
     public function __construct(
         private readonly RemediationResolver $remediationResolver,
     ) {}
@@ -23,33 +27,27 @@ class RemediationController extends Controller
         $system->load('stacks');
 
         if ($system->stacks->isEmpty()) {
-            return response()->json([
-                'message' => 'Configure at least one technology stack on the system before remediating.',
-            ], 422);
+            return $this->emptyStacksResponse();
         }
 
         $dispatch = $this->resolveDispatch($system, $request->validated('dispatch_id'));
 
         if ($dispatch === null) {
-            return response()->json([
-                'message' => 'No completed attack dispatch is available to remediate.',
-            ], 422);
+            return $this->missingDispatchResponse();
         }
 
-        $results = SystemResult::query()
-            ->with(['attack', 'attackDispatch'])
-            ->where('system_id', $system->id)
-            ->where('attack_dispatch_id', $dispatch->id)
-            ->latest()
-            ->get();
+        $results = $this->paginatedDispatchResults(
+            $system,
+            $dispatch,
+            $request->page(),
+            $request->perPage(),
+        );
 
-        if ($results->isEmpty()) {
-            return response()->json([
-                'message' => 'No findings are available to remediate for the selected dispatch.',
-            ], 422);
+        if ($results->total() === 0) {
+            return $this->emptyFindingsResponse();
         }
 
-        $findings = $results
+        $findings = collect($results->items())
             ->map(fn (SystemResult $result) => $this->formatFinding($result, $system))
             ->values()
             ->all();
@@ -58,38 +56,13 @@ class RemediationController extends Controller
             'message' => 'Remediation suggestions generated.',
             'system_id' => $system->id,
             'dispatch_id' => $dispatch->id,
-            'stacks' => $system->stacks
-                ->map(fn ($stack) => [
-                    'id' => $stack->id,
-                    'slug' => $stack->slug,
-                    'name' => $stack->name,
-                ])
-                ->values()
-                ->all(),
-            'findings_count' => count($findings),
+            'stacks' => $this->formatSystemStacks($system),
+            'findings_count' => $results->total(),
             'findings' => $findings,
+            'findings_pagination' => $this->formatPagination($results),
         ]);
     }
 
-    private function resolveDispatch(System $system, ?string $dispatchId): ?AttackDispatch
-    {
-        if (is_string($dispatchId)) {
-            return AttackDispatch::query()
-                ->where('system_id', $system->id)
-                ->whereKey($dispatchId)
-                ->first();
-        }
-
-        return AttackDispatch::query()
-            ->where('system_id', $system->id)
-            ->whereNotNull('completed_at')
-            ->latest('dispatched_at')
-            ->first();
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
     private function formatFinding(SystemResult $result, System $system): array
     {
         $data = [

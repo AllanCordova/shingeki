@@ -23,6 +23,7 @@ class Remediation extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'stack_id',
         'scan_type',
         'attack_category',
@@ -48,5 +49,10 @@ class Remediation extends Model
     public function stack(): BelongsTo
     {
         return $this->belongsTo(Stack::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -6,6 +6,7 @@ use App\Enums\AttackCategory;
 use App\Enums\AttackRiskLevel;
 use App\Enums\AttackScanType;
 use App\Enums\AttackTargetLocation;
+use App\Enums\UserRole;
 use App\Models\Attack;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
@@ -63,7 +64,7 @@ class AttackCatalogSeeder extends Seeder
             [
                 'name' => 'Attack Catalog Admin',
                 'password' => Hash::make('password'),
-                'role' => 'admin',
+                'role' => UserRole::Admin,
             ],
         );
 

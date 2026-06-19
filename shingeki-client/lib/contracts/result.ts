@@ -1,7 +1,17 @@
-import type { Timestamps } from "./common";
+import type { Timestamps, PaginationMeta } from "./common";
 import type { AttackDispatch, AttackScanTypeValue } from "./attack";
 
 export type DispatchProbeOutcome = "clean" | "error" | "vulnerable";
+
+export type DispatchProbeListFilter = "all" | "vulnerable" | "clean";
+
+export type { PaginationMeta } from "./common";
+export interface ProbeOutcomeCounts {
+  all: number;
+  vulnerable: number;
+  clean: number;
+  error: number;
+}
 
 export interface DispatchProbe extends Timestamps {
   id: string;
@@ -49,4 +59,13 @@ export interface ResultsResponse {
   dispatch: AttackDispatch;
   results: SystemResult[];
   probes: DispatchProbe[];
+  probes_pagination: PaginationMeta;
+  probe_counts: ProbeOutcomeCounts;
+  filter: DispatchProbeListFilter;
+}
+
+export interface ResultsQueryParams {
+  page?: number;
+  per_page?: number;
+  filter?: DispatchProbeListFilter;
 }

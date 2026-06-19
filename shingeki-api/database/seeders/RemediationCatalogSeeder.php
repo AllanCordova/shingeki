@@ -6,6 +6,7 @@ use App\Enums\AttackCategory;
 use App\Enums\AttackScanType;
 use App\Models\Remediation;
 use App\Models\Stack;
+use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,6 +16,10 @@ class RemediationCatalogSeeder extends Seeder
 
     public function run(): void
     {
+        $catalogAdmin = User::query()
+            ->where('email', config('attacks.catalog_admin_email'))
+            ->firstOrFail();
+
         $vanillaPhp = Stack::query()->where('slug', 'vanilla_php')->firstOrFail();
         $laravel = Stack::query()->where('slug', 'laravel')->firstOrFail();
         $express = Stack::query()->where('slug', 'express')->firstOrFail();
@@ -96,14 +101,14 @@ class RemediationCatalogSeeder extends Seeder
         ];
 
         foreach ($entries as $entry) {
-            $this->upsertRemediation($entry);
+            $this->upsertRemediation($entry, $catalogAdmin->id);
         }
     }
 
     /**
      * @param  array<string, mixed>  $entry
      */
-    private function upsertRemediation(array $entry): void
+    private function upsertRemediation(array $entry, string $userId): void
     {
         $query = Remediation::query()->where('stack_id', $entry['stack_id']);
 
@@ -124,6 +129,9 @@ class RemediationCatalogSeeder extends Seeder
             return;
         }
 
-        Remediation::create($entry);
+        Remediation::create([
+            ...$entry,
+            'user_id' => $userId,
+        ]);
     }
 }

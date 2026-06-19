@@ -1,6 +1,6 @@
 # Desenvolvimento — Mobile (Expo / Android)
 
-Guia para levantar o app `shingeki-mobile` no emulador ou dispositivo Android.
+Guia para levantar o app `shingeki-mobile` no emulador ou dispositivo Android. Índice de clients: [CLIENTS.md](CLIENTS.md).
 
 ## Requisitos
 

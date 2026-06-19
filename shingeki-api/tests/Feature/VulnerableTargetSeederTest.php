@@ -5,6 +5,7 @@ use App\Models\Signature;
 use App\Models\Stack;
 use App\Models\System;
 use App\Models\User;
+use Database\Seeders\AttackCatalogSeeder;
 use Database\Seeders\RemediationCatalogSeeder;
 use Database\Seeders\StackCatalogSeeder;
 use Database\Seeders\VulnerableTargetSeeder;
@@ -20,6 +21,7 @@ test('vulnerable target seeder creates lab project system and permitted signatur
 
     User::factory()->create(['email' => 'test@example.com']);
 
+    $this->seed(AttackCatalogSeeder::class);
     $this->seed(StackCatalogSeeder::class);
     $this->seed(RemediationCatalogSeeder::class);
     $this->seed(VulnerableTargetSeeder::class);

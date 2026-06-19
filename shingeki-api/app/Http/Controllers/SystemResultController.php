@@ -2,6 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\DispatchProbeOutcome;
+use App\Enums\DispatchProbeListFilter;
+use App\Http\Controllers\Concerns\FormatsPagination;
+use App\Http\Requests\ListSystemResultShow;
 use App\Models\AttackDispatch;
 use App\Models\DispatchProbe;
 use App\Models\Project;
@@ -11,6 +15,8 @@ use Illuminate\Http\JsonResponse;
 
 class SystemResultController extends Controller
 {
+    use FormatsPagination;
+
     public function index(Project $project, System $system): JsonResponse
     {
         $this->authorize('viewAny', [SystemResult::class, $system]);
@@ -28,7 +34,7 @@ class SystemResultController extends Controller
         ]);
     }
 
-    public function show(Project $project, System $system, AttackDispatch $attackDispatch): JsonResponse
+    public function show(ListSystemResultShow $request, Project $project, System $system, AttackDispatch $attackDispatch): JsonResponse
     {
         $this->authorize('viewBatch', $attackDispatch);
 
@@ -38,11 +44,22 @@ class SystemResultController extends Controller
             ->latest()
             ->get();
 
-        $probes = DispatchProbe::query()
+        $probeBaseQuery = DispatchProbe::query()
+            ->where('attack_dispatch_id', $attackDispatch->id);
+
+        $probeCounts = $this->probeOutcomeCounts($probeBaseQuery);
+
+        $probesQuery = (clone $probeBaseQuery)
             ->with('attack')
-            ->where('attack_dispatch_id', $attackDispatch->id)
-            ->latest()
-            ->get();
+            ->latest();
+
+        $this->applyProbeFilter($probesQuery, $request->filter());
+
+        $probes = $probesQuery
+            ->paginate(
+                perPage: $request->perPage(),
+                page: $request->page(),
+            );
 
         return response()->json([
             'dispatch' => $this->formatDispatch($attackDispatch),
@@ -50,10 +67,13 @@ class SystemResultController extends Controller
                 ->map(fn (SystemResult $result) => $this->formatResult($result))
                 ->values()
                 ->all(),
-            'probes' => $probes
+            'probes' => collect($probes->items())
                 ->map(fn (DispatchProbe $probe) => $this->formatProbe($probe))
                 ->values()
                 ->all(),
+            'probes_pagination' => $this->formatPagination($probes),
+            'probe_counts' => $probeCounts,
+            'filter' => $request->filter()->value,
         ]);
     }
 
@@ -177,5 +197,37 @@ class SystemResultController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<DispatchProbe>  $query
+     */
+    private function applyProbeFilter($query, DispatchProbeListFilter $filter): void
+    {
+        match ($filter) {
+            DispatchProbeListFilter::Vulnerable => $query->where(
+                'outcome',
+                DispatchProbeOutcome::Vulnerable,
+            ),
+            DispatchProbeListFilter::Clean => $query->where(
+                'outcome',
+                DispatchProbeOutcome::Clean,
+            ),
+            DispatchProbeListFilter::All => null,
+        };
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder<DispatchProbe>  $query
+     * @return array{all: int, vulnerable: int, clean: int, error: int}
+     */
+    private function probeOutcomeCounts($query): array
+    {
+        return [
+            'all' => (clone $query)->count(),
+            'vulnerable' => (clone $query)->where('outcome', DispatchProbeOutcome::Vulnerable)->count(),
+            'clean' => (clone $query)->where('outcome', DispatchProbeOutcome::Clean)->count(),
+            'error' => (clone $query)->where('outcome', DispatchProbeOutcome::Error)->count(),
+        ];
     }
 }
