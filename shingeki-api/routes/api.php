@@ -3,6 +3,11 @@
 use App\Http\Controllers\AiRemediationController;
 use App\Http\Controllers\AttackController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogAttackController;
+use App\Http\Controllers\CatalogAttackImportController;
+use App\Http\Controllers\CatalogImportController;
+use App\Http\Controllers\CatalogRemediationController;
+use App\Http\Controllers\CatalogRemediationImportController;
 use App\Http\Controllers\CoverUploadController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RemediationController;
@@ -32,6 +37,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
 
     Route::get('stacks', [StackController::class, 'index']);
+
+    Route::middleware('role:ADMIN,SPECIALIST')->prefix('catalog')->group(function () {
+        Route::apiResource('attacks', CatalogAttackController::class);
+        Route::apiResource('remediations', CatalogRemediationController::class);
+        Route::get('attacks/import/template', [CatalogAttackImportController::class, 'template']);
+        Route::post('attacks/import', [CatalogAttackImportController::class, 'store']);
+        Route::get('remediations/import/template', [CatalogRemediationImportController::class, 'template']);
+        Route::post('remediations/import', [CatalogRemediationImportController::class, 'store']);
+        Route::get('imports/{import}', [CatalogImportController::class, 'show']);
+    });
 
     Route::apiResource('projects', ProjectController::class);
     Route::apiResource('projects.systems', SystemController::class);

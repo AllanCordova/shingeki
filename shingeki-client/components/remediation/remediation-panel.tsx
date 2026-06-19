@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { RemediatedFinding } from "@/lib/contracts";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
 import { useAiRemediateSystem, useRemediateSystem } from "@/lib/hooks/use-remediate";
 import { notify } from "@/lib/notify";
 import { AiRemediationFindingCard } from "@/components/remediation/ai-remediation-finding-card";
@@ -17,9 +18,18 @@ import {
   CardTitle,
   EmptyState,
   ErrorShow,
+  ListPagination,
 } from "@/components/ui";
 
 type RemediationView = "catalog" | "ai";
+
+async function runAction(action: () => Promise<void>, errorMessage: string) {
+  try {
+    await action();
+  } catch (error) {
+    notify.fromApiError(error, errorMessage);
+  }
+}
 
 export function RemediationPanel({
   projectId,
@@ -46,34 +56,36 @@ export function RemediationPanel({
   const [hasAi, setHasAi] = useState(false);
   const [view, setView] = useState<RemediationView>("catalog");
 
-  const input = dispatchId ? { dispatch_id: dispatchId } : {};
+  const baseInput = dispatchId ? { dispatch_id: dispatchId } : {};
+  const paginatedInput = { ...baseInput, per_page: DEFAULT_PAGE_SIZE };
   const showResults = hasCatalog || hasAi;
 
-  const handleRemediate = async () => {
-    try {
-      reset();
-      const result = await remediate(input);
-      setHasCatalog(true);
-      setView("catalog");
+  const loadCatalogPage = async (page: number, notifyOnSuccess = false) => {
+    reset();
+    const result = await remediate({ ...paginatedInput, page });
+    setHasCatalog(true);
+    if (notifyOnSuccess) {
       notify.success(
         `${result.findings_count} achado(s) com sugestoes de correcao.`,
       );
-    } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel gerar as correcoes.");
     }
   };
 
-  const handleAiRemediate = async (regenerate = false) => {
-    try {
-      resetAi();
-      const result = await remediateWithAi({ ...input, regenerate });
-      setHasAi(true);
-      setView("ai");
+  const loadAiPage = async (
+    page: number,
+    options?: { regenerate?: boolean; notifyOnSuccess?: boolean },
+  ) => {
+    resetAi();
+    const result = await remediateWithAi({
+      ...paginatedInput,
+      page,
+      regenerate: options?.regenerate,
+    });
+    setHasAi(true);
+    if (options?.notifyOnSuccess) {
       notify.success(
         `${result.findings_count} sugestao(oes) de IA gerada(s) via ${result.provider}.`,
       );
-    } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel gerar sugestoes com IA.");
     }
   };
 
@@ -94,7 +106,12 @@ export function RemediationPanel({
           <Button
             type="button"
             isLoading={isLoading}
-            onClick={() => void handleRemediate()}
+            onClick={() =>
+              void runAction(async () => {
+                await loadCatalogPage(1, true);
+                setView("catalog");
+              }, "Nao foi possivel gerar as correcoes.")
+            }
           >
             Gerar correcoes
           </Button>
@@ -102,7 +119,12 @@ export function RemediationPanel({
             type="button"
             variant="outline"
             isLoading={aiLoading}
-            onClick={() => void handleAiRemediate(false)}
+            onClick={() =>
+              void runAction(async () => {
+                await loadAiPage(1, { notifyOnSuccess: true });
+                setView("ai");
+              }, "Nao foi possivel gerar sugestoes com IA.")
+            }
           >
             Sugerir com IA
           </Button>
@@ -111,7 +133,12 @@ export function RemediationPanel({
               type="button"
               variant="ghost"
               disabled={aiLoading}
-              onClick={() => void handleAiRemediate(true)}
+              onClick={() =>
+                void runAction(
+                  () => loadAiPage(1, { regenerate: true, notifyOnSuccess: true }),
+                  "Nao foi possivel gerar sugestoes com IA.",
+                )
+              }
             >
               Regenerar IA
             </Button>
@@ -156,6 +183,16 @@ export function RemediationPanel({
                       finding={finding}
                     />
                   ))}
+                  <ListPagination
+                    pagination={data.findings_pagination}
+                    isFetching={isLoading}
+                    onPageChange={(page) =>
+                      void runAction(
+                        () => loadCatalogPage(page),
+                        "Nao foi possivel carregar a pagina de correcoes.",
+                      )
+                    }
+                  />
                 </div>
               )
             ) : !hasAi || !aiData ? (
@@ -182,6 +219,16 @@ export function RemediationPanel({
                     finding={finding}
                   />
                 ))}
+                <ListPagination
+                  pagination={aiData.findings_pagination}
+                  isFetching={aiLoading}
+                  onPageChange={(page) =>
+                    void runAction(
+                      () => loadAiPage(page),
+                      "Nao foi possivel carregar a pagina de sugestoes de IA.",
+                    )
+                  }
+                />
               </div>
             )}
           </>

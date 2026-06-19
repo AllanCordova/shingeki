@@ -1,4 +1,5 @@
 import type { AttackScanTypeValue } from "./attack";
+import type { PaginationMeta } from "./common";
 import type { Stack } from "./stack";
 
 export interface RemediationSnippet {
@@ -28,6 +29,8 @@ export interface RemediatedFinding {
 
 export interface RemediateSystemInput {
   dispatch_id?: string;
+  page?: number;
+  per_page?: number;
 }
 
 export interface RemediateSystemResponse {
@@ -37,6 +40,7 @@ export interface RemediateSystemResponse {
   stacks: Pick<Stack, "id" | "slug" | "name">[];
   findings_count: number;
   findings: RemediatedFinding[];
+  findings_pagination: PaginationMeta;
 }
 
 export type AiConfidence = "high" | "medium" | "low";
@@ -86,6 +90,8 @@ export interface RemediateSystemAiInput {
   dispatch_id?: string;
   finding_ids?: string[];
   regenerate?: boolean;
+  page?: number;
+  per_page?: number;
 }
 
 export interface RemediateSystemAiResponse {
@@ -97,4 +103,5 @@ export interface RemediateSystemAiResponse {
   stacks: Pick<Stack, "id" | "slug" | "name">[];
   findings_count: number;
   findings: AiRemediatedFinding[];
+  findings_pagination: PaginationMeta;
 }

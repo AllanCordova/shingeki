@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserRole;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\User;
@@ -31,7 +32,7 @@ class DatabaseSeeder extends Seeder
             [
                 'name' => 'Test User',
                 'password' => Hash::make('password'),
-                'role' => 'user',
+                'role' => UserRole::Specialist,
             ],
         );
 

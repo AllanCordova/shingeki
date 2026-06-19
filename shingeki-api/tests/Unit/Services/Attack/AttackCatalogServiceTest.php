@@ -8,25 +8,26 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('catalogAttacks returns only attacks owned by catalog admin', function () {
-    config(['attacks.catalog_admin_email' => 'admin@admin.com']);
+test('catalogAttacks returns only attacks owned by catalog managers', function () {
+    $admin = User::factory()->admin()->create();
+    $specialist = User::factory()->specialist()->create();
+    $other = User::factory()->create();
 
-    $admin = User::factory()->create(['email' => 'admin@admin.com']);
-    $other = User::factory()->create(['email' => 'user@example.com']);
-
-    $catalogAttack = Attack::factory()->for($admin)->create();
+    $adminAttack = Attack::factory()->for($admin)->create();
+    $specialistAttack = Attack::factory()->for($specialist)->create();
     Attack::factory()->for($other)->create();
 
     $attacks = (new AttackCatalogService)->catalogAttacks();
 
-    expect($attacks)->toHaveCount(1)
-        ->and($attacks->first()?->id)->toBe($catalogAttack->id);
+    expect($attacks)->toHaveCount(2)
+        ->and($attacks->pluck('id')->all())->toEqualCanonicalizing([
+            $adminAttack->id,
+            $specialistAttack->id,
+        ]);
 });
 
 test('catalogAttacks filters by scan type', function () {
-    config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
-    $admin = User::factory()->create(['email' => 'admin@admin.com']);
+    $admin = User::factory()->admin()->create();
 
     Attack::factory()->for($admin)->create();
     $sastAttack = Attack::factory()->sast()->for($admin)->create();
@@ -38,7 +39,5 @@ test('catalogAttacks filters by scan type', function () {
 });
 
 test('catalogAttacksOrFail throws when catalog is empty', function () {
-    config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
     (new AttackCatalogService)->catalogAttacksOrFail();
 })->throws(RuntimeException::class);

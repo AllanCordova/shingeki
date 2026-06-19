@@ -5,8 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useResults } from "@/lib/hooks/use-results";
 import { useSystem } from "@/lib/hooks/use-systems";
+import type { DispatchProbeListFilter } from "@/lib/contracts";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
 import { formatDate } from "@/lib/utils";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
+import { ProbeOutcomeFilter } from "@/components/results/probe-outcome-filter";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
@@ -37,12 +40,25 @@ export default function ResultsDetailPage() {
   }>();
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [probePage, setProbePage] = useState(1);
+  const [probeFilter, setProbeFilter] = useState<DispatchProbeListFilter>("all");
 
-  const { dispatch, results, probes, isLoading, isError, error, refetch } = useResults(
-    projectId,
-    systemId,
-    dispatchId,
-  );
+  const {
+    dispatch,
+    results,
+    probes,
+    probesPagination,
+    probeCounts,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useResults(projectId, systemId, dispatchId, {
+    page: probePage,
+    per_page: DEFAULT_PAGE_SIZE,
+    filter: probeFilter,
+  });
   const { system } = useSystem(projectId, systemId);
 
   const dispatchLabel = dispatch?.dispatched_at
@@ -59,12 +75,15 @@ export default function ResultsDetailPage() {
       : null,
     dispatch?.probes_count != null
       ? `${dispatch.probes_count} teste(s) executado(s)`
-      : probes.length > 0
-        ? `${probes.length} teste(s) executado(s)`
+      : probeCounts
+        ? `${probeCounts.all} teste(s) executado(s)`
         : null,
   ]
     .filter(Boolean)
     .join(" · ");
+
+  const showVulnerabilities =
+    probeFilter === "all" || probeFilter === "vulnerable";
 
   return (
     <div className="flex flex-col gap-6">
@@ -109,19 +128,27 @@ export default function ResultsDetailPage() {
               {coverageSummary ? ` · ${coverageSummary}` : ""}
               {dispatch?.duration_ms ? ` · ${dispatch.duration_ms} ms` : ""}
             </p>
+            <ProbeOutcomeFilter
+              filter={probeFilter}
+              probeCounts={probeCounts}
+              onFilterChange={(nextFilter) => {
+                setProbeFilter(nextFilter);
+                setProbePage(1);
+              }}
+            />
           </div>
 
-          {results.length === 0 && !isPending ? (
+          {showVulnerabilities && results.length === 0 && !isPending ? (
             <EmptyState
               title="Nenhuma vulnerabilidade encontrada"
               description="O scan foi executado, mas nenhum indicador de vulnerabilidade foi detectado neste disparo."
             />
-          ) : results.length === 0 && isPending ? (
+          ) : showVulnerabilities && results.length === 0 && isPending ? (
             <EmptyState
               title="Aguardando vulnerabilidades"
               description="Os achados aparecerao aqui se alguma vulnerabilidade for detectada."
             />
-          ) : (
+          ) : showVulnerabilities ? (
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold text-foreground">Vulnerabilidades</h2>
               {results.map((result) => (
@@ -173,7 +200,7 @@ export default function ResultsDetailPage() {
                 </Card>
               ))}
             </div>
-          )}
+          ) : null}
 
           <ScanCoveragePanel
             probes={probes}
@@ -183,6 +210,10 @@ export default function ResultsDetailPage() {
             jobsPlanned={dispatch?.jobs_planned}
             vectorsDiscovered={dispatch?.vectors_discovered}
             targetUrl={system?.target_url}
+            filter={probeFilter}
+            pagination={probesPagination}
+            isFetching={isFetching}
+            onPageChange={setProbePage}
           />
 
           {dispatch?.status === "completed" ? (

@@ -6,6 +6,7 @@ use App\Enums\AttackCategory;
 use App\Enums\AttackScanType;
 use App\Models\Remediation;
 use App\Models\Stack;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,6 +22,7 @@ class RemediationFactory extends Factory
     public function definition(): array
     {
         return [
+            'user_id' => User::factory(),
             'stack_id' => Stack::factory()->vanillaPhp(),
             'scan_type' => AttackScanType::Dast,
             'attack_category' => AttackCategory::PathTraversal,

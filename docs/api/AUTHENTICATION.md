@@ -23,7 +23,7 @@ Cadastra usuário e retorna token.
     "id": "uuid",
     "name": "Nome",
     "email": "user@example.com",
-    "role": "user",
+    "role": "USER",
     "created_at": "...",
     "updated_at": "..."
   },
@@ -49,6 +49,16 @@ Cadastra usuário e retorna token.
   "message": "Invalid credentials."
 }
 ```
+
+## Papéis (`role`)
+
+| Valor | Descrição |
+|-------|-----------|
+| `USER` | Padrão no registro. Acesso a projetos, sistemas, ataques e remediação de achados. |
+| `SPECIALIST` | Gerencia o catálogo global (`/api/catalog/*`). Atribuído manualmente ou via seed. |
+| `ADMIN` | Acesso total ao catálogo, incluindo editar/remover registros de outros autores. |
+
+Detalhes das rotas de catálogo: [CATALOG.md](CATALOG.md).
 
 ## POST /api/auth/logout
 

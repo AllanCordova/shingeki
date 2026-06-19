@@ -29,6 +29,8 @@ cp .env.example .env
 cp shingeki-api/.env.example shingeki-api/.env
 ```
 
+Use o `.env.example` **de `shingeki-api/`** (contém `APP_KEY=`). O da raiz é só para Docker Compose.
+
 Gere a chave e o link de storage (capas em `/storage/covers`):
 
 ```bash
@@ -58,9 +60,10 @@ php artisan migrate --seed
 php artisan serve
 php artisan queue:listen --tries=1
 php artisan attacks:consume-results
+php artisan catalog:consume-imports
 ```
 
-A API fica em `http://127.0.0.1:8000` (rotas com prefixo `/api`).
+Processos longos em terminais separados: `attacks:consume-results` (resultados DAST/SAST) e `catalog:consume-imports` (import CSV do catálogo). Detalhes: [api/CATALOG-BULK-IMPORT.md](api/CATALOG-BULK-IMPORT.md).
 
 ### Stack completa (DAST + alvo vulnerável)
 
@@ -73,9 +76,12 @@ php artisan migrate --seed
 php artisan serve
 php artisan queue:listen --tries=1
 php artisan attacks:consume-results
+php artisan catalog:consume-imports
 ```
 
-Para cadastrar o alvo, disparar ataques e consultar resultados, veja [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
+A API fica em `http://127.0.0.1:8000` (rotas com prefixo `/api`).
+
+Para importação CSV do catálogo admin, veja [api/CATALOG-BULK-IMPORT.md](api/CATALOG-BULK-IMPORT.md).
 
 ## Credenciais do seed {#credenciais-do-seed}
 
@@ -83,7 +89,10 @@ Após `php artisan migrate --seed`:
 
 | E-mail | Senha | Perfil |
 |--------|-------|--------|
-| `test@example.com` | `password` | Projeto **Pentest Lab** e sistema **Vulnerable PHP Target** |
+| `test@example.com` | `password` | `SPECIALIST` — projeto **Pentest Lab**, sistema **Vulnerable PHP Target**, acesso admin ao catálogo |
+| `admin@admin.com` | `password` | `ADMIN` — autor dos ataques/medicações seed do catálogo global |
+
+Para cadastrar o alvo, disparar ataques e consultar resultados, veja [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 
 ## 4. Escolha o client
 

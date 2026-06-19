@@ -67,6 +67,7 @@ components/
 | Dispatch | Sem campo de token — depende de assinatura validada no sistema |
 | Resultados | Lista com exclusão individual ou em massa (modais) |
 | Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
+| Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações e import CSV |
 
 ## Paridade com o mobile
 

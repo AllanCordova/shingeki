@@ -37,9 +37,7 @@ describe('POST attacks/dispatch', function () {
     });
 
     test('dispatches admin catalog attacks when signature is permitted', function () {
-        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
-        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         $catalogAttacks = Attack::factory()->count(2)->for($admin)->create();
         Attack::factory()->sast()->for($admin)->create();
 
@@ -88,8 +86,6 @@ describe('POST attacks/dispatch', function () {
     });
 
     test('returns unprocessable when catalog is empty', function () {
-        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
         $system = System::factory()->for($project)->create();
@@ -107,9 +103,7 @@ describe('POST attacks/dispatch', function () {
     });
 
     test('rejects dispatch when signature is denied', function () {
-        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
-        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
@@ -142,9 +136,7 @@ describe('POST attacks/dispatch', function () {
     });
 
     test('rejects dispatch when system has no signature', function () {
-        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
-        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
@@ -161,9 +153,7 @@ describe('POST attacks/dispatch', function () {
 
 describe('POST attacks/dispatch/sast', function () {
     test('dispatches sast catalog attacks when signature is permitted', function () {
-        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
-        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         Attack::factory()->count(2)->for($admin)->create();
         $sastAttack = Attack::factory()->sast()->for($admin)->create();
 
@@ -204,9 +194,7 @@ describe('POST attacks/dispatch/sast', function () {
     });
 
     test('returns unprocessable when repository url is missing', function () {
-        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
-
-        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         Attack::factory()->sast()->for($admin)->create();
 
         $user = User::factory()->create();

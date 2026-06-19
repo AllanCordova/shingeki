@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Http\Requests\AuthLogin;
 use App\Http\Requests\AuthRegister;
 use App\Http\Requests\AuthUpdate;
@@ -23,7 +24,7 @@ class AuthController extends Controller
             'name' => $request->validated('name'),
             'email' => $request->validated('email'),
             'password' => $request->validated('password'),
-            'role' => 'user',
+            'role' => UserRole::User,
         ]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
@@ -109,7 +110,7 @@ class AuthController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'avatar_path' => $user->avatar_path,
-            'role' => $user->role,
+            'role' => $user->role->value,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
         ];
