@@ -2,13 +2,34 @@
 
 declare(strict_types=1);
 
-require_once __DIR__.'/../includes/layout.php';
-require_once __DIR__.'/../includes/db.php';
+require_once __DIR__.'/../includes/auth.php';
 
-renderHeader('Login');
+function safeNext(mixed $next): string
+{
+    if (! is_string($next) || $next === '') {
+        return '/dashboard.php';
+    }
 
-$message = null;
+    if (str_starts_with($next, 'http://') || str_starts_with($next, 'https://')) {
+        $parts = parse_url($next);
+        if ($parts !== false && isset($parts['path'])) {
+            $next = $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
+        }
+    }
+
+    if (! str_starts_with($next, '/')) {
+        return '/dashboard.php';
+    }
+
+    return $next;
+}
+
 $error = null;
+
+if (isAuthenticated()) {
+    header('Location: '.safeNext($_GET['next'] ?? '/dashboard.php'));
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = $_POST['email'] ?? '';
@@ -21,33 +42,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user = $result ? $result->fetch(PDO::FETCH_ASSOC) : false;
 
         if ($user) {
-            $message = 'Welcome, '.htmlspecialchars((string) $user['email'], ENT_QUOTES).'!';
+            loginUser($user);
 
-            $next = $_GET['next'] ?? $_POST['next'] ?? null;
-            if (is_string($next) && $next !== '') {
-                header('Location: '.$next);
-                exit;
-            }
-        } else {
-            $error = 'Invalid credentials.';
+            header('Location: '.safeNext($_GET['next'] ?? $_POST['next'] ?? '/dashboard.php'));
+            exit;
         }
+
+        $error = 'Invalid credentials.';
     } catch (Throwable $exception) {
         $error = 'Database error: '.$exception->getMessage();
     }
 }
 
-if ($message !== null) {
-    echo '<p style="color:green;">'.htmlspecialchars($message, ENT_QUOTES).'</p>';
-}
+require_once __DIR__.'/../includes/layout.php';
+
+renderHeader('Login');
 
 if ($error !== null) {
     echo '<p style="color:red;">'.htmlspecialchars($error, ENT_QUOTES).'</p>';
 }
 
+$next = $_GET['next'] ?? '';
+
 ?>
-<form method="post" action="/login.php">
-    <?php if (! empty($_GET['next'])): ?>
-        <input type="hidden" name="next" value="<?= htmlspecialchars((string) $_GET['next'], ENT_QUOTES) ?>">
+<p>Sign in to access protected lab routes (dashboard, profile, notes, secure files).</p>
+<form method="post" action="/login.php<?= $next !== '' ? '?next='.htmlspecialchars(rawurlencode($next), ENT_QUOTES) : '' ?>">
+    <?php if ($next !== ''): ?>
+        <input type="hidden" name="next" value="<?= htmlspecialchars($next, ENT_QUOTES) ?>">
     <?php endif; ?>
     <label>
         Email
@@ -59,6 +80,7 @@ if ($error !== null) {
     </label>
     <button type="submit">Sign in</button>
 </form>
+<p><small>Demo users: <code>guest@vuln.local</code> / <code>guest123</code>, <code>admin@vuln.local</code> / <code>super-secret</code></small></p>
 <?php
 
 renderFooter();
