@@ -40,6 +40,8 @@ Inicia captura via popup.
 
 Para alvos externos, `mode` e `external` e `capture_callback_url` aponta para `/shingeki-capture.php` no alvo.
 
+No **shingeki-vulnerable-target**, apos login bem-sucedido em `/login.php`, a sessao PHP (`PHPSESSID`) e enviada automaticamente para a API quando o popup redireciona para `/shingeki-capture.php?ticket=...`. Rotas protegidas de teste: `/dashboard.php`, `/profile.php`, `/notes.php`, `/app/browse/{file}`.
+
 ## POST /api/target-session/capture/{ticket}
 
 Rota publica (sem Sanctum). Finaliza a captura usando o ticket de curta duracao.
