@@ -63,6 +63,7 @@ describe('POST attacks/dispatch', function () {
                 Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
                 Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === $catalogAttacks->pluck('id')->all()),
                 AttackScanType::Dast,
+                null,
             );
 
         $response = $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload());
@@ -188,6 +189,7 @@ describe('POST attacks/dispatch/sast', function () {
                 Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
                 Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === [$sastAttack->id]),
                 AttackScanType::Sast,
+                null,
             );
 
         $response = $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload());

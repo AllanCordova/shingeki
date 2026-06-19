@@ -50,6 +50,7 @@ Exemplo de validação:
 | Stacks tecnológicas | [api/STACKS.md](api/STACKS.md) |
 | Capas e biblioteca | [api/COVERS.md](api/COVERS.md) |
 | Assinaturas digitais | [api/SIGNATURES.md](api/SIGNATURES.md) |
+| Sessao do alvo (DAST autenticado) | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Ataques DAST/SAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
 | Remediação (snippets) | [api/REMEDIATION.md](api/REMEDIATION.md) |
 | Remediação com IA | [api/REMEDIATION.md](api/REMEDIATION.md#post-remediateai) |
@@ -76,6 +77,9 @@ Exemplo de validação:
 - `POST /api/projects/{project}/systems/{system}/signatures/generate`
 - `POST /api/projects/{project}/systems/{system}/signatures/validate`
 - `POST /api/projects/{project}/systems/{system}/signatures/revoke`
+- `GET /api/projects/{project}/systems/{system}/target-session`
+- `POST /api/projects/{project}/systems/{system}/target-session`
+- `DELETE /api/projects/{project}/systems/{system}/target-session`
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch` (DAST)
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast` (SAST)
 - `GET /api/projects/{project}/systems/{system}/system-results`

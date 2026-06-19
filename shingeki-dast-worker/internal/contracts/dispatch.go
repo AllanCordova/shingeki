@@ -22,6 +22,7 @@ type DispatchBatch struct {
 	RepositoryURL  string       `json:"repository_url"`
 	Attacks        []AttackItem `json:"attacks"`
 	DispatchedAt   string       `json:"dispatched_at"`
+	Auth           *TargetAuth  `json:"auth,omitempty"`
 }
 
 func (b DispatchBatch) EffectiveScanType() string {

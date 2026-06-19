@@ -48,6 +48,12 @@ const MESSAGE_TRANSLATIONS: Record<string, string> = {
     "IA nao configurada no servidor. Defina GEMINI_API_KEY ou GROQ_API_KEY.",
   "AI remediation suggestions generated.":
     "Sugestoes de IA geradas com sucesso.",
+  "Target session imported successfully.":
+    "Sessao do alvo importada com sucesso.",
+  "Target session removed successfully.":
+    "Sessao do alvo removida com sucesso.",
+  "No target session found for this system.":
+    "Nenhuma sessao do alvo encontrada para este sistema.",
 };
 
 /** Traducao de mensagens de validacao do Laravel (heuristica por padrao). */

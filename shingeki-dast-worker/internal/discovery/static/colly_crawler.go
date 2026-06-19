@@ -28,7 +28,7 @@ func NewCollyCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.Attac
 	return &CollyCrawler{cfg: discoveryCfg, attack: attackCfg, logger: logger}
 }
 
-func (c *CollyCrawler) Discover(ctx context.Context, targetURL string) ([]contracts.AttackVector, error) {
+func (c *CollyCrawler) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
 	queue := bfs.NewQueue()
 	queue.Enqueue(targetURL, 0)
 
@@ -51,7 +51,7 @@ func (c *CollyCrawler) Discover(ctx context.Context, targetURL string) ([]contra
 			continue
 		}
 
-		pageVectors, links, err := c.crawlPage(ctx, item.URL)
+		pageVectors, links, err := c.crawlPage(ctx, item.URL, authHeaders)
 		if err != nil {
 			c.logger.Warn("static crawl failed", "url", item.URL, "error", err)
 			continue
@@ -75,7 +75,7 @@ func (c *CollyCrawler) Discover(ctx context.Context, targetURL string) ([]contra
 	return vectors, nil
 }
 
-func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string) ([]contracts.AttackVector, []string, error) {
+func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeaders map[string]string) ([]contracts.AttackVector, []string, error) {
 	var vectors []contracts.AttackVector
 	var links []string
 
@@ -84,6 +84,12 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string) ([]contrac
 		colly.MaxDepth(0),
 	)
 	coll.SetRequestTimeout(c.cfg.PageTimeout)
+
+	coll.OnRequest(func(r *colly.Request) {
+		for key, value := range authHeaders {
+			r.Headers.Set(key, value)
+		}
+	})
 
 	coll.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		href := strings.TrimSpace(e.Attr("href"))

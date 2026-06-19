@@ -60,13 +60,15 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 
 	p.logger.Info("starting pipeline", "system_id", batch.SystemID, "target", batch.TargetURL)
 
-	vectors, err := p.discovery.Discover(ctx, batch.TargetURL)
+	authHeaders := batch.AuthHeaders()
+	vectors, err := p.discovery.Discover(ctx, batch.TargetURL, authHeaders)
 	if err != nil {
 		return fmt.Errorf("discovery: %w", err)
 	}
 	p.logger.Info("discovery finished", "vectors", len(vectors))
 
 	jobs := p.attack.MapVectorsToJobs(vectors, batch.Attacks)
+	jobs = attack.ApplyGlobalHeaders(jobs, authHeaders)
 	p.logger.Info("mapped attack jobs", "jobs", len(jobs))
 
 	responses := p.attack.ExecutePool(ctx, jobs)

@@ -50,6 +50,11 @@ class System extends Model
         return $this->hasMany(AttackDispatch::class);
     }
 
+    public function targetSessions(): HasMany
+    {
+        return $this->hasMany(SystemTargetSession::class);
+    }
+
     public function stacks(): BelongsToMany
     {
         return $this->belongsToMany(Stack::class, 'system_stack')

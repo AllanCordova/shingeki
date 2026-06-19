@@ -30,7 +30,7 @@ func NewRodCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.AttackC
 	return &RodCrawler{cfg: discoveryCfg, attack: attackCfg, logger: logger}
 }
 
-func (r *RodCrawler) Discover(ctx context.Context, targetURL string) ([]contracts.AttackVector, error) {
+func (r *RodCrawler) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
 	if !r.cfg.RodEnabled {
 		return nil, nil
 	}
@@ -83,6 +83,16 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string) ([]contract
 
 	go router.Run()
 	defer router.Stop()
+
+	if len(authHeaders) > 0 {
+		extra := make([]string, 0, len(authHeaders)*2)
+		for key, value := range authHeaders {
+			extra = append(extra, key, value)
+		}
+		if _, err := page.SetExtraHeaders(extra); err != nil {
+			return nil, fmt.Errorf("set extra headers: %w", err)
+		}
+	}
 
 	if err := page.Navigate(targetURL); err != nil {
 		return nil, fmt.Errorf("navigate %q: %w", targetURL, err)

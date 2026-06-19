@@ -15,6 +15,8 @@ export const queryKeys = {
   systems: (projectId: string) => ["projects", projectId, "systems"] as const,
   system: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId] as const,
+  targetSession: (projectId: string, systemId: string) =>
+    ["projects", projectId, "systems", systemId, "target-session"] as const,
 
   dispatches: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId, "dispatches"] as const,

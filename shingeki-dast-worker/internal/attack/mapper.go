@@ -53,6 +53,18 @@ func locationCompatible(vectorLocation, attackLocation string) bool {
 	return false
 }
 
+func ApplyGlobalHeaders(jobs []types.Job, global map[string]string) []types.Job {
+	if len(global) == 0 {
+		return jobs
+	}
+
+	for i := range jobs {
+		jobs[i].Vector.Headers = contracts.MergeHeaders(global, jobs[i].Vector.Headers)
+	}
+
+	return jobs
+}
+
 func parsePayload(raw json.RawMessage) (types.PayloadSpec, error) {
 	var generic map[string]any
 	if err := json.Unmarshal(raw, &generic); err != nil {

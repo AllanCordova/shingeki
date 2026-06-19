@@ -11,6 +11,7 @@ use App\Models\System;
 use App\Services\Attack\AttackCatalogService;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Services\Signature\SignatureAuthorizationService;
+use App\Services\TargetSession\TargetSessionService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
@@ -21,6 +22,7 @@ class AttackController extends Controller
         private readonly SignatureAuthorizationService $signatureAuthorization,
         private readonly AttackCatalogService $attackCatalog,
         private readonly AttackQueuePublisher $attackQueuePublisher,
+        private readonly TargetSessionService $targetSessionService,
     ) {}
 
     public function dispatch(AttackDispatchRequest $request, Project $project, System $system): JsonResponse
@@ -80,15 +82,18 @@ class AttackController extends Controller
             $request->user(),
             $attacks,
             $scanType,
+            $this->targetSessionService->resolveQueueAuth($request->user(), $system),
         );
 
         $scanLabel = $scanType === AttackScanType::Sast ? 'SAST' : 'DAST';
+        $targetSession = $this->targetSessionService->findActiveSession($request->user(), $system);
 
         return response()->json([
             'message' => "{$scanLabel} attack catalog dispatched to processing queue.",
             'dispatch' => $this->formatDispatch($dispatch),
             'attacks_count' => $attacks->count(),
             'attacks' => $attacks->map(fn (Attack $attack) => $this->formatAttack($attack)),
+            'target_session_connected' => $targetSession !== null,
         ], 202);
     }
 

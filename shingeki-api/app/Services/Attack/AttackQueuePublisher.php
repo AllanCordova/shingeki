@@ -22,6 +22,7 @@ class AttackQueuePublisher
         User $requestedBy,
         Collection $attacks,
         AttackScanType $scanType = AttackScanType::Dast,
+        ?array $targetAuth = null,
     ): void {
         $connection = $this->connection();
         $dispatchQueue = $this->dispatchQueueFor($scanType);
@@ -29,7 +30,7 @@ class AttackQueuePublisher
         $connection->declareQueue($dispatchQueue);
         $connection->declareQueue(config('attacks.queues.results'));
 
-        $message = json_encode([
+        $payload = [
             'event' => 'attack.dispatch.batch',
             'scan_type' => $scanType->value,
             'dispatch_id' => $dispatch->id,
@@ -42,7 +43,13 @@ class AttackQueuePublisher
                 ->values()
                 ->all(),
             'dispatched_at' => $dispatch->dispatched_at->toIso8601String(),
-        ], JSON_THROW_ON_ERROR);
+        ];
+
+        if ($targetAuth !== null) {
+            $payload['auth'] = $targetAuth;
+        }
+
+        $message = json_encode($payload, JSON_THROW_ON_ERROR);
 
         $connection->pushRaw($message, $dispatchQueue);
     }
