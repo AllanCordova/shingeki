@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { forwardToApi } from "@/lib/api/server";
 import { respond } from "@/lib/api/route-helpers";
 import { AUTH_COOKIE } from "@/lib/config";
@@ -16,7 +17,7 @@ export async function POST(_request: Request, { params }: Params) {
 
   return respond(
     await forwardToApi("post", `/target-session/capture/${ticket}`, {
-      authorization: `Bearer ${token}`,
+      body: { authorization: `Bearer ${token}` },
     }),
   );
 }
