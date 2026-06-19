@@ -13,12 +13,11 @@ class AttackDispatch extends FormRequest
     }
 
     /**
+     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
-            'signature_token' => ['required', 'string', 'size:64'],
-        ];
+        return [];
     }
 }

@@ -15,32 +15,32 @@ beforeEach(function () {
     $this->service = new SignatureAuthorizationService(new SignatureStatusService);
 });
 
-test('assertPermittedToken passes for permitted signature', function () {
+test('assertPermittedForSystem passes for permitted signature', function () {
     $user = User::factory()->create();
     $system = System::factory()->create();
     $signature = Signature::factory()->for($user)->for($system)->permitted()->create([
         'token' => str_repeat('a', 64),
     ]);
 
-    $result = $this->service->assertPermittedToken($user, $system, $signature->token);
+    $result = $this->service->assertPermittedForSystem($user, $system);
 
     expect($result->id)->toBe($signature->id);
 });
 
-test('assertPermittedToken rejects invalid token', function () {
+test('assertPermittedForSystem rejects when no signature exists', function () {
     $user = User::factory()->create();
     $system = System::factory()->create();
 
-    $this->service->assertPermittedToken($user, $system, str_repeat('x', 64));
-})->throws(AuthorizationException::class);
+    $this->service->assertPermittedForSystem($user, $system);
+})->throws(AuthorizationException::class, 'No signature token found for this system.');
 
-test('assertPermittedToken rejects denied signature', function () {
+test('assertPermittedForSystem rejects denied signature', function () {
     $user = User::factory()->create();
     $system = System::factory()->create();
-    $signature = Signature::factory()->for($user)->for($system)->create([
+    Signature::factory()->for($user)->for($system)->create([
         'token' => str_repeat('b', 64),
         'status' => SignatureStatus::Denied,
     ]);
 
-    $this->service->assertPermittedToken($user, $system, $signature->token);
-})->throws(AuthorizationException::class);
+    $this->service->assertPermittedForSystem($user, $system);
+})->throws(AuthorizationException::class, 'Signature token is not permitted for attacks.');
