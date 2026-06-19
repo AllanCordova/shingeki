@@ -6,14 +6,17 @@ Backend Laravel 13 — API REST com prefixo `/api`, autenticação Sanctum e aut
 
 ```
 app/
-  Http/Controllers/     # Auth, Project, System, Signature, Attack, SystemResult, CoverUpload
+  Http/Controllers/     # Auth, Project, System, Signature, Attack, SystemResult, Remediation, AiRemediation, CoverUpload
   Http/Requests/        # Validação de entrada (Form Requests + ValidatesCoverSelection)
   Policies/             # Escopo por usuário dono do projeto/sistema
-  Models/               # User, Project, System, Signature, Attack, AttackDispatch, SystemResult, UserCoverUpload
+  Models/               # User, Project, System, Signature, Attack, AttackDispatch, SystemResult, AiRemediationSuggestion, UserCoverUpload
   Services/
     Cover/              # Upload, biblioteca por usuário, paths em storage público
-    Signature/          # Geração, validação HTML no alvo, autorização no dispatch
+    Signature/          # Geração, validação HTML no alvo, autorização no dispatch (resolve token ativo)
     Attack/             # Catálogo, publicação RabbitMQ, processamento de resultados
+    Remediation/        # Lookup de snippets por stack e achado
+    Ai/                 # LLM clients (Gemini/Groq), prompts, validação de resposta
+    Source/             # Contexto de código (GitHub raw, heurística DAST)
   Enums/                # Categorias de ataque, risco, local do alvo, status de assinatura
   Console/Commands/     # attacks:consume-results (consumer da fila de retorno)
 ```
@@ -29,9 +32,10 @@ app/
 |------|------------------|
 | Projetos / sistemas | CRUD aninhado; capas via multipart (`cover` ou `cover_upload_id`) |
 | Biblioteca de capas | `UserCoverLibraryService` — limite por usuário, reuso e remoção com regras de referência |
-| Assinaturas | Token em meta tag HTML do alvo; estados validados antes do dispatch |
-| DAST | `AttackCatalogService` monta lote; `AttackQueuePublisher` publica em RabbitMQ |
-| Resultados | `AttackResultsMessageHandler` + `AttackResultProcessor` persistem achados e completam dispatch |
+| Assinaturas | Token em meta tag HTML do alvo; dispatch resolve assinatura ativa (sem body) |
+| DAST / SAST | `AttackCatalogService` monta lote; `AttackQueuePublisher` publica em RabbitMQ |
+| Resultados | `AttackResultsMessageHandler` + `AttackResultProcessor` persistem achados; exclusão em batch |
+| Remediação | Catálogo de snippets (`RemediationResolver`) e sugestões IA (`AiRemediationService`) |
 
 ## Integração assíncrona
 

@@ -26,7 +26,7 @@ O token é retornado em `POST /api/auth/register` e `POST /api/auth/login` (Lara
 | Status | Situação |
 |--------|----------|
 | `401` | Token ausente, inválido ou credenciais incorretas no login |
-| `403` | Sem permissão (policy) ou token de assinatura não autorizado no dispatch |
+| `403` | Sem permissão (policy) ou assinatura ausente/expirada/não permitida no dispatch |
 | `404` | Recurso inexistente ou fora do escopo do usuário |
 | `422` | Validação (`errors` por campo) ou regra de negócio (ex.: capa em uso na biblioteca) |
 
@@ -52,6 +52,7 @@ Exemplo de validação:
 | Assinaturas digitais | [api/SIGNATURES.md](api/SIGNATURES.md) |
 | Ataques DAST/SAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
 | Remediação (snippets) | [api/REMEDIATION.md](api/REMEDIATION.md) |
+| Remediação com IA | [api/REMEDIATION.md](api/REMEDIATION.md#post-remediateai) |
 
 ## Índice de rotas
 
@@ -78,8 +79,11 @@ Exemplo de validação:
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch` (DAST)
 - `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast` (SAST)
 - `GET /api/projects/{project}/systems/{system}/system-results`
+- `DELETE /api/projects/{project}/systems/{system}/system-results`
 - `GET /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
+- `DELETE /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
 - `POST /api/projects/{project}/systems/{system}/remediate`
+- `POST /api/projects/{project}/systems/{system}/remediate/ai` (throttle 10/min)
 
 Recursos aninhados (`project`, `system`) são resolvidos por UUID e restritos ao dono (policies).
 
