@@ -116,7 +116,7 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 
 		method := strings.ToUpper(strings.TrimSpace(e.Attr("method")))
 		if method == "" {
-			method = "GET"
+			method = defaultFormMethod(e)
 		}
 
 		vector := contracts.NewAttackVector(resolved, method, "FORM")
@@ -160,4 +160,17 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 
 	coll.Wait()
 	return vectors, links, nil
+}
+
+func defaultFormMethod(form *colly.HTMLElement) string {
+	hasPassword := false
+	form.ForEach("input", func(_ int, el *colly.HTMLElement) {
+		if strings.EqualFold(strings.TrimSpace(el.Attr("type")), "password") {
+			hasPassword = true
+		}
+	})
+	if hasPassword {
+		return "POST"
+	}
+	return "GET"
 }

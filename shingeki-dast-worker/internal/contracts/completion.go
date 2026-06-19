@@ -8,11 +8,14 @@ import (
 const EventDispatchCompleted = "attack.dispatch.completed"
 
 type DispatchCompletionMessage struct {
-	Event          string `json:"event"`
-	DispatchID     string `json:"dispatch_id"`
-	SystemID       string `json:"system_id"`
-	DurationMs     int64  `json:"duration_ms"`
-	FindingsCount  int    `json:"findings_count"`
+	Event             string `json:"event"`
+	DispatchID        string `json:"dispatch_id"`
+	SystemID          string `json:"system_id"`
+	DurationMs        int64  `json:"duration_ms"`
+	FindingsCount     int    `json:"findings_count"`
+	ProbesCount       int    `json:"probes_count"`
+	VectorsDiscovered int    `json:"vectors_discovered"`
+	JobsPlanned       int    `json:"jobs_planned"`
 }
 
 func (m DispatchCompletionMessage) MarshalJSONBytes() ([]byte, error) {
@@ -41,6 +44,15 @@ func (m DispatchCompletionMessage) Validate() error {
 	}
 	if m.FindingsCount < 0 {
 		return fmt.Errorf("findings_count must be >= 0")
+	}
+	if m.ProbesCount < 0 {
+		return fmt.Errorf("probes_count must be >= 0")
+	}
+	if m.VectorsDiscovered < 0 {
+		return fmt.Errorf("vectors_discovered must be >= 0")
+	}
+	if m.JobsPlanned < 0 {
+		return fmt.Errorf("jobs_planned must be >= 0")
 	}
 	return nil
 }
