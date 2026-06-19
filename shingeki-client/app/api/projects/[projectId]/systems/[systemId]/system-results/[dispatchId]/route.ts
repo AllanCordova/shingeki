@@ -14,3 +14,13 @@ export async function GET(_request: Request, { params }: Params) {
     ),
   );
 }
+
+export async function DELETE(_request: Request, { params }: Params) {
+  const { projectId, systemId, dispatchId } = await params;
+  return respond(
+    await forwardToApi(
+      "delete",
+      `/projects/${projectId}/systems/${systemId}/system-results/${dispatchId}`,
+    ),
+  );
+}

@@ -42,5 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);
 
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
+    Route::delete('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'deleteAll']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);
+    Route::delete('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'destroy']);
 });

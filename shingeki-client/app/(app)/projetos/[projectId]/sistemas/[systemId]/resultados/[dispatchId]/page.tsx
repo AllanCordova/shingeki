@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useState } from "react";
 import { useResults } from "@/lib/hooks/use-results";
 import { formatDate } from "@/lib/utils";
+import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -30,6 +33,8 @@ export default function ResultsDetailPage() {
     systemId: string;
     dispatchId: string;
   }>();
+  const router = useRouter();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const { dispatch, results, isLoading, isError, error, refetch } = useResults(
     projectId,
@@ -37,14 +42,25 @@ export default function ResultsDetailPage() {
     dispatchId,
   );
 
+  const dispatchLabel = dispatch?.dispatched_at
+    ? formatDate(dispatch.dispatched_at)
+    : "este disparo";
+
   return (
     <div className="flex flex-col gap-6">
-      <Link
-        href={`/projetos/${projectId}/sistemas/${systemId}`}
-        className="text-sm text-muted-foreground hover:text-foreground"
-      >
-        ← Voltar ao sistema
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <Link
+          href={`/projetos/${projectId}/sistemas/${systemId}`}
+          className="text-sm text-muted-foreground hover:text-foreground"
+        >
+          ← Voltar ao sistema
+        </Link>
+        {dispatch ? (
+          <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+            Remover
+          </Button>
+        ) : null}
+      </div>
 
       {isLoading ? (
         <Loading label="Carregando resultados..." />
@@ -149,6 +165,19 @@ export default function ResultsDetailPage() {
           ) : null}
         </>
       )}
+
+      <DeleteDispatchModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        projectId={projectId}
+        systemId={systemId}
+        dispatchId={dispatchId}
+        dispatchLabel={dispatchLabel}
+        onDeleted={() => {
+          router.push(`/projetos/${projectId}/sistemas/${systemId}`);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }

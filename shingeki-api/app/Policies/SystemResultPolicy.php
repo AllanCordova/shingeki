@@ -28,6 +28,16 @@ class SystemResultPolicy
             && $system->project_id === $project->id;
     }
 
+    public function deleteBatch(User $user, AttackDispatch $dispatch): bool
+    {
+        return $this->viewBatch($user, $dispatch);
+    }
+
+    public function deleteAny(User $user, System $system): bool
+    {
+        return $this->viewAny($user, $system);
+    }
+
     private function ownsSystemProject(User $user, System $system): bool
     {
         $project = request()->route('project');

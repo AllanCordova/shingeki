@@ -46,6 +46,35 @@ class SystemResultController extends Controller
         ]);
     }
 
+    public function destroy(Project $project, System $system, AttackDispatch $attackDispatch): JsonResponse
+    {
+        $this->authorize('deleteBatch', $attackDispatch);
+
+        $attackDispatch->systemResults()->delete();
+        $attackDispatch->delete();
+
+        return response()->json([
+            'message' => 'Attack dispatch deleted successfully.',
+        ]);
+    }
+
+    public function deleteAll(Project $project, System $system): JsonResponse
+    {
+        $this->authorize('deleteAny', [SystemResult::class, $system]);
+
+        SystemResult::query()
+            ->where('system_id', $system->id)
+            ->delete();
+
+        AttackDispatch::query()
+            ->where('system_id', $system->id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'All attack dispatches deleted successfully.',
+        ]);
+    }
+
     /**
      * @return array<string, mixed>
      */
