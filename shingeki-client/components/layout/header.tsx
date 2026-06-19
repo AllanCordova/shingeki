@@ -29,7 +29,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-border bg-surface/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
         <Link
-          href="/projetos"
+          href="/"
           className="text-lg font-semibold tracking-tight text-foreground"
         >
           shingeki

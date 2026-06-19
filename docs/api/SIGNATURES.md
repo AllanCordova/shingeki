@@ -87,14 +87,24 @@ Revoga a assinatura ativa do sistema.
 
 **Resposta `404`:** nenhuma assinatura ativa para revogar.
 
+## Uso no dispatch de ataques
+
+Após **generate** e **validate** (com `permitted: true`), o dispatch DAST/SAST não exige mais o token no body. A API localiza a assinatura ativa do usuário para o sistema e valida expiração e permissão.
+
+Erros comuns no dispatch:
+
+| Mensagem | Situação |
+|----------|----------|
+| `No signature token found for this system.` | Nenhuma assinatura gerada |
+| `Signature token has expired.` | Token expirado — gere um novo |
+| `Signature token is not permitted for attacks.` | Meta tag ainda não validada no alvo |
+
 ## Alvo de laboratório
 
-No seed **Vulnerable PHP Target**, use o valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` nos `.env` (raiz e API). Exemplo padrão:
+No seed **Vulnerable PHP Target**, o `content` da meta tag após `generate` deve coincidir com `VULNERABLE_TARGET_SIGNATURE_TOKEN` nos `.env` (raiz e API). Exemplo padrão (64 caracteres hex):
 
-```json
-{
-  "signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-}
+```
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 ```
 
 Esse valor é o `content` da meta tag após `generate`, não o ID da assinatura no banco.

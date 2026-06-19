@@ -48,3 +48,11 @@ components/
 ## Paridade com o web
 
 Fluxos de negócio alinhados (projetos, sistemas, assinatura, ataque, resultados). **Upload de capa apenas no client web.** O mobile cria/edita entidades sem capa e pode exibir capas criadas pelo web quando `cover_path` está preenchido.
+
+O formulário de ataque também **não solicita token de assinatura** — a API resolve a assinatura ativa do sistema (igual ao web).
+
+## Build e distribuição
+
+- `eas.json` — perfis development, preview e production.
+- `app.json` — bundle IDs, `projectId` EAS e owner Expo.
+- Builds via `eas build`; ver [MOBILE-DEVELOPMENT.md](../MOBILE-DEVELOPMENT.md#3-build-com-eas-expo-application-services).

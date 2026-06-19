@@ -129,3 +129,114 @@ describe('GET system-results/{attack_dispatch}', function () {
             ->assertNotFound();
     });
 });
+
+describe('DELETE system-results/{attack_dispatch}', function () {
+    test('requires authentication', function () {
+        $project = Project::factory()->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->create();
+
+        $this->deleteJson(systemResultShowUrl($project, $system, $dispatch))
+            ->assertUnauthorized();
+    });
+
+    test('deletes dispatch and its findings', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $attack = Attack::factory()->create();
+
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => now(),
+            'findings_count' => 1,
+        ]);
+
+        SystemResult::factory()->for($system)->for($attack)->create([
+            'attack_dispatch_id' => $dispatch->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson(systemResultShowUrl($project, $system, $dispatch))
+            ->assertOk()
+            ->assertJsonPath('message', 'Attack dispatch deleted successfully.');
+
+        $this->assertDatabaseMissing('attack_dispatches', ['id' => $dispatch->id]);
+        $this->assertDatabaseMissing('system_results', [
+            'attack_dispatch_id' => $dispatch->id,
+        ]);
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($owner)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->deleteJson(systemResultShowUrl($project, $system, $dispatch))
+            ->assertNotFound();
+    });
+});
+
+describe('DELETE system-results', function () {
+    test('requires authentication', function () {
+        $project = Project::factory()->create();
+        $system = System::factory()->for($project)->create();
+
+        $this->deleteJson(systemResultsUrl($project, $system))
+            ->assertUnauthorized();
+    });
+
+    test('deletes all dispatches and findings for a system', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $attack = Attack::factory()->create();
+
+        $first = AttackDispatch::factory()->for($system)->for($user)->create();
+        $second = AttackDispatch::factory()->for($system)->for($user)->create();
+
+        SystemResult::factory()->for($system)->for($attack)->create([
+            'attack_dispatch_id' => $first->id,
+        ]);
+        SystemResult::factory()->for($system)->for($attack)->create([
+            'attack_dispatch_id' => $second->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson(systemResultsUrl($project, $system))
+            ->assertOk()
+            ->assertJsonPath('message', 'All attack dispatches deleted successfully.');
+
+        $this->assertDatabaseMissing('attack_dispatches', ['system_id' => $system->id]);
+        $this->assertDatabaseMissing('system_results', ['system_id' => $system->id]);
+    });
+
+    test('succeeds when system has no dispatches', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson(systemResultsUrl($project, $system))
+            ->assertOk()
+            ->assertJsonPath('message', 'All attack dispatches deleted successfully.');
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->deleteJson(systemResultsUrl($project, $system))
+            ->assertNotFound();
+    });
+});

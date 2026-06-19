@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
 import { queryKeys } from "@/lib/query-keys";
@@ -73,5 +73,60 @@ export function useResults(
     isError: query.isError,
     error: (query.error as ApiError | null) ?? null,
     refetch: query.refetch,
+  };
+}
+
+export function useDeleteDispatch(projectId: string, systemId: string) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (dispatchId: string) => {
+      await apiClient.delete(
+        `/projects/${projectId}/systems/${systemId}/system-results/${dispatchId}`,
+      );
+      return dispatchId;
+    },
+    onSuccess: (dispatchId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.dispatches(projectId, systemId),
+      });
+      queryClient.removeQueries({
+        queryKey: queryKeys.results(projectId, systemId, dispatchId),
+      });
+    },
+  });
+
+  return {
+    deleteDispatch: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: (mutation.error as ApiError | null) ?? null,
+    reset: mutation.reset,
+  };
+}
+
+export function useDeleteAllDispatches(projectId: string, systemId: string) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.delete(
+        `/projects/${projectId}/systems/${systemId}/system-results`,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.dispatches(projectId, systemId),
+      });
+      queryClient.removeQueries({
+        queryKey: ["projects", projectId, "systems", systemId, "dispatches"],
+      });
+    },
+  });
+
+  return {
+    deleteAllDispatches: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: (mutation.error as ApiError | null) ?? null,
+    reset: mutation.reset,
   };
 }

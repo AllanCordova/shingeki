@@ -22,9 +22,9 @@ function attackSastDispatchUrl(Project $project, System $system): string
     return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/dispatch/sast';
 }
 
-function validAttackDispatchPayload(string $signatureToken): array
+function validAttackDispatchPayload(): array
 {
-    return ['signature_token' => $signatureToken];
+    return [];
 }
 
 describe('POST attacks/dispatch', function () {
@@ -32,7 +32,7 @@ describe('POST attacks/dispatch', function () {
         $project = Project::factory()->create();
         $system = System::factory()->for($project)->create();
 
-        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload(str_repeat('a', 64)))
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertUnauthorized();
     });
 
@@ -65,7 +65,7 @@ describe('POST attacks/dispatch', function () {
                 AttackScanType::Dast,
             );
 
-        $response = $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload($token));
+        $response = $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload());
 
         $response
             ->assertAccepted()
@@ -100,7 +100,7 @@ describe('POST attacks/dispatch', function () {
 
         Sanctum::actingAs($user);
 
-        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload($token))
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertUnprocessable()
             ->assertJsonPath('message', 'No catalog attacks are available for dispatch.');
     });
@@ -123,7 +123,7 @@ describe('POST attacks/dispatch', function () {
 
         Sanctum::actingAs($user);
 
-        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload($token))
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertForbidden()
             ->assertJsonPath('message', 'Signature token is not permitted for attacks.');
     });
@@ -136,8 +136,25 @@ describe('POST attacks/dispatch', function () {
 
         Sanctum::actingAs($intruder);
 
-        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload(str_repeat('e', 64)))
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertNotFound();
+    });
+
+    test('rejects dispatch when system has no signature', function () {
+        config(['attacks.catalog_admin_email' => 'admin@admin.com']);
+
+        $admin = User::factory()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
+            ->assertForbidden()
+            ->assertJsonPath('message', 'No signature token found for this system.');
     });
 });
 
@@ -173,7 +190,7 @@ describe('POST attacks/dispatch/sast', function () {
                 AttackScanType::Sast,
             );
 
-        $response = $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload($token));
+        $response = $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload());
 
         $response
             ->assertAccepted()
@@ -202,7 +219,7 @@ describe('POST attacks/dispatch/sast', function () {
 
         Sanctum::actingAs($user);
 
-        $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload($token))
+        $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertUnprocessable()
             ->assertJsonPath('message', 'System repository_url is required for SAST dispatch.');
     });

@@ -38,3 +38,63 @@ export interface RemediateSystemResponse {
   findings_count: number;
   findings: RemediatedFinding[];
 }
+
+export type AiConfidence = "high" | "medium" | "low";
+
+export interface AiSourceContext {
+  excerpt: string;
+  file: string | null;
+  line: number | null;
+  origin: "repository" | "evidence" | "dast_heuristic";
+}
+
+export interface AiSuggestion {
+  system_result_id: string;
+  location: {
+    file: string | null;
+    line: number | null;
+  };
+  root_cause: string;
+  risk_summary: string;
+  suggested_fix: {
+    description: string;
+    code: string;
+  };
+  validation: {
+    why_this_fixes: string;
+    confidence: AiConfidence;
+    syntax_valid: boolean;
+  };
+  references: string[];
+}
+
+export interface AiRemediatedFinding {
+  system_result_id: string;
+  attack_dispatch_id: string | null;
+  scan_type?: AttackScanTypeValue;
+  vulnerable_route: string | null;
+  payload_used: string | null;
+  evidence: string | null;
+  http_request: string | null;
+  attack?: RemediatedFinding["attack"];
+  source_context: AiSourceContext;
+  ai_suggestion: AiSuggestion;
+  cached: boolean;
+}
+
+export interface RemediateSystemAiInput {
+  dispatch_id?: string;
+  finding_ids?: string[];
+  regenerate?: boolean;
+}
+
+export interface RemediateSystemAiResponse {
+  message: string;
+  system_id: string;
+  dispatch_id: string;
+  provider: string;
+  model: string;
+  stacks: Pick<Stack, "id" | "slug" | "name">[];
+  findings_count: number;
+  findings: AiRemediatedFinding[];
+}

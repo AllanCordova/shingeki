@@ -9,16 +9,18 @@ app/
   (auth)/            # Login e registro (rotas públicas)
   (app)/             # Área autenticada (header + páginas de projetos/sistemas/resultados)
   api/               # Route handlers REST — proxy para a Laravel
-proxy.ts             # Proteção de rotas privadas (redireciona não autenticados)
+  page.tsx           # Landing pública (/) com seções de produto
+proxy.ts             # Proteção de rotas privadas; `/` é pública
 lib/
   api/               # Cliente HTTP (browser/servidor) + error-handler (mensagens em PT)
   contracts/         # Schemas Zod (formulários) + tipos de resposta da API
-  hooks/             # React Query por recurso (auth, projects, systems, cover-uploads, attack, results, signature)
+  hooks/             # React Query por recurso (auth, projects, systems, cover-uploads, attack, results, signature, remediate)
   stores/            # Zustand — tema e estado de UI
 components/
   ui/                # Primitivos (Button, Input, Modal, CoverUpload, CoverLibraryPicker, …)
   forms/             # Project, System, CoverFields, login/register
-  projects/ systems/ signature/ attack/ results/
+  landing/           # Página inicial pública (seções, nav, scroll)
+  projects/ systems/ signature/ attack/ results/ remediation/
 ```
 
 ## BFF (Backend for Frontend)
@@ -55,6 +57,16 @@ components/
 - Tokens em `app/globals.css` com Tailwind v4 (`@theme inline`).
 - Componentes usam utilitários derivados das variáveis — sem cores fixas no JSX.
 - Alternância de tema no header via store Zustand.
+- Landing pública (`components/landing/`) usa seções claras/escuras com scroll suave e navegação por âncora.
+
+## Fluxos recentes
+
+| Fluxo | Onde |
+|-------|------|
+| Landing `/` | Pública; CTA para login ou área logada conforme cookie |
+| Dispatch | Sem campo de token — depende de assinatura validada no sistema |
+| Resultados | Lista com exclusão individual ou em massa (modais) |
+| Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
 
 ## Paridade com o mobile
 

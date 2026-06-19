@@ -28,17 +28,11 @@ O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 
 Cadastre o sistema no app com a URL da coluna que corresponde a onde a API roda. O seed cria o projeto **Pentest Lab** e o sistema **Vulnerable PHP Target** apontando para o alvo.
 
-### Token de assinatura
+### Assinatura do sistema
 
-Valor de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (raiz, `shingeki-api` e container do alvo). Exemplo padrão dos repositórios:
+Antes de disparar ataques, gere e valide a assinatura do sistema (meta tag no HTML do alvo). A API resolve automaticamente o token ativo e permitido — **não é necessário enviar `signature_token` no body do dispatch**.
 
-```json
-{
-  "signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-}
-```
-
-Fluxo de assinaturas (gerar, validar, revogar): [SIGNATURES.md](SIGNATURES.md).
+No alvo de laboratório, o valor da meta tag vem de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (raiz, `shingeki-api` e container do alvo). Fluxo completo: [SIGNATURES.md](SIGNATURES.md).
 
 ## POST .../attacks/dispatch (DAST)
 
@@ -46,13 +40,9 @@ Fluxo de assinaturas (gerar, validar, revogar): [SIGNATURES.md](SIGNATURES.md).
 
 Enfileira o catálogo **DAST** (`scan_type: DAST`) para o sistema. Publica na fila `attacks.dispatch`.
 
-**Body (JSON):**
+**Body (JSON):** vazio (`{}`) ou omitido.
 
-| Campo | Regras |
-|-------|--------|
-| `signature_token` | obrigatório, string, exatamente 64 caracteres |
-
-O token deve corresponder à assinatura **permitida** (validada no HTML do alvo).
+A API busca a assinatura ativa do usuário para o sistema, verifica expiração e status **permitido** (validado no HTML do alvo).
 
 **Resposta `202`:**
 
@@ -90,7 +80,7 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
 }
 ```
 
-**Resposta `403`:** token de assinatura inválido ou não autorizado.
+**Resposta `403`:** assinatura ausente, expirada ou ainda não permitida para ataques.
 
 **Resposta `422`:** catálogo de ataques indisponível ou erro de configuração.
 
@@ -100,7 +90,7 @@ O token deve corresponder à assinatura **permitida** (validada no HTML do alvo)
 
 Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [shingeki-sast-worker](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
 
-**Body (JSON):** igual ao dispatch DAST (`signature_token` obrigatório).
+**Body (JSON):** vazio, igual ao dispatch DAST.
 
 **Pré-requisito:** o sistema deve ter `repository_url` preenchido (repositório Git público no MVP).
 
@@ -170,13 +160,42 @@ Detalhe de um dispatch com achados.
 
 O parâmetro de rota é o UUID do `AttackDispatch` (nome da rota: `attack_dispatch`).
 
+## DELETE .../system-results/{attack_dispatch}
+
+`DELETE /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
+
+Remove um disparo e todos os `system_results` associados.
+
+**Resposta `200`:**
+
+```json
+{
+  "message": "Attack dispatch deleted successfully."
+}
+```
+
+**Resposta `403`:** sem permissão (mesma policy de visualização do batch).
+
+## DELETE .../system-results
+
+`DELETE /api/projects/{project}/systems/{system}/system-results`
+
+Remove **todos** os dispatches e achados do sistema.
+
+**Resposta `200`:**
+
+```json
+{
+  "message": "All attack dispatches deleted successfully."
+}
+```
+
 ## Exemplo com curl
 
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/projects/{projectId}/systems/{systemId}/attacks/dispatch" \
   -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json" \
-  -d '{"signature_token": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}'
+  -H "Content-Type: application/json"
 ```
 
 Substitua IDs após `GET /api/projects` (seed cria **Pentest Lab** / **Vulnerable PHP Target**).

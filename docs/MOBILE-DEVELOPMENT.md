@@ -52,3 +52,33 @@ No terminal do Expo:
 Faça login com as credenciais do seed ([RUN-PROJECT.md](RUN-PROJECT.md#credenciais-do-seed)).
 
 Contratos HTTP: [API.md](API.md).
+
+## 3. Build com EAS (Expo Application Services)
+
+O projeto inclui `eas.json` com perfis `development`, `preview` e `production`. Identificadores:
+
+| Plataforma | ID |
+|------------|-----|
+| Android | `com.allancordovadev.shingeki` |
+| iOS | `com.allancordovadev.shingeki` |
+
+### Pré-requisitos
+
+- Conta Expo (`owner`: `allancordovadev` em `app.json`)
+- [EAS CLI](https://docs.expo.dev/build/setup/): `npm install -g eas-cli`
+- Login: `eas login`
+
+### Build Android (AAB)
+
+```bash
+cd shingeki-mobile
+eas build --platform android --profile production
+```
+
+### Arquivos locais (não commitar)
+
+O `.gitignore` do mobile ignora credenciais EAS, APKs/AABs locais e `tools/bundletool-all.jar`. O script `tools/sign-aab.js` auxilia assinatura local de AAB para testes.
+
+### Variáveis no build
+
+`EXPO_PUBLIC_*` devem apontar para a API acessível pelo dispositivo/emulador de destino (mesmas regras da seção 1).

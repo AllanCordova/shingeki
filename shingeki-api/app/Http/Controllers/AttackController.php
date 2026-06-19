@@ -48,10 +48,9 @@ class AttackController extends Controller
         $this->authorize('create', [Attack::class, $system]);
 
         try {
-            $this->signatureAuthorization->assertPermittedToken(
+            $this->signatureAuthorization->assertPermittedForSystem(
                 $request->user(),
                 $system,
-                $request->validated('signature_token'),
             );
         } catch (AuthorizationException $exception) {
             return response()->json([

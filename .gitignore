@@ -21,3 +21,6 @@ Thumbs.db
 
 # MkDocs build output
 site/
+
+# build settings
+.easignore
