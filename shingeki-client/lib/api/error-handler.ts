@@ -40,6 +40,14 @@ const MESSAGE_TRANSLATIONS: Record<string, string> = {
   "Signature not found.": "Assinatura nao encontrada.",
   "No signature token found for this system.":
     "Nenhum token de assinatura encontrado para este sistema.",
+  "Signature token is not permitted for attacks.":
+    "A assinatura ainda nao esta permitida. Valide a instalacao no alvo.",
+  "Signature token has expired.":
+    "O token de assinatura expirou. Gere um novo token.",
+  "No AI provider is configured. Set GEMINI_API_KEY or GROQ_API_KEY.":
+    "IA nao configurada no servidor. Defina GEMINI_API_KEY ou GROQ_API_KEY.",
+  "AI remediation suggestions generated.":
+    "Sugestoes de IA geradas com sucesso.",
 };
 
 /** Traducao de mensagens de validacao do Laravel (heuristica por padrao). */

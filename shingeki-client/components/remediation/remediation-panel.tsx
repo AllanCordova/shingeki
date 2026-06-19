@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { RemediatedFinding } from "@/lib/contracts";
-import { useRemediateSystem } from "@/lib/hooks/use-remediate";
+import { useAiRemediateSystem, useRemediateSystem } from "@/lib/hooks/use-remediate";
 import { notify } from "@/lib/notify";
+import { AiRemediationFindingCard } from "@/components/remediation/ai-remediation-finding-card";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
+import { cn } from "@/lib/utils";
 import {
   Badge,
   Button,
@@ -16,6 +18,8 @@ import {
   EmptyState,
   ErrorShow,
 } from "@/components/ui";
+
+type RemediationView = "catalog" | "ai";
 
 export function RemediationPanel({
   projectId,
@@ -30,15 +34,27 @@ export function RemediationPanel({
     projectId,
     systemId,
   );
-  const [expanded, setExpanded] = useState(false);
+  const {
+    remediateWithAi,
+    data: aiData,
+    isLoading: aiLoading,
+    error: aiError,
+    reset: resetAi,
+  } = useAiRemediateSystem(projectId, systemId);
+
+  const [hasCatalog, setHasCatalog] = useState(false);
+  const [hasAi, setHasAi] = useState(false);
+  const [view, setView] = useState<RemediationView>("catalog");
+
+  const input = dispatchId ? { dispatch_id: dispatchId } : {};
+  const showResults = hasCatalog || hasAi;
 
   const handleRemediate = async () => {
     try {
       reset();
-      const result = await remediate(
-        dispatchId ? { dispatch_id: dispatchId } : {},
-      );
-      setExpanded(true);
+      const result = await remediate(input);
+      setHasCatalog(true);
+      setView("catalog");
       notify.success(
         `${result.findings_count} achado(s) com sugestoes de correcao.`,
       );
@@ -47,38 +63,160 @@ export function RemediationPanel({
     }
   };
 
+  const handleAiRemediate = async (regenerate = false) => {
+    try {
+      resetAi();
+      const result = await remediateWithAi({ ...input, regenerate });
+      setHasAi(true);
+      setView("ai");
+      notify.success(
+        `${result.findings_count} sugestao(oes) de IA gerada(s) via ${result.provider}.`,
+      );
+    } catch (err) {
+      notify.fromApiError(err, "Nao foi possivel gerar sugestoes com IA.");
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Remediacao</CardTitle>
         <CardDescription>
-          Gere snippets de correcao com base nas stacks do sistema e nos achados
-          ja registrados.
+          Gere sugestoes pelo catalogo ou pela IA e alterne entre as visoes com
+          os controles abaixo.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
+        {aiError && !aiError.hasFieldErrors ? <ErrorShow error={aiError} /> : null}
 
-        <Button type="button" isLoading={isLoading} onClick={() => void handleRemediate()}>
-          Gerar correcoes
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            isLoading={isLoading}
+            onClick={() => void handleRemediate()}
+          >
+            Gerar correcoes
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            isLoading={aiLoading}
+            onClick={() => void handleAiRemediate(false)}
+          >
+            Sugerir com IA
+          </Button>
+          {hasAi && aiData ? (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={aiLoading}
+              onClick={() => void handleAiRemediate(true)}
+            >
+              Regenerar IA
+            </Button>
+          ) : null}
+        </div>
 
-        {expanded && data ? (
-          data.findings_count === 0 ? (
-            <EmptyState
-              title="Nenhum achado para remediar"
-              description="Execute um ataque e aguarde os resultados antes de gerar correcoes."
-            />
-          ) : (
-            <div className="flex flex-col gap-4">
-              {data.findings.map((finding) => (
-                <FindingRemediationCard key={finding.system_result_id} finding={finding} />
-              ))}
+        {showResults ? (
+          <>
+            <div className="inline-flex w-full max-w-md rounded-app border border-border p-1 sm:w-auto">
+              <ViewToggleButton
+                active={view === "catalog"}
+                disabled={!hasCatalog}
+                onClick={() => setView("catalog")}
+              >
+                Shingeki remediacoes
+              </ViewToggleButton>
+              <ViewToggleButton
+                active={view === "ai"}
+                disabled={!hasAi}
+                onClick={() => setView("ai")}
+              >
+                IA
+              </ViewToggleButton>
             </div>
-          )
+
+            {view === "catalog" ? (
+              !hasCatalog || !data ? (
+                <EmptyState
+                  title="Catalogo ainda nao gerado"
+                  description='Clique em "Gerar correcoes" para ver os snippets do algoritmo.'
+                />
+              ) : data.findings_count === 0 ? (
+                <EmptyState
+                  title="Nenhum achado para remediar"
+                  description="Execute um ataque e aguarde os resultados antes de gerar correcoes."
+                />
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {data.findings.map((finding) => (
+                    <FindingRemediationCard
+                      key={finding.system_result_id}
+                      finding={finding}
+                    />
+                  ))}
+                </div>
+              )
+            ) : !hasAi || !aiData ? (
+              <EmptyState
+                title="Sugestoes de IA ainda nao geradas"
+                description='Clique em "Sugerir com IA" para analisar o codigo dos achados.'
+              />
+            ) : aiData.findings_count === 0 ? (
+              <EmptyState
+                title="Nenhum achado para IA"
+                description="Execute um ataque e aguarde os resultados antes de gerar sugestoes."
+              />
+            ) : (
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Modelo:</span>
+                  <Badge tone="neutral">
+                    {aiData.provider} / {aiData.model}
+                  </Badge>
+                </div>
+                {aiData.findings.map((finding) => (
+                  <AiRemediationFindingCard
+                    key={finding.system_result_id}
+                    finding={finding}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+function ViewToggleButton({
+  active,
+  disabled,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "flex-1 rounded-[calc(var(--radius)-2px)] px-4 py-2 text-sm font-medium transition-colors sm:flex-none sm:min-w-[7.5rem]",
+        active
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",
+        disabled && "cursor-not-allowed opacity-40",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
