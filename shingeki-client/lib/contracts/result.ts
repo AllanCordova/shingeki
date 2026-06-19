@@ -1,6 +1,28 @@
 import type { Timestamps } from "./common";
 import type { AttackDispatch, AttackScanTypeValue } from "./attack";
 
+export type DispatchProbeOutcome = "clean" | "error" | "vulnerable";
+
+export interface DispatchProbe extends Timestamps {
+  id: string;
+  attack_dispatch_id: string;
+  system_id: string;
+  attack_id: string;
+  route: string;
+  payload_used: string;
+  http_request: string | null;
+  outcome: DispatchProbeOutcome;
+  evidence: string;
+  error_message: string | null;
+  attack?: {
+    id: string;
+    scan_type?: AttackScanTypeValue;
+    category: string;
+    target_location: string;
+    risk_level: string;
+  };
+}
+
 export interface SystemResult extends Timestamps {
   id: string;
   system_id: string;
@@ -26,4 +48,5 @@ export interface DispatchesResponse {
 export interface ResultsResponse {
   dispatch: AttackDispatch;
   results: SystemResult[];
+  probes: DispatchProbe[];
 }

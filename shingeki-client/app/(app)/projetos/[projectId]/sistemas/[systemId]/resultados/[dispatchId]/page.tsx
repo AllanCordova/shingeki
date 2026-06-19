@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useResults } from "@/lib/hooks/use-results";
+import { useSystem } from "@/lib/hooks/use-systems";
 import { formatDate } from "@/lib/utils";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
+import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
@@ -36,15 +38,33 @@ export default function ResultsDetailPage() {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const { dispatch, results, isLoading, isError, error, refetch } = useResults(
+  const { dispatch, results, probes, isLoading, isError, error, refetch } = useResults(
     projectId,
     systemId,
     dispatchId,
   );
+  const { system } = useSystem(projectId, systemId);
 
   const dispatchLabel = dispatch?.dispatched_at
     ? formatDate(dispatch.dispatched_at)
     : "este disparo";
+
+  const isPending = dispatch?.status === "pending";
+  const coverageSummary = [
+    dispatch?.vectors_discovered != null
+      ? `${dispatch.vectors_discovered} rota(s) descoberta(s)`
+      : null,
+    dispatch?.jobs_planned != null
+      ? `${dispatch.jobs_planned} teste(s) planejado(s)`
+      : null,
+    dispatch?.probes_count != null
+      ? `${dispatch.probes_count} teste(s) executado(s)`
+      : probes.length > 0
+        ? `${probes.length} teste(s) executado(s)`
+        : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,25 +106,24 @@ export default function ResultsDetailPage() {
               dispatch?.findings_count !== undefined
                 ? ` · ${dispatch.findings_count} vulnerabilidade(s)`
                 : ""}
+              {coverageSummary ? ` · ${coverageSummary}` : ""}
               {dispatch?.duration_ms ? ` · ${dispatch.duration_ms} ms` : ""}
             </p>
           </div>
 
-          {results.length === 0 ? (
+          {results.length === 0 && !isPending ? (
             <EmptyState
-              title={
-                dispatch?.status === "completed"
-                  ? "Nenhuma vulnerabilidade encontrada"
-                  : "Aguardando processamento"
-              }
-              description={
-                dispatch?.status === "completed"
-                  ? "O sistema nao apresentou vulnerabilidades neste disparo."
-                  : "Os resultados aparecerao automaticamente assim que o worker concluir."
-              }
+              title="Nenhuma vulnerabilidade encontrada"
+              description="O scan foi executado, mas nenhum indicador de vulnerabilidade foi detectado neste disparo."
+            />
+          ) : results.length === 0 && isPending ? (
+            <EmptyState
+              title="Aguardando vulnerabilidades"
+              description="Os achados aparecerao aqui se alguma vulnerabilidade for detectada."
             />
           ) : (
             <div className="flex flex-col gap-4">
+              <h2 className="text-lg font-semibold text-foreground">Vulnerabilidades</h2>
               {results.map((result) => (
                 <Card key={result.id}>
                   <CardHeader>
@@ -155,6 +174,16 @@ export default function ResultsDetailPage() {
               ))}
             </div>
           )}
+
+          <ScanCoveragePanel
+            probes={probes}
+            isPending={isPending}
+            scanType={dispatch?.scan_type}
+            probesCount={dispatch?.probes_count}
+            jobsPlanned={dispatch?.jobs_planned}
+            vectorsDiscovered={dispatch?.vectors_discovered}
+            targetUrl={system?.target_url}
+          />
 
           {dispatch?.status === "completed" ? (
             <RemediationPanel

@@ -34,6 +34,9 @@ export interface AttackDispatch extends Timestamps {
   completed_at: string | null;
   duration_ms: number | null;
   findings_count: number | null;
+  probes_count: number | null;
+  vectors_discovered: number | null;
+  jobs_planned: number | null;
   status: DispatchStatus;
 }
 

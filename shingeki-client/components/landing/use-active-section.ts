@@ -1,133 +1,52 @@
 "use client";
 
-
-
 import { useEffect, useState } from "react";
 
-import {
-
-  computeSectionVisibility,
-
-  subscribeScroll,
-
-} from "./use-section-visibility";
-
-export function useActiveSection(sectionIds: string[]) {
-
+export function useLandingScrollState(sectionIds: string[]) {
   const [activeId, setActiveId] = useState(sectionIds[0] ?? "");
-
-
-
-  useEffect(() => {
-
-    const elements = sectionIds
-
-      .map((id) => document.querySelector(`[data-section-id="${id}"]`))
-
-      .filter((el): el is HTMLElement => el instanceof HTMLElement);
-
-
-
-    if (elements.length === 0) return;
-
-
-
-    return subscribeScroll(() => {
-
-      const vh = window.innerHeight;
-
-      let bestId = sectionIds[0] ?? "";
-
-      let bestVisibility = -1;
-
-
-
-      for (const el of elements) {
-
-        const id = el.dataset.sectionId;
-
-        if (!id) continue;
-
-
-
-        const v = computeSectionVisibility(el.getBoundingClientRect(), vh);
-
-        if (v > bestVisibility) {
-
-          bestVisibility = v;
-
-          bestId = id;
-
-        }
-
-      }
-
-
-
-      setActiveId(bestId);
-
-    });
-
-  }, [sectionIds]);
-
-
-
-  return activeId;
-
-}
-
-export function useSectionBackgroundOpacities(sectionIds: string[]) {
-
   const [opacities, setOpacities] = useState<Record<string, number>>({});
 
-
-
   useEffect(() => {
+    const ratios = new Map<string, number>();
+    sectionIds.forEach((id) => ratios.set(id, 0));
 
-    const elements = sectionIds
+    const observers: IntersectionObserver[] = [];
 
-      .map((id) => {
+    for (const id of sectionIds) {
+      const element = document.getElementById(id);
+      if (!element) continue;
 
-        const el = document.querySelector(`[data-section-id="${id}"]`);
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          ratios.set(id, entry?.isIntersecting ? entry.intersectionRatio : 0);
 
-        return el instanceof HTMLElement ? { id, el } : null;
+          let bestId = sectionIds[0] ?? "";
+          let bestRatio = -1;
 
-      })
+          for (const sectionId of sectionIds) {
+            const ratio = ratios.get(sectionId) ?? 0;
+            if (ratio > bestRatio) {
+              bestRatio = ratio;
+              bestId = sectionId;
+            }
+          }
 
-      .filter((item): item is { id: string; el: HTMLElement } => item !== null);
+          setActiveId(bestId);
+          setOpacities(Object.fromEntries(ratios.entries()));
+        },
+        { threshold: [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1] },
+      );
 
+      observer.observe(element);
+      observers.push(observer);
+    }
 
-
-    if (elements.length === 0) return;
-
-
-
-    return subscribeScroll(() => {
-
-      const vh = window.innerHeight;
-
-      const next: Record<string, number> = {};
-
-
-
-      for (const { id, el } of elements) {
-
-        next[id] = computeSectionVisibility(el.getBoundingClientRect(), vh);
-
+    return () => {
+      for (const observer of observers) {
+        observer.disconnect();
       }
-
-
-
-      setOpacities(next);
-
-    });
-
+    };
   }, [sectionIds]);
 
-
-
-  return opacities;
-
+  return { activeId, opacities };
 }
-
-

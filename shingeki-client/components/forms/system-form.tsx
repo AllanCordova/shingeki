@@ -83,7 +83,7 @@ export function SystemForm({
         label="URL alvo"
         htmlFor="target_url"
         error={errors.target_url?.message}
-        hint="Endereco do sistema que sera testado."
+        hint="Endereco aberto no navegador (ex.: http://127.0.0.1:8090). Nao use host.docker.internal aqui."
       >
         <Input
           id="target_url"

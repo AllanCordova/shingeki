@@ -96,6 +96,9 @@ export function DispatchesList({
                           {dispatch.findings_count !== null
                             ? ` · ${dispatch.findings_count} achado(s)`
                             : ""}
+                          {dispatch.probes_count !== null && dispatch.probes_count > 0
+                            ? ` · ${dispatch.probes_count} teste(s)`
+                            : ""}
                         </span>
                       </div>
                     </Link>

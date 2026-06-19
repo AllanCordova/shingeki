@@ -18,7 +18,7 @@ export function ScrollBackground({ sections, opacities }: ScrollBackgroundProps)
       {sections.map((section) => (
         <div
           key={section.id}
-          className="absolute inset-0"
+          className="absolute inset-0 transition-opacity duration-700 ease-out"
           style={{
             background: section.background,
             opacity: opacities[section.id] ?? 0,

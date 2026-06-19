@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useRevokeTargetSession,
   useStartTargetSessionConnect,
@@ -23,6 +23,17 @@ import {
 const TARGET_SESSION_CONNECTED = "shingeki-target-session-connected";
 const POPUP_FEATURES =
   "popup=yes,width=520,height=720,menubar=no,toolbar=no,location=yes,status=no";
+const POLL_INTERVAL_MS = 2000;
+const POLL_TIMEOUT_MS = 120_000;
+
+function isAllowedCaptureOrigin(
+  origin: string,
+  allowedOrigins: string[],
+): boolean {
+  return allowedOrigins.some(
+    (allowed) => allowed.toLowerCase() === origin.toLowerCase(),
+  );
+}
 
 export function TargetSessionPanel({
   projectId,
@@ -39,32 +50,82 @@ export function TargetSessionPanel({
   const revokeSession = useRevokeTargetSession(projectId, systemId);
   const storeSession = useStoreTargetSession(projectId, systemId);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const allowedOriginsRef = useRef<string[]>([window.location.origin]);
+  const pollTimerRef = useRef<number | null>(null);
+
+  const stopPolling = () => {
+    if (pollTimerRef.current !== null) {
+      window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  const handleConnected = () => {
+    stopPolling();
+    void refetch();
+    notify.success("Sessao do alvo conectada.");
+  };
 
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
       if (event.data?.type !== TARGET_SESSION_CONNECTED) return;
+      if (!isAllowedCaptureOrigin(event.origin, allowedOriginsRef.current)) {
+        return;
+      }
 
-      void refetch();
-      notify.success("Sessao do alvo conectada.");
+      handleConnected();
     };
 
     window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
+    return () => {
+      window.removeEventListener("message", onMessage);
+      stopPolling();
+    };
   }, [refetch]);
+
+  const startCapturePolling = () => {
+    stopPolling();
+    const startedAt = Date.now();
+
+    pollTimerRef.current = window.setInterval(() => {
+      if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+        stopPolling();
+        return;
+      }
+
+      void refetch().then((result) => {
+        if (result.data?.connected) {
+          handleConnected();
+        }
+      });
+    }, POLL_INTERVAL_MS);
+  };
 
   const handleConnect = async () => {
     try {
       const result = await startConnect.startConnect();
-      const popup = window.open(result.popup_url, "shingeki-target-login", POPUP_FEATURES);
+      allowedOriginsRef.current = [
+        window.location.origin,
+        ...(result.target_origin ? [result.target_origin] : []),
+      ];
+
+      const popup = window.open(
+        result.popup_url,
+        "shingeki-target-login",
+        POPUP_FEATURES,
+      );
 
       if (!popup) {
         notify.error("Permita pop-ups para conectar a sessao do alvo.");
         return;
       }
 
+      startCapturePolling();
+
       if (result.mode === "external") {
-        notify.success("Faca login na janela aberta. A sessao sera capturada automaticamente.");
+        notify.success(
+          "Faca login na janela aberta. A sessao sera capturada automaticamente.",
+        );
       } else {
         notify.success("Faca login na janela aberta para conectar a sessao.");
       }

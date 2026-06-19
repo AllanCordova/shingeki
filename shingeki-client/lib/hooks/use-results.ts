@@ -68,6 +68,7 @@ export function useResults(
   return {
     dispatch: query.data?.dispatch,
     results: query.data?.results ?? [],
+    probes: query.data?.probes ?? [],
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     isError: query.isError,

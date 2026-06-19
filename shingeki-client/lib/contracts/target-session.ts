@@ -14,6 +14,8 @@ export type TargetSessionConnectStartResponse = {
   mode: "same_origin" | "external";
   popup_url: string;
   capture_callback_url: string | null;
+  target_origin?: string;
+  client_origin?: string;
 };
 
 export interface StoreTargetSessionInput {
