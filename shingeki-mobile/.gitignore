@@ -41,8 +41,17 @@ yarn-error.*
 /ios
 /android
 
+# EAS local credentials (nunca commitar)
+credentials.json
+credentials/
+meu_app.apks
+apk-output/
+shingekiApp-universal.apk
+tools/bundletool-all.jar
+
 # other
 .vscode/
 .claude
 AGENTS.md
 CLAUDE.md
+*.aab
