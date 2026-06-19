@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiRemediationController;
 use App\Http\Controllers\AttackController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CoverUploadController;
@@ -40,6 +41,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);
+    Route::post('projects/{project}/systems/{system}/remediate/ai', [AiRemediationController::class, 'remediate'])
+        ->middleware('throttle:10,1');
 
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
     Route::delete('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'deleteAll']);
