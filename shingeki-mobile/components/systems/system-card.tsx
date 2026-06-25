@@ -1,7 +1,7 @@
-import { Pressable, Text } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { Link } from "expo-router";
 import type { System } from "@/lib/contracts";
-import { Card, CardContent, CoverImage } from "@/components/ui";
+import { Badge, Card, CardContent, CoverImage } from "@/components/ui";
 
 export function SystemCard({
   projectId,
@@ -25,6 +25,15 @@ export function SystemCard({
             <Text className="text-sm text-muted-foreground" numberOfLines={1}>
               {system.target_url}
             </Text>
+            {system.stacks?.length > 0 ? (
+              <View className="flex-row flex-wrap gap-1.5 pt-1">
+                {system.stacks.map((stack) => (
+                  <Badge key={stack.id} tone="neutral">
+                    {stack.name}
+                  </Badge>
+                ))}
+              </View>
+            ) : null}
           </CardContent>
         </Card>
       </Pressable>

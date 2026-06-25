@@ -15,8 +15,11 @@ export function useDispatchAttack(projectId: string, systemId: string) {
       );
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.dispatches(projectId, systemId),
+      });
+      await queryClient.refetchQueries({
         queryKey: queryKeys.dispatches(projectId, systemId),
       });
     },

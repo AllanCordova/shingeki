@@ -1,8 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
+import type { AttackDispatch } from "@/lib/contracts";
+import { isDispatchCompleted } from "@/lib/dispatch-status";
 import { queryKeys } from "@/lib/query-keys";
 import type { DispatchesResponse, ResultsResponse } from "@/lib/contracts";
+import { useRefetchOnFocus } from "@/lib/hooks/use-refetch-on-focus";
+
+const RESULTS_POLL_MS = 5000;
+
+function hasPendingDispatches(
+  dispatches: AttackDispatch[] | undefined,
+): boolean {
+  return dispatches?.some((d) => !isDispatchCompleted(d)) ?? false;
+}
+
+function isDispatchPending(dispatch: AttackDispatch | undefined): boolean {
+  if (!dispatch) return false;
+  return !isDispatchCompleted(dispatch);
+}
 
 export function useDispatches(projectId: string, systemId: string) {
   const query = useQuery({
@@ -15,12 +31,12 @@ export function useDispatches(projectId: string, systemId: string) {
     },
     enabled: Boolean(projectId) && Boolean(systemId),
     staleTime: 0,
-    refetchInterval: (query) => {
-      const dispatches = query.state.data;
-      const hasPending = dispatches?.some((d) => d.status === "pending");
-      return hasPending ? 5000 : false;
-    },
+    refetchOnMount: "always",
+    refetchInterval: (q) =>
+      hasPendingDispatches(q.state.data) ? RESULTS_POLL_MS : false,
   });
+
+  useRefetchOnFocus(query.refetch);
 
   return {
     dispatches: query.data ?? [],
@@ -47,11 +63,12 @@ export function useResults(
     },
     enabled: Boolean(projectId) && Boolean(systemId) && Boolean(dispatchId),
     staleTime: 0,
-    refetchInterval: (query) => {
-      const status = query.state.data?.dispatch?.status;
-      return status === "pending" ? 5000 : false;
-    },
+    refetchOnMount: "always",
+    refetchInterval: (q) =>
+      isDispatchPending(q.state.data?.dispatch) ? RESULTS_POLL_MS : false,
   });
+
+  useRefetchOnFocus(query.refetch);
 
   return {
     dispatch: query.data?.dispatch,

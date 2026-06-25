@@ -14,4 +14,5 @@ export { Label } from "./label";
 export { Loading } from "./loading";
 export { Modal } from "./modal";
 export { Spinner } from "./spinner";
+export { StackSelect } from "./stack-select";
 export { Textarea } from "./textarea";

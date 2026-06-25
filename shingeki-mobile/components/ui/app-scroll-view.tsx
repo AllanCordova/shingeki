@@ -7,6 +7,9 @@ export function AppScrollView({ className, style, ...props }: ScrollViewProps) {
     <ScrollView
       className={cn("flex-1 bg-background", className)}
       style={[{ flex: 1, backgroundColor: appBackgroundColor }, style]}
+      showsVerticalScrollIndicator
+      nestedScrollEnabled
+      keyboardShouldPersistTaps="handled"
       {...props}
     />
   );

@@ -1,8 +1,22 @@
-import { useState, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useState, type ReactNode } from "react";
+import { AppState, Platform } from "react-native";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 import Toast from "react-native-toast-message";
 
+function useReactQueryAppFocus() {
+  useEffect(() => {
+    if (Platform.OS === "web") return;
+
+    const subscription = AppState.addEventListener("change", (status) => {
+      focusManager.setFocused(status === "active");
+    });
+
+    return () => subscription.remove();
+  }, []);
+}
+
 export function AppProviders({ children }: { children: ReactNode }) {
+  useReactQueryAppFocus();
   const [queryClient] = useState(
     () =>
       new QueryClient({

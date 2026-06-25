@@ -1,5 +1,10 @@
 import { z } from "zod";
 import type { Timestamps } from "./common";
+import type { Stack } from "./stack";
+
+const stackIdsSchema = z
+  .array(z.string().uuid("Stack invalida."))
+  .min(1, "Selecione pelo menos uma stack tecnologica.");
 
 export const systemCreateSchema = z.object({
   name: z
@@ -14,6 +19,7 @@ export const systemCreateSchema = z.object({
     .url("URL do repositorio invalida.")
     .min(1, "Informe a URL do repositorio.")
     .max(2048, "A URL do repositorio e muito longa."),
+  stack_ids: stackIdsSchema,
 });
 
 export const systemUpdateSchema = z.object({
@@ -30,6 +36,7 @@ export const systemUpdateSchema = z.object({
     .url("URL do repositorio invalida.")
     .max(2048, "A URL do repositorio e muito longa.")
     .optional(),
+  stack_ids: stackIdsSchema.optional(),
 });
 
 export type SystemCreateInput = z.infer<typeof systemCreateSchema>;
@@ -42,6 +49,7 @@ export interface System extends Timestamps {
   name: string;
   target_url: string;
   repository_url: string;
+  stacks: Stack[];
 }
 
 export interface SystemsResponse {

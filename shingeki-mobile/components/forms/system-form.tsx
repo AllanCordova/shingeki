@@ -1,4 +1,4 @@
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, type Control, type FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { View } from "react-native";
 import {
@@ -9,11 +9,12 @@ import {
 } from "@/lib/contracts";
 import { applyApiFieldErrors } from "@/lib/forms";
 import type { ApiError } from "@/lib/api/error-handler";
+import { StackFields } from "@/components/forms/stack-fields";
 import { Button, ErrorShow, Field, Input } from "@/components/ui";
 
 interface SystemFormProps {
   mode?: "create" | "edit";
-  defaultValues?: Partial<SystemCreateInput>;
+  defaultValues?: Partial<SystemCreateInput> & { stack_ids?: string[] };
   submitLabel?: string;
   isLoading: boolean;
   error: ApiError | null;
@@ -43,6 +44,7 @@ export function SystemForm({
       name: defaultValues?.name ?? "",
       target_url: defaultValues?.target_url ?? "",
       repository_url: defaultValues?.repository_url ?? "",
+      stack_ids: defaultValues?.stack_ids ?? [],
     },
   });
 
@@ -115,6 +117,11 @@ export function SystemForm({
           )}
         />
       </Field>
+
+      <StackFields
+        control={control as Control<{ stack_ids: string[] }>}
+        errors={errors as FieldErrors<{ stack_ids: string[] }>}
+      />
 
       <View className="flex-row items-center justify-end gap-2">
         {onCancel ? (
