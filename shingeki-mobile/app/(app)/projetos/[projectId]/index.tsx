@@ -8,6 +8,7 @@ import {
   useUpdateProject,
 } from "@/lib/hooks/use-projects";
 import { useCreateSystem, useSystems } from "@/lib/hooks/use-systems";
+import { getRouteParam } from "@/lib/route-params";
 import { ProjectForm } from "@/components/forms/project-form";
 import { SystemForm } from "@/components/forms/system-form";
 import { SystemCard } from "@/components/systems/system-card";
@@ -25,7 +26,7 @@ import {
 
 export default function ProjectDetailScreen() {
   const { projectId } = useLocalSearchParams<{ projectId: string }>();
-  const id = projectId ?? "";
+  const id = getRouteParam(projectId);
   const router = useRouter();
 
   const { project, isLoading, isError, error, refetch } = useProject(id);

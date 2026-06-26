@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Linking, Text, View } from "react-native";
+import { Linking, RefreshControl, Text, View } from "react-native";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import {
   useDeleteSystem,
   useSystem,
   useUpdateSystem,
 } from "@/lib/hooks/use-systems";
+import { useDispatches } from "@/lib/hooks/use-results";
+import { getRouteParam } from "@/lib/route-params";
 import { SystemForm } from "@/components/forms/system-form";
 import { SignaturePanel } from "@/components/signature/signature-panel";
 import { AttackForm } from "@/components/attack/attack-form";
@@ -13,6 +15,7 @@ import { DispatchesList } from "@/components/results/dispatches-list";
 import { notify } from "@/lib/notify";
 import {
   AppScrollView,
+  Badge,
   Button,
   CoverHero,
   ErrorShow,
@@ -25,16 +28,27 @@ export default function SystemDetailScreen() {
     projectId: string;
     systemId: string;
   }>();
-  const pid = projectId ?? "";
-  const sid = systemId ?? "";
+  const pid = getRouteParam(projectId);
+  const sid = getRouteParam(systemId);
   const router = useRouter();
 
   const { system, isLoading, isError, error, refetch } = useSystem(pid, sid);
+  const { refetch: refetchDispatches } = useDispatches(pid, sid);
   const updateSystem = useUpdateSystem(pid, sid);
   const deleteSystem = useDeleteSystem(pid);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetch(), refetchDispatches()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   if (isLoading) return <Loading label="Carregando sistema..." />;
   if (isError || !system)
@@ -50,7 +64,12 @@ export default function SystemDetailScreen() {
   };
 
   return (
-    <AppScrollView contentContainerClassName="gap-8 pb-8">
+    <AppScrollView
+      contentContainerClassName="gap-8 pb-8"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+      }
+    >
       <CoverHero coverPath={system.cover_path} alt={`Capa de ${system.name}`}>
         <Link href={`/projetos/${pid}`} asChild>
           <Text className="mb-4 text-sm text-white/75">
@@ -67,6 +86,15 @@ export default function SystemDetailScreen() {
           >
             {system.target_url}
           </Text>
+          {system.stacks?.length > 0 ? (
+            <View className="flex-row flex-wrap gap-2">
+              {system.stacks.map((stack) => (
+                <Badge key={stack.id} tone="neutral">
+                  {stack.name}
+                </Badge>
+              ))}
+            </View>
+          ) : null}
           <View className="flex-row gap-2">
             <Button variant="outline" onPress={() => setEditOpen(true)}>
               Editar
@@ -80,8 +108,8 @@ export default function SystemDetailScreen() {
 
       <View className="gap-8 px-4">
         <SignaturePanel projectId={pid} systemId={sid} />
-        <AttackForm projectId={pid} systemId={sid} />
         <DispatchesList projectId={pid} systemId={sid} />
+        <AttackForm projectId={pid} systemId={sid} />
       </View>
 
       <Modal
@@ -98,6 +126,7 @@ export default function SystemDetailScreen() {
             name: system.name,
             target_url: system.target_url,
             repository_url: system.repository_url,
+            stack_ids: system.stacks?.map((stack) => stack.id) ?? [],
           }}
           onCancel={() => setEditOpen(false)}
           onSubmit={async (values) => {

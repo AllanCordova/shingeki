@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { Header } from "@/components/layout/header";
 import { Loading, Screen } from "@/components/ui";
@@ -36,15 +37,17 @@ export default function AppLayout() {
   return (
     <Screen>
       <Header />
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          contentStyle: {
-            ...stackContentStyle,
-            paddingVertical: 24,
-          },
-        }}
-      />
+      <View style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: {
+              ...stackContentStyle,
+              paddingVertical: 24,
+            },
+          }}
+        />
+      </View>
     </Screen>
   );
 }

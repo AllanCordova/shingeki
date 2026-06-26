@@ -31,6 +31,12 @@ const MESSAGE_TRANSLATIONS: Record<string, string> = {
   "Signature not found.": "Assinatura nao encontrada.",
   "No signature token found for this system.":
     "Nenhum token de assinatura encontrado para este sistema.",
+  "Signature token is not permitted for attacks.":
+    "A assinatura ainda nao esta permitida. Valide a instalacao no alvo.",
+  "Signature token has expired.":
+    "O token de assinatura expirou. Gere um novo token.",
+  "System repository_url is required for SAST dispatch.":
+    "Informe a URL do repositorio para disparos SAST.",
 };
 
 function translateFieldMessage(message: string): string {
@@ -49,6 +55,9 @@ function translateFieldMessage(message: string): string {
   }
   if (lower.includes("is required") || lower.includes("field is required")) {
     return "Campo obrigatorio.";
+  }
+  if (lower.includes("stack")) {
+    return "Selecione pelo menos uma stack tecnologica.";
   }
   return message;
 }
