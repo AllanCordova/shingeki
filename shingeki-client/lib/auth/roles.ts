@@ -50,4 +50,8 @@ export function canManageCatalog(user: User | undefined): boolean {
 export function canBulkImportCatalog(user: User | undefined): boolean {
   return hasCatalogCapability(user, "bulkImportCatalog");
 }
-
+
+export function canUseManualProxy(user: User | undefined): boolean {
+  return hasAnyRole(user, ["ADMIN", "SPECIALIST"]);
+}
+

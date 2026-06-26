@@ -1,6 +1,7 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
+import { createServerApi, forwardToApi } from "@/lib/api/server";
 
 /** Converte o resultado de forwardToApi em uma resposta JSON do Next. */
 export function respond(result: { status: number; data: unknown }): NextResponse {
@@ -19,4 +20,31 @@ export async function readJson(request: Request): Promise<unknown> {
 export function isMultipartRequest(request: Request): boolean {
   const contentType = request.headers.get("content-type") ?? "";
   return contentType.includes("multipart/form-data");
+}
+
+/** Encaminha GET com query string para a API Laravel. */
+export async function forwardGetWithQuery(request: Request, apiPath: string) {
+  const query = new URL(request.url).searchParams.toString();
+  const path = apiPath + (query ? `?${query}` : "");
+  return respond(await forwardToApi("get", path));
+}
+
+/** Encaminha download de template CSV da API Laravel. */
+export async function forwardCsvTemplate(apiPath: string, fallbackFilename: string) {
+  const api = await createServerApi();
+  const response = await api.get(apiPath, { responseType: "arraybuffer" });
+
+  if (response.status >= 400) {
+    return NextResponse.json(response.data, { status: response.status });
+  }
+
+  return new NextResponse(response.data, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=UTF-8",
+      "Content-Disposition":
+        response.headers["content-disposition"] ??
+        `attachment; filename="${fallbackFilename}"`,
+    },
+  });
 }

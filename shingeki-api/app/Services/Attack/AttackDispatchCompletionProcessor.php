@@ -4,12 +4,17 @@ namespace App\Services\Attack;
 
 use App\Models\AttackDispatch;
 use App\Models\System;
+use App\Services\Notification\UserNotificationService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 
 class AttackDispatchCompletionProcessor
 {
     public const EVENT = 'attack.dispatch.completed';
+
+    public function __construct(
+        private readonly UserNotificationService $userNotificationService,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $message
@@ -70,6 +75,9 @@ class AttackDispatchCompletionProcessor
             'jobs_planned' => $jobsPlanned === null ? null : (int) $jobsPlanned,
         ]);
 
-        return $dispatch->fresh();
+        $dispatch = $dispatch->fresh();
+        $this->userNotificationService->completeAttackDispatch($dispatch);
+
+        return $dispatch;
     }
 }

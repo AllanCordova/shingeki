@@ -40,6 +40,8 @@ Rode junto com `php artisan attacks:consume-results` enquanto a API estiver ativ
 
 Resposta de upload aceito: `202` com objeto `import` (`PENDING` → `PROCESSING` → `COMPLETED` ou `FAILED`).
 
+Ao enfileirar, a API cria notificação `catalog_import` (`pending`); ao concluir o último chunk (ou falhar na validação), o status passa para `completed` ou `failed`. Ver [NOTIFICATIONS.md](NOTIFICATIONS.md).
+
 Erros de validacao por linha: `422` com `validation_errors` (`row`, `messages`).
 
 ## Template de ataques

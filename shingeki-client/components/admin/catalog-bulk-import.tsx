@@ -34,14 +34,20 @@ export function CatalogBulkImport({
   const { importJob } = useCatalogImportStatus(importId);
 
   useEffect(() => {
-    if (
-      importJob?.status === "COMPLETED" &&
-      importJob.id !== completedRef.current
-    ) {
-      completedRef.current = importJob.id;
-      onCompleted?.();
+    if (!importJob || importJob.id === completedRef.current) return;
+
+    const terminal =
+      importJob.status === "COMPLETED" || importJob.status === "FAILED";
+
+    if (!terminal) return;
+
+    completedRef.current = importJob.id;
+    onCompleted?.();
+
+    if (importJob.status === "FAILED") {
+      notify.error(`${label}: importacao falhou. Veja detalhes no sininho.`);
     }
-  }, [importJob, onCompleted]);
+  }, [importJob, label, onCompleted]);
 
   if (!canBulkImportCatalog(user)) {
     return null;
@@ -63,7 +69,7 @@ export function CatalogBulkImport({
       }
 
       setImportId(result.import.id);
-      notify.success(`${label} enfileirado para processamento.`);
+      notify.success(`${label} enfileirado. Acompanhe pelo sininho de notificacoes.`);
     } catch (err) {
       notify.fromApiError(err, `Nao foi possivel importar ${label.toLowerCase()}.`);
     } finally {

@@ -8,6 +8,7 @@ use App\Models\Attack;
 use App\Models\CatalogImport;
 use App\Models\Remediation;
 use App\Models\User;
+use App\Services\Notification\UserNotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -18,6 +19,7 @@ class CatalogImportService
         private readonly AttackSpreadsheetParser $attackParser,
         private readonly RemediationSpreadsheetParser $remediationParser,
         private readonly CatalogImportQueuePublisher $publisher,
+        private readonly UserNotificationService $userNotificationService,
     ) {}
 
     /**
@@ -46,8 +48,11 @@ class CatalogImportService
             : $this->remediationParser->parse($file);
 
         if ($parsed['errors'] !== []) {
+            $import = $this->createFailedImport($user, $type, count($parsed['rows']), $parsed['errors']);
+            $this->userNotificationService->finalizeCatalogImport($import);
+
             return [
-                'import' => $this->createFailedImport($user, $type, count($parsed['rows']), $parsed['errors']),
+                'import' => $import,
                 'validation_errors' => $parsed['errors'],
             ];
         }
@@ -64,6 +69,7 @@ class CatalogImportService
         ]);
 
         $this->publisher->publish($import, $user, $type, $parsed['rows']);
+        $this->userNotificationService->trackCatalogImportPending($import->fresh());
 
         return [
             'import' => $import->fresh(),
@@ -131,7 +137,13 @@ class CatalogImportService
                 'completed_at' => $isLastChunk ? now() : $import->completed_at,
             ]);
 
-            return $import->fresh();
+            $import = $import->fresh();
+
+            if ($isLastChunk) {
+                $this->userNotificationService->finalizeCatalogImport($import);
+            }
+
+            return $import;
         });
     }
 

@@ -14,4 +14,7 @@ export * from "./remediation";
 export * from "./target-session";
 export * from "./catalog-attack";
 export * from "./catalog-remediation";
+export * from "./catalog-list";
 export * from "./catalog-import";
+export * from "./notification";
+export * from "./manual-proxy";

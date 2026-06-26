@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { Link } from "expo-router";
 import { useDispatches } from "@/lib/hooks/use-results";
+import { isDispatchCompleted } from "@/lib/dispatch-status";
 import { formatDate } from "@/lib/utils";
 import {
   Badge,
@@ -32,7 +33,7 @@ export function DispatchesList({
           <View>
             <CardTitle>Resultados</CardTitle>
             <CardDescription>
-              Disparos e suas vulnerabilidades encontradas.
+              Disparos e vulnerabilidades. Role a tela para ver a lista completa.
             </CardDescription>
           </View>
           {isFetching ? <Spinner size="sm" /> : null}
@@ -75,10 +76,10 @@ export function DispatchesList({
                     </View>
                     <Badge
                       tone={
-                        dispatch.status === "completed" ? "success" : "warning"
+                        isDispatchCompleted(dispatch) ? "success" : "warning"
                       }
                     >
-                      {dispatch.status === "completed"
+                      {isDispatchCompleted(dispatch)
                         ? "Concluido"
                         : "Processando"}
                     </Badge>

@@ -2,30 +2,48 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ListCatalogItems;
 use App\Http\Requests\StoreCatalogAttack;
 use App\Http\Requests\UpdateCatalogAttack;
+use App\Http\Controllers\Concerns\FormatsCatalogItem;
+use App\Http\Controllers\Concerns\FormatsPagination;
+use App\Http\Controllers\Concerns\ResolvesCatalogOwners;
 use App\Models\Attack;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class CatalogAttackController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    use FormatsCatalogItem;
+    use FormatsPagination;
+    use ResolvesCatalogOwners;
+
+    public function index(ListCatalogItems $request): JsonResponse
     {
         $this->authorize('manageCatalog');
 
-        $attacks = Attack::query()
+        $query = Attack::query()
             ->with('user:id,name,email,role')
-            ->latest()
-            ->get();
+            ->latest();
+
+        if ($ownerUserId = $request->ownerUserId()) {
+            $query->where('user_id', $ownerUserId);
+        }
+
+        $attacks = $query->paginate(
+            perPage: $request->perPage(),
+            page: $request->page(),
+        );
 
         return response()->json([
             'attacks' => $attacks
+                ->getCollection()
                 ->map(fn (Attack $attack) => $this->formatAttack($attack, $request->user()))
                 ->values()
                 ->all(),
+            'pagination' => $this->formatPagination($attacks),
+            'owners' => $this->catalogOwnersFor(Attack::class),
         ]);
     }
 
@@ -94,18 +112,13 @@ class CatalogAttackController extends Controller
             'target_location' => $attack->target_location->value,
             'risk_level' => $attack->risk_level->value,
             'payload' => $attack->payload,
-            'author' => $attack->relationLoaded('user') && $attack->user !== null
-                ? [
-                    'id' => $attack->user->id,
-                    'name' => $attack->user->name,
-                    'email' => $attack->user->email,
-                    'role' => $attack->user->role->value,
-                ]
-                : null,
-            'permissions' => [
-                'update' => Gate::forUser($viewer)->allows('updateCatalogAttack', $attack),
-                'delete' => Gate::forUser($viewer)->allows('deleteCatalogAttack', $attack),
-            ],
+            'author' => $this->formatCatalogAuthor($attack),
+            'permissions' => $this->formatCatalogPermissions(
+                $viewer,
+                $attack,
+                'updateCatalogAttack',
+                'deleteCatalogAttack',
+            ),
             'created_at' => $attack->created_at,
             'updated_at' => $attack->updated_at,
         ];

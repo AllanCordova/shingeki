@@ -29,7 +29,7 @@ Base: `/api/catalog/attacks`
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/catalog/attacks` | Lista ataques (com `author` e `permissions`) |
+| GET | `/api/catalog/attacks` | Lista paginada (com `author`, `permissions`, `owners`) |
 | POST | `/api/catalog/attacks` | Cria ataque (`user_id` = usuário autenticado) |
 | GET | `/api/catalog/attacks/{attack}` | Detalhe |
 | PUT | `/api/catalog/attacks/{attack}` | Atualiza (policy de ownership) |
@@ -82,7 +82,7 @@ Base: `/api/catalog/remediations`
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
-| GET | `/api/catalog/remediations` | Lista snippets (com `permissions`) |
+| GET | `/api/catalog/remediations` | Lista paginada (com `permissions`, `owners`) |
 | POST | `/api/catalog/remediations` | Cria snippet |
 | GET | `/api/catalog/remediations/{remediation}` | Detalhe |
 | PUT | `/api/catalog/remediations/{remediation}` | Atualiza |
@@ -101,6 +101,37 @@ Base: `/api/catalog/remediations`
 
 Lookup em `POST .../remediate` continua descrito em [REMEDIATION.md](REMEDIATION.md).
 
+## Listagem paginada e filtro por autor
+
+`GET /api/catalog/attacks` e `GET /api/catalog/remediations` aceitam:
+
+| Query | Default | Descrição |
+|-------|---------|-----------|
+| `page` | `1` | Página |
+| `per_page` | `25` | Itens por página (máx. 100) |
+| `user_id` | — | Filtra por UUID do autor (`user_id` do registro) |
+
+Resposta inclui:
+
+```json
+{
+  "attacks": [ "... ou remediations ..." ],
+  "pagination": {
+    "current_page": 1,
+    "last_page": 3,
+    "per_page": 25,
+    "total": 52,
+    "from": 1,
+    "to": 25
+  },
+  "owners": [
+    { "id": "uuid", "name": "Test User", "email": "test@example.com" }
+  ]
+}
+```
+
+`owners` lista autores distintos com itens no catálogo (para popular o filtro no admin).
+
 ## Erros comuns
 
 | Status | Situação |
@@ -111,4 +142,4 @@ Lookup em `POST .../remediate` continua descrito em [REMEDIATION.md](REMEDIATION
 
 ## Client web
 
-Usuários `ADMIN` e `SPECIALIST` veem a sidebar admin (`/admin`, `/admin/ataques`, `/admin/medicacoes`) com CRUD individual e painel de importação CSV.
+Usuários `ADMIN` e `SPECIALIST` veem a sidebar admin (`/admin`, `/admin/ataques`, `/admin/medicacoes`) com CRUD individual, **paginação**, **filtro por autor** e painel de importação CSV.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
 import { queryKeys } from "@/lib/query-keys";
@@ -33,6 +33,8 @@ export function useCatalogImportStatus(importId: string | null, enabled = true) 
 }
 
 export function useUploadCatalogImport(path: string) {
+  const queryClient = useQueryClient();
+
   const mutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
@@ -41,6 +43,9 @@ export function useUploadCatalogImport(path: string) {
         headers: { "Content-Type": "multipart/form-data" },
       });
       return data;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notificationsAll });
     },
   });
 

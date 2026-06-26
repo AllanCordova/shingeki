@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AttackScanTypeValue } from "./attack";
 import type { Stack } from "./stack";
 import type { Timestamps } from "./common";
+import type { CatalogAuthor, CatalogListResponseMeta } from "./catalog-list";
 
 export const catalogRemediationCreateSchema = z.object({
   stack_id: z.string().uuid("Selecione uma stack."),
@@ -18,12 +19,8 @@ export type CatalogRemediationCreateInput = z.infer<
   typeof catalogRemediationCreateSchema
 >;
 
-export interface CatalogRemediationAuthor {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+/** @deprecated Use CatalogAuthor */
+export type CatalogRemediationAuthor = CatalogAuthor;
 
 export interface CatalogRemediation extends Timestamps {
   id: string;
@@ -37,14 +34,14 @@ export interface CatalogRemediation extends Timestamps {
   description: string;
   code_snippet: string;
   references: string[];
-  author: CatalogRemediationAuthor | null;
+  author: CatalogAuthor | null;
   permissions: {
     update: boolean;
     delete: boolean;
   };
 }
 
-export interface CatalogRemediationsResponse {
+export interface CatalogRemediationsResponse extends CatalogListResponseMeta {
   remediations: CatalogRemediation[];
 }
 
