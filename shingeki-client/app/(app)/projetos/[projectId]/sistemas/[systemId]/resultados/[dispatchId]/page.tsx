@@ -4,25 +4,30 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useResults } from "@/lib/hooks/use-results";
-import { useSystem } from "@/lib/hooks/use-systems";
 import type { DispatchProbeListFilter } from "@/lib/contracts";
+import type { AttackDispatch } from "@/lib/contracts/attack";
+import type { PaginationMeta, SystemResult } from "@/lib/contracts/result";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
+import { formatFindingSourceLocation, isSastResult } from "@/lib/results/source-location";
 import { formatDate } from "@/lib/utils";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { ProbeOutcomeFilter } from "@/components/results/probe-outcome-filter";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
+import { cn } from "@/lib/utils";
 import {
   Badge,
   Button,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
   EmptyState,
   ErrorShow,
   Loading,
+  ListPagination,
 } from "@/components/ui";
 
 function riskTone(risk: string): "danger" | "warning" | "neutral" {
@@ -40,12 +45,14 @@ export default function ResultsDetailPage() {
   }>();
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [resultsPage, setResultsPage] = useState(1);
   const [probePage, setProbePage] = useState(1);
   const [probeFilter, setProbeFilter] = useState<DispatchProbeListFilter>("all");
 
   const {
     dispatch,
     results,
+    resultsPagination,
     probes,
     probesPagination,
     probeCounts,
@@ -57,10 +64,10 @@ export default function ResultsDetailPage() {
   } = useResults(projectId, systemId, dispatchId, {
     page: probePage,
     per_page: DEFAULT_PAGE_SIZE,
+    results_page: resultsPage,
+    results_per_page: DEFAULT_PAGE_SIZE,
     filter: probeFilter,
   });
-  const { system } = useSystem(projectId, systemId);
-
   const dispatchLabel = dispatch?.dispatched_at
     ? formatDate(dispatch.dispatched_at)
     : "este disparo";
@@ -83,11 +90,31 @@ export default function ResultsDetailPage() {
     .join(" · ");
 
   const showVulnerabilities =
-    probeFilter === "all" || probeFilter === "vulnerable";
+    dispatch?.scan_type === "SAST" ||
+    probeFilter === "all" ||
+    probeFilter === "vulnerable";
+  const vulnerabilitiesTotal = resultsPagination?.total ?? results.length;
+
+  const coverageTotal = probesPagination?.total ?? probeCounts?.all ?? 0;
+  const showCompactCoverage =
+    probeFilter === "all" && (isPending || coverageTotal === 0);
+
+  const coveragePanelProps = {
+    probes,
+    isPending,
+    scanType: dispatch?.scan_type,
+    probesCount: dispatch?.probes_count,
+    jobsPlanned: dispatch?.jobs_planned,
+    vectorsDiscovered: dispatch?.vectors_discovered,
+    filter: probeFilter,
+    pagination: probesPagination,
+    isFetching,
+    onPageChange: setProbePage,
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex w-full flex-wrap items-center justify-between gap-4">
         <Link
           href={`/projetos/${projectId}/sistemas/${systemId}`}
           className="text-sm text-muted-foreground hover:text-foreground"
@@ -102,12 +129,16 @@ export default function ResultsDetailPage() {
       </div>
 
       {isLoading ? (
-        <Loading label="Carregando resultados..." />
+        <div className="w-full">
+          <Loading label="Carregando resultados..." />
+        </div>
       ) : isError ? (
-        <ErrorShow error={error} onRetry={() => refetch()} />
+        <div className="w-full">
+          <ErrorShow error={error} onRetry={() => refetch()} />
+        </div>
       ) : (
         <>
-          <div className="flex flex-col gap-2">
+          <div className="flex w-full flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                 Disparo {formatDate(dispatch?.dispatched_at)}
@@ -128,93 +159,7 @@ export default function ResultsDetailPage() {
               {coverageSummary ? ` · ${coverageSummary}` : ""}
               {dispatch?.duration_ms ? ` · ${dispatch.duration_ms} ms` : ""}
             </p>
-            <ProbeOutcomeFilter
-              filter={probeFilter}
-              probeCounts={probeCounts}
-              onFilterChange={(nextFilter) => {
-                setProbeFilter(nextFilter);
-                setProbePage(1);
-              }}
-            />
           </div>
-
-          {showVulnerabilities && results.length === 0 && !isPending ? (
-            <EmptyState
-              title="Nenhuma vulnerabilidade encontrada"
-              description="O scan foi executado, mas nenhum indicador de vulnerabilidade foi detectado neste disparo."
-            />
-          ) : showVulnerabilities && results.length === 0 && isPending ? (
-            <EmptyState
-              title="Aguardando vulnerabilidades"
-              description="Os achados aparecerao aqui se alguma vulnerabilidade for detectada."
-            />
-          ) : showVulnerabilities ? (
-            <div className="flex flex-col gap-4">
-              <h2 className="text-lg font-semibold text-foreground">Vulnerabilidades</h2>
-              {results.map((result) => (
-                <Card key={result.id}>
-                  <CardHeader>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CardTitle>
-                        {result.attack?.category ?? "Vulnerabilidade"}
-                      </CardTitle>
-                      <ScanTypeBadge
-                        scanType={
-                          result.attack?.scan_type ?? dispatch?.scan_type
-                        }
-                      />
-                      {result.attack?.risk_level ? (
-                        <Badge tone={riskTone(result.attack.risk_level)}>
-                          {result.attack.risk_level}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-3 text-sm">
-                    {result.vulnerable_route ? (
-                      <Detail label="Rota vulneravel" value={result.vulnerable_route} />
-                    ) : null}
-                    {result.payload_used ? (
-                      <Detail
-                        label={
-                          (result.attack?.scan_type ?? dispatch?.scan_type) ===
-                          "SAST"
-                            ? "Regra"
-                            : "Payload"
-                        }
-                        value={result.payload_used}
-                        mono
-                      />
-                    ) : null}
-                    {result.evidence ? (
-                      <Detail label="Evidencia" value={result.evidence} mono />
-                    ) : null}
-                    {result.http_request ? (
-                      <Detail
-                        label="Requisicao HTTP"
-                        value={result.http_request}
-                        mono
-                      />
-                    ) : null}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : null}
-
-          <ScanCoveragePanel
-            probes={probes}
-            isPending={isPending}
-            scanType={dispatch?.scan_type}
-            probesCount={dispatch?.probes_count}
-            jobsPlanned={dispatch?.jobs_planned}
-            vectorsDiscovered={dispatch?.vectors_discovered}
-            targetUrl={system?.target_url}
-            filter={probeFilter}
-            pagination={probesPagination}
-            isFetching={isFetching}
-            onPageChange={setProbePage}
-          />
 
           {dispatch?.status === "completed" ? (
             <RemediationPanel
@@ -223,6 +168,59 @@ export default function ResultsDetailPage() {
               dispatchId={dispatchId}
             />
           ) : null}
+
+          <ProbeOutcomeFilter
+            filter={probeFilter}
+            probeCounts={probeCounts}
+            onFilterChange={(nextFilter) => {
+              setProbeFilter(nextFilter);
+              setProbePage(1);
+              setResultsPage(1);
+            }}
+          />
+
+          {showCompactCoverage ? (
+            <ScanCoveragePanel {...coveragePanelProps} compactWhenEmpty />
+          ) : null}
+
+          <section className="w-full">
+            {showCompactCoverage ? (
+              showVulnerabilities ? (
+                <VulnerabilitiesSection
+                  results={results}
+                  dispatch={dispatch}
+                  isPending={isPending}
+                  isFetching={isFetching}
+                  vulnerabilitiesTotal={vulnerabilitiesTotal}
+                  resultsPagination={resultsPagination}
+                  onPageChange={setResultsPage}
+                />
+              ) : null
+            ) : (
+              <div
+                className={cn(
+                  "grid grid-cols-1 gap-6",
+                  showVulnerabilities ? "xl:grid-cols-2 xl:items-start" : "",
+                )}
+              >
+                <div className={cn(!showVulnerabilities && "xl:col-span-2")}>
+                  <ScanCoveragePanel {...coveragePanelProps} />
+                </div>
+
+                {showVulnerabilities ? (
+                  <VulnerabilitiesSection
+                    results={results}
+                    dispatch={dispatch}
+                    isPending={isPending}
+                    isFetching={isFetching}
+                    vulnerabilitiesTotal={vulnerabilitiesTotal}
+                    resultsPagination={resultsPagination}
+                    onPageChange={setResultsPage}
+                  />
+                ) : null}
+              </div>
+            )}
+          </section>
         </>
       )}
 
@@ -239,6 +237,125 @@ export default function ResultsDetailPage() {
         }}
       />
     </div>
+  );
+}
+
+function VulnerabilitiesSection({
+  results,
+  dispatch,
+  isPending,
+  isFetching,
+  vulnerabilitiesTotal,
+  resultsPagination,
+  onPageChange,
+}: {
+  results: SystemResult[];
+  dispatch?: AttackDispatch;
+  isPending: boolean;
+  isFetching: boolean;
+  vulnerabilitiesTotal: number;
+  resultsPagination?: PaginationMeta;
+  onPageChange: (page: number) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vulnerabilidades</CardTitle>
+        <CardDescription>
+          Achados confirmados e evidencias do scan.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {vulnerabilitiesTotal === 0 && !isPending ? (
+          <EmptyState
+            title="Nenhuma vulnerabilidade encontrada"
+            description="O scan foi executado, mas nenhum indicador de vulnerabilidade foi detectado."
+          />
+        ) : vulnerabilitiesTotal === 0 && isPending ? (
+          <EmptyState
+            title="Aguardando vulnerabilidades"
+            description="Os achados aparecerao aqui se alguma vulnerabilidade for detectada."
+          />
+        ) : (
+          <>
+            <div className="flex flex-col gap-4">
+              {results.map((result) => {
+                const sast = isSastResult(result, dispatch?.scan_type);
+                const sourceLocation =
+                  formatFindingSourceLocation(result) ??
+                  (sast && result.vulnerable_route ? result.vulnerable_route : null);
+
+                return (
+                  <Card key={result.id}>
+                    <CardHeader>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <CardTitle className="text-base">
+                          {result.attack?.category ?? "Vulnerabilidade"}
+                        </CardTitle>
+                        <ScanTypeBadge
+                          scanType={result.attack?.scan_type ?? dispatch?.scan_type}
+                        />
+                        {result.attack?.risk_level ? (
+                          <Badge tone={riskTone(result.attack.risk_level)}>
+                            {result.attack.risk_level}
+                          </Badge>
+                        ) : null}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-3 text-sm">
+                      {sourceLocation ? (
+                        <Detail
+                          label={sast ? "Arquivo e linha(s)" : "Localizacao"}
+                          value={sourceLocation}
+                          mono
+                        />
+                      ) : null}
+                      {result.vulnerable_route && !sast ? (
+                        <Detail
+                          label="Rota vulneravel"
+                          value={result.vulnerable_route}
+                        />
+                      ) : null}
+                      {result.payload_used ? (
+                        <Detail
+                          label={sast ? "Regra Semgrep" : "Payload"}
+                          value={result.payload_used}
+                          mono
+                        />
+                      ) : null}
+                      {result.matched_snippet ? (
+                        <Detail
+                          label="Trecho afetado"
+                          value={result.matched_snippet}
+                          mono
+                        />
+                      ) : null}
+                      {result.evidence ? (
+                        <Detail label="Evidencia" value={result.evidence} mono />
+                      ) : null}
+                      {result.http_request ? (
+                        <Detail
+                          label={sast ? "Contexto" : "Requisicao HTTP"}
+                          value={result.http_request}
+                          mono
+                        />
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            {resultsPagination ? (
+              <ListPagination
+                pagination={resultsPagination}
+                isFetching={isFetching}
+                onPageChange={onPageChange}
+              />
+            ) : null}
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -13,6 +13,10 @@ type ResultMessage struct {
 	PayloadUsed     string `json:"payload_used"`
 	Evidence        string `json:"evidence"`
 	HTTPRequest     string `json:"http_request"`
+	SourceFile      string `json:"source_file,omitempty"`
+	StartLine       int    `json:"start_line,omitempty"`
+	EndLine         int    `json:"end_line,omitempty"`
+	MatchedSnippet  string `json:"matched_snippet,omitempty"`
 }
 
 func (r ResultMessage) Validate() error {

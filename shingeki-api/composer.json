@@ -48,7 +48,11 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan attacks:consume-results\" \"npm run dev\" --names='server,queue,attacks,vite'"
+            "php artisan serve"
+        ],
+        "dev:with-consumers": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -c \"#93c5fd,#fdba74,#fcd34d\" \"php artisan serve\" \"php artisan attacks:consume-results\" \"php artisan catalog:consume-imports\" --names='server,attacks,catalog'"
         ],
         "lint:fix": [
             "@php ./vendor/bin/pint"

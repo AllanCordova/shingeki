@@ -11,6 +11,7 @@ use App\Models\DispatchProbe;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
+use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Http\JsonResponse;
 
 class SystemResultController extends Controller
@@ -42,7 +43,10 @@ class SystemResultController extends Controller
             ->with('attack')
             ->where('attack_dispatch_id', $attackDispatch->id)
             ->latest()
-            ->get();
+            ->paginate(
+                perPage: $request->resultsPerPage(),
+                page: $request->resultsPage(),
+            );
 
         $probeBaseQuery = DispatchProbe::query()
             ->where('attack_dispatch_id', $attackDispatch->id);
@@ -63,10 +67,11 @@ class SystemResultController extends Controller
 
         return response()->json([
             'dispatch' => $this->formatDispatch($attackDispatch),
-            'results' => $results
+            'results' => collect($results->items())
                 ->map(fn (SystemResult $result) => $this->formatResult($result))
                 ->values()
                 ->all(),
+            'results_pagination' => $this->formatPagination($results),
             'probes' => collect($probes->items())
                 ->map(fn (DispatchProbe $probe) => $this->formatProbe($probe))
                 ->values()
@@ -140,6 +145,13 @@ class SystemResultController extends Controller
      */
     private function formatResult(SystemResult $result): array
     {
+        $locationFields = SourceFileNormalizer::formatForApi(
+            $result->source_file,
+            $result->start_line,
+            $result->end_line,
+            $result->vulnerable_route,
+        );
+
         $data = [
             'id' => $result->id,
             'system_id' => $result->system_id,
@@ -149,6 +161,8 @@ class SystemResultController extends Controller
             'payload_used' => $result->payload_used,
             'evidence' => $result->evidence,
             'http_request' => $result->http_request,
+            'matched_snippet' => $result->matched_snippet,
+            ...$locationFields,
             'created_at' => $result->created_at,
             'updated_at' => $result->updated_at,
         ];

@@ -20,6 +20,10 @@ export const notify = {
     toast.error(message);
   },
 
+  warning(message: string) {
+    toast.warning(message);
+  },
+
   fromApiError(error: unknown, fallback = "Ocorreu um erro.") {
     const apiError = error as ApiError | null;
     if (apiError?.message) {

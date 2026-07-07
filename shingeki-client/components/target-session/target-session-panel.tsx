@@ -148,8 +148,9 @@ export function TargetSessionPanel({
       <CardHeader>
         <CardTitle>Sessao do alvo</CardTitle>
         <CardDescription>
-          Conecte a sessao autenticada do alvo para o DAST testar rotas protegidas.
-          Uma janela separada abrira para voce fazer login — sem copiar cookies manualmente.
+          Conecte sua sessao autenticada para que o scan acesse areas protegidas do
+          sistema. Uma janela separada abrira para voce fazer login — sem copiar
+          cookies manualmente.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -170,7 +171,7 @@ export function TargetSessionPanel({
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              O proximo disparo DAST enviara estes headers ao worker.
+              Os proximos scans utilizarao esta sessao automaticamente.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button

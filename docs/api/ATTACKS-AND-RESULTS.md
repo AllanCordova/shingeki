@@ -8,17 +8,24 @@ Requer workers, filas e (para DAST em laboratório) alvo vulnerável. API e stac
 
 ### Stack completa
 
-Na raiz do monorepo (MySQL, RabbitMQ, workers DAST/SAST e alvo vulnerável):
+Na raiz do monorepo:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
+docker compose --profile stack up -d --build
+```
+
+Em terminais separados na API:
+
+```bash
 cd shingeki-api
 php artisan migrate --seed
 php artisan serve
-php artisan queue:listen --tries=1
 php artisan attacks:consume-results
 php artisan catalog:consume-imports
 ```
+
+Client web: `cd shingeki-client && npm run dev`. Detalhes: [RUN-PROJECT.md](../RUN-PROJECT.md).
 
 O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 

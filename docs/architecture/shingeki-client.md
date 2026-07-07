@@ -71,7 +71,3 @@ components/
 | Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações, **paginação**, **filtro por autor** e import CSV |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` — proxy HTTP, payload catalogado, mapa de rotas; link no hero do sistema |
 | Notificações | Sininho no header (`NotificationBell`); poll 20s; badge unread + pending; toasts após dispatch/import CSV |
-
-## Paridade com o mobile
-
-Mesmos contratos Zod e fluxos de negócio; diferença principal: web usa BFF + cookie http-only; mobile chama a API diretamente com token em `expo-secure-store` ([shingeki-mobile](shingeki-mobile.md)).

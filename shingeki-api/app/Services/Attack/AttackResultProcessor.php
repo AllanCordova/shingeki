@@ -6,6 +6,7 @@ use App\Models\Attack;
 use App\Models\AttackDispatch;
 use App\Models\System;
 use App\Models\SystemResult;
+use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 
@@ -59,6 +60,53 @@ class AttackResultProcessor
             'payload_used' => $payload['payload_used'],
             'evidence' => $payload['evidence'],
             'http_request' => $payload['http_request'],
+            ...$this->optionalLocationFields($payload),
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function optionalLocationFields(array $payload): array
+    {
+        $fields = [];
+
+        if (isset($payload['source_file']) && is_string($payload['source_file']) && $payload['source_file'] !== '') {
+            $normalized = SourceFileNormalizer::normalize($payload['source_file']);
+
+            if ($normalized !== null) {
+                $fields['source_file'] = $normalized;
+            }
+        }
+
+        if (isset($payload['start_line']) && is_numeric($payload['start_line'])) {
+            $fields['start_line'] = (int) $payload['start_line'];
+        }
+
+        if (isset($payload['end_line']) && is_numeric($payload['end_line'])) {
+            $fields['end_line'] = (int) $payload['end_line'];
+        }
+
+        if (isset($payload['matched_snippet']) && is_string($payload['matched_snippet']) && $payload['matched_snippet'] !== '') {
+            $fields['matched_snippet'] = $payload['matched_snippet'];
+        }
+
+        if (! isset($fields['source_file']) && isset($fields['start_line'])) {
+            $location = SourceFileNormalizer::locationFromResult(
+                null,
+                $fields['start_line'],
+                $fields['end_line'] ?? null,
+                isset($payload['vulnerable_route']) && is_string($payload['vulnerable_route'])
+                    ? $payload['vulnerable_route']
+                    : null,
+            );
+
+            if ($location !== null) {
+                $fields['source_file'] = $location['file'];
+            }
+        }
+
+        return $fields;
     }
 }

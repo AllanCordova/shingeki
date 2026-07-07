@@ -54,6 +54,37 @@ class RemediationCatalogSeeder extends Seeder
                 'code_snippet' => "echo '<p>Results for: '.htmlspecialchars(\$query, ENT_QUOTES | ENT_HTML5, 'UTF-8').'</p>';",
                 'references' => ['https://www.php.net/manual/en/function.htmlspecialchars.php', 'https://owasp.org/www-community/attacks/xss/'],
             ],
+            // Vanilla PHP — alvo vulnerável (SAST / Semgrep)
+            [
+                'stack_id' => $vanillaPhp->id,
+                'scan_type' => AttackScanType::Sast,
+                'attack_category' => AttackCategory::SqlInjection,
+                'semgrep_rule_id' => 'php.lang.security.injection.tainted-sql-string.tainted-sql-string',
+                'title' => 'Substitua o SQL concatenado por prepared statement (remova o sink)',
+                'description' => 'Troque a string SQL concatenada por prepared statement com placeholders. Remova TODA a cadeia antiga ($sql, db()->query($sql)/db()->exec($sql)) e reconstrua a variável de resultado usada depois.',
+                'code_snippet' => "\$stmt = db()->prepare('SELECT * FROM users WHERE email = ? AND password = ? LIMIT 1');\n\$stmt->execute([\$email, \$password]);\n\$user = \$stmt->fetch(PDO::FETCH_ASSOC) ?: false;",
+                'references' => ['https://www.php.net/manual/en/pdo.prepared-statements.php', 'https://owasp.org/www-community/attacks/SQL_Injection'],
+            ],
+            [
+                'stack_id' => $vanillaPhp->id,
+                'scan_type' => AttackScanType::Sast,
+                'attack_category' => AttackCategory::Xss,
+                'semgrep_rule_id' => 'php.lang.security.injection.echoed-request.echoed-request',
+                'title' => 'Codifique a saída refletida com htmlspecialchars',
+                'description' => 'Substitua o echo direto de dados de $_GET/$_POST por htmlspecialchars na mesma linha, removendo a linha vulnerável original.',
+                'code_snippet' => "echo '<p>Results for: '.htmlspecialchars(\$query, ENT_QUOTES | ENT_HTML5, 'UTF-8').'</p>';",
+                'references' => ['https://www.php.net/manual/en/function.htmlspecialchars.php', 'https://owasp.org/www-community/attacks/xss/'],
+            ],
+            [
+                'stack_id' => $vanillaPhp->id,
+                'scan_type' => AttackScanType::Sast,
+                'attack_category' => AttackCategory::PathTraversal,
+                'semgrep_rule_id' => 'php.lang.security.injection.tainted-filename.tainted-filename',
+                'title' => 'Confine a leitura ao storage com basename + realpath',
+                'description' => 'Sanitize o nome do arquivo com basename(), resolva com realpath() e confirme str_starts_with no diretório base antes de qualquer is_file()/readfile(). Substitua todo o bloco vulnerável de uma vez.',
+                'code_snippet' => "\$file = basename(str_replace('\\\\', '/', \$file));\nif (\$file === '' || str_contains(\$file, '..')) {\n    http_response_code(400);\n    exit('Invalid file name.');\n}\n\n\$storageDir = realpath(__DIR__.'/../storage');\nif (\$storageDir === false) {\n    http_response_code(500);\n    exit;\n}\n\n\$resolved = realpath(\$storageDir.DIRECTORY_SEPARATOR.\$file);\nif (\$resolved === false || ! str_starts_with(\$resolved, \$storageDir) || ! is_file(\$resolved)) {\n    http_response_code(404);\n    exit('File not found.');\n}\n\nheader('Content-Type: text/plain; charset=utf-8');\nreadfile(\$resolved);",
+                'references' => ['https://owasp.org/www-community/attacks/Path_Traversal', 'https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html'],
+            ],
             // Laravel
             [
                 'stack_id' => $laravel->id,

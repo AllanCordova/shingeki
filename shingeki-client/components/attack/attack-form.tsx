@@ -36,7 +36,7 @@ export function AttackForm({
     try {
       const result = await dispatchAttack(scanType);
       notify.success(
-        `${result.attacks_count} ataque(s) ${scanLabels[scanType]} enfileirado(s). Acompanhe pelo sininho.`,
+        `${result.attacks_count} teste(s) ${scanLabels[scanType]} iniciado(s). Acompanhe pelo sininho.`,
       );
     } catch (err) {
       notify.fromApiError(
@@ -82,8 +82,8 @@ export function AttackForm({
             </div>
             {data ? (
               <Badge tone="success">
-                {data.attacks_count} ataque(s) {scanLabels[data.scanType]}{" "}
-                enfileirado(s)
+                {data.attacks_count} teste(s) {scanLabels[data.scanType]}{" "}
+                iniciado(s)
               </Badge>
             ) : null}
           </div>

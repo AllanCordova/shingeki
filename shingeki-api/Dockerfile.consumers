@@ -1,0 +1,26 @@
+FROM php:8.4-cli-bookworm
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git supervisor unzip \
+    && docker-php-ext-install pdo_mysql pcntl posix sockets \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --prefer-dist --no-interaction
+
+COPY . .
+RUN composer dump-autoload --optimize
+
+COPY docker/supervisord.consumers.conf /etc/supervisor/conf.d/supervisord.conf
+COPY docker/entrypoint.consumers.sh /usr/local/bin/docker-entrypoint.sh
+
+RUN sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
+    && chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

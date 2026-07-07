@@ -14,6 +14,7 @@ type Finding struct {
 	CheckID string
 	Path    string
 	Line    int
+	EndLine int
 	Message string
 	Snippet string
 }
@@ -83,6 +84,9 @@ type semgrepResult struct {
 	Start   struct {
 		Line int `json:"line"`
 	} `json:"start"`
+	End struct {
+		Line int `json:"line"`
+	} `json:"end"`
 	Extra struct {
 		Message string `json:"message"`
 		Lines   string `json:"lines"`
@@ -97,10 +101,16 @@ func ParseSemgrepOutput(output []byte) ([]Finding, error) {
 
 	findings := make([]Finding, 0, len(report.Results))
 	for _, result := range report.Results {
+		endLine := result.End.Line
+		if endLine <= 0 {
+			endLine = result.Start.Line
+		}
+
 		findings = append(findings, Finding{
 			CheckID: result.CheckID,
 			Path:    result.Path,
 			Line:    result.Start.Line,
+			EndLine: endLine,
 			Message: result.Extra.Message,
 			Snippet: strings.TrimSpace(result.Extra.Lines),
 		})

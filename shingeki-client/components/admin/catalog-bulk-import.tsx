@@ -69,7 +69,7 @@ export function CatalogBulkImport({
       }
 
       setImportId(result.import.id);
-      notify.success(`${label} enfileirado. Acompanhe pelo sininho de notificacoes.`);
+      notify.success(`${label} iniciado. Acompanhe pelo sininho de notificacoes.`);
     } catch (err) {
       notify.fromApiError(err, `Nao foi possivel importar ${label.toLowerCase()}.`);
     } finally {

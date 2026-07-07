@@ -37,7 +37,7 @@ class CatalogRemediationRowValidator
             'semgrep_rule_id' => $this->nullableValue($row['semgrep_rule_id'] ?? ''),
             'title' => $row['title'] ?? '',
             'description' => $row['description'] ?? '',
-            'code_snippet' => $row['code_snippet'] ?? '',
+            'code_snippet' => $this->normalizeMultiline($row['code_snippet'] ?? ''),
             'references' => $references === [] ? null : $references,
         ], [
             'stack_slug' => ['required', 'string'],
@@ -78,6 +78,11 @@ class CatalogRemediationRowValidator
         $value = trim($value);
 
         return $value === '' ? null : $value;
+    }
+
+    private function normalizeMultiline(string $value): string
+    {
+        return str_replace(['\\r\\n', '\\n', '\\t'], ["\n", "\n", "\t"], $value);
     }
 
     /**
