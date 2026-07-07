@@ -30,10 +30,12 @@ type WorkerConfig struct {
 }
 
 type ScannerConfig struct {
-	SemgrepBinary string
-	CloneTimeout  time.Duration
-	ScanTimeout   time.Duration
-	Languages     []string
+	SemgrepBinary     string
+	CloneTimeout      time.Duration
+	ScanTimeout       time.Duration
+	Languages         []string
+	GitHubToken       string
+	LabRepositoryPath string
 }
 
 func Load() (Config, error) {
@@ -79,10 +81,12 @@ func Load() (Config, error) {
 			JobTimeout: jobTimeout,
 		},
 		Scanner: ScannerConfig{
-			SemgrepBinary: getEnv("SEMGREP_BINARY", "semgrep"),
-			CloneTimeout:  cloneTimeout,
-			ScanTimeout:   scanTimeout,
-			Languages:     languages,
+			SemgrepBinary:     getEnv("SEMGREP_BINARY", "semgrep"),
+			CloneTimeout:      cloneTimeout,
+			ScanTimeout:       scanTimeout,
+			Languages:         languages,
+			GitHubToken:       getEnv("GITHUB_TOKEN", ""),
+			LabRepositoryPath: getEnv("SAST_LAB_REPOSITORY_PATH", ""),
 		},
 	}
 

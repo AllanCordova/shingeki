@@ -96,7 +96,8 @@ describe('GET system-results/{attack_dispatch}', function () {
             ->assertOk()
             ->assertJsonPath('dispatch.id', $dispatch->id)
             ->assertJsonPath('dispatch.duration_ms', 5000)
-            ->assertJsonCount(1, 'results');
+            ->assertJsonCount(1, 'results')
+            ->assertJsonPath('results_pagination.total', 1);
     });
 
     test('returns pending dispatch with empty results', function () {
@@ -164,6 +165,31 @@ describe('GET system-results/{attack_dispatch}', function () {
             ->assertJsonPath('probe_counts.vulnerable', 8)
             ->assertJsonPath('probe_counts.clean', 20)
             ->assertJsonPath('probe_counts.error', 2);
+    });
+
+    test('paginates vulnerabilities separately from probes', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $attack = Attack::factory()->create();
+
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => now(),
+            'findings_count' => 30,
+        ]);
+
+        SystemResult::factory()->for($system)->for($attack)->count(30)->create([
+            'attack_dispatch_id' => $dispatch->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(systemResultShowUrl($project, $system, $dispatch).'?results_page=1&results_per_page=10')
+            ->assertOk()
+            ->assertJsonPath('results_pagination.current_page', 1)
+            ->assertJsonPath('results_pagination.per_page', 10)
+            ->assertJsonPath('results_pagination.total', 30)
+            ->assertJsonCount(10, 'results');
     });
 
     test('filters probes by vulnerable outcome', function () {
