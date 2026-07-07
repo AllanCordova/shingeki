@@ -10,6 +10,7 @@ use App\Models\SystemResult;
 use App\Services\Remediation\RemediationResolver;
 use App\Services\Source\SourceContext;
 use App\Services\Source\SourceContextService;
+use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Support\Collection;
 use RuntimeException;
 
@@ -203,6 +204,13 @@ class AiRemediationService
         array $aiSuggestion,
         bool $cached,
     ): array {
+        $locationFields = SourceFileNormalizer::formatForApi(
+            $result->source_file,
+            $result->start_line,
+            $result->end_line,
+            $result->vulnerable_route,
+        );
+
         $data = [
             'system_result_id' => $result->id,
             'attack_dispatch_id' => $result->attack_dispatch_id,
@@ -211,6 +219,7 @@ class AiRemediationService
             'payload_used' => $result->payload_used,
             'evidence' => $result->evidence,
             'http_request' => $result->http_request,
+            ...$locationFields,
             'source_context' => $source->toArray(),
             'ai_suggestion' => $aiSuggestion,
             'cached' => $cached,

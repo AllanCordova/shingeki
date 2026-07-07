@@ -21,6 +21,31 @@ class SnippetSyntaxValidator
         };
     }
 
+    public function validatePhpFile(string $content): bool
+    {
+        $content = trim($content);
+
+        if ($content === '') {
+            return false;
+        }
+
+        if (! str_starts_with($content, '<?php')) {
+            $content = "<?php\n".$content;
+        }
+
+        $path = tempnam(sys_get_temp_dir(), 'shingeki-php-file-');
+
+        if ($path === false) {
+            return true;
+        }
+
+        file_put_contents($path, $content);
+        exec('php -l '.escapeshellarg($path).' 2>&1', $output, $exitCode);
+        @unlink($path);
+
+        return $exitCode === 0;
+    }
+
     private function validatePhp(string $code): bool
     {
         $wrapped = "<?php\n".$code;
