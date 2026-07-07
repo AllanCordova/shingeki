@@ -2,6 +2,8 @@
 .env.backup
 .env.production
 
+/node_modules/
+
 shingeki-api/vendor/
 shingeki-api/node_modules/
 shingeki-api/.phpunit.cache/
@@ -19,8 +21,7 @@ shingeki-dast-worker/*.exe
 .DS_Store
 Thumbs.db
 
-# MkDocs build output
-site/
+shingeki-api/supervisord.pid
 
 # build settings
 .easignore
