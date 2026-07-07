@@ -56,7 +56,7 @@ A API não executa varredura no request HTTP: o dispatch retorna `202` com o reg
 ## Persistência
 
 - Relacionamentos: usuário → projetos → sistemas → assinaturas, dispatches, resultados.
-- Capas: disco `public`, paths `/storage/covers/{uuid}.ext` (requer `storage:link`).
+- Capas: disco `public`, paths `/storage/covers/{uuid}.ext`.
 - Configuração de capas: `config/covers.php` (limite de uploads por usuário).
 
 ## Contratos com clients

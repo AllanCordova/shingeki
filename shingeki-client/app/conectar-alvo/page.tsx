@@ -11,14 +11,10 @@ function ConectarAlvoContent() {
   const searchParams = useSearchParams();
   const ticket = searchParams.get("ticket");
   const [error, setError] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(true);
+  const [isCapturing, setIsCapturing] = useState(Boolean(ticket));
 
   useEffect(() => {
-    if (!ticket) {
-      setError("Link de conexao invalido.");
-      setIsCapturing(false);
-      return;
-    }
+    if (!ticket) return;
 
     const capture = async () => {
       try {
@@ -49,6 +45,23 @@ function ConectarAlvoContent() {
 
     void capture();
   }, [ticket]);
+
+  if (!ticket) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6">
+        <ErrorShow
+          error={{
+            message: "Link de conexao invalido.",
+            status: 422,
+            hasFieldErrors: false,
+          }}
+        />
+        <Button type="button" onClick={() => window.close()}>
+          Fechar janela
+        </Button>
+      </div>
+    );
+  }
 
   if (isCapturing) {
     return (

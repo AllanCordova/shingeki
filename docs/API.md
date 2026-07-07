@@ -132,5 +132,3 @@ Recursos aninhados (`project`, `system`) são resolvidos por UUID e restritos ao
 ```
 
 Exemplo: `http://127.0.0.1:8000` + `/storage/covers/abc.jpg`.
-
-Requer `php artisan storage:link` na API.

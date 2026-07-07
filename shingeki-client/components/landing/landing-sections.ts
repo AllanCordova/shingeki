@@ -41,7 +41,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
       {
         title: "Monorepo completo",
         description:
-          "API Laravel, worker Go, cliente Next.js e app mobile Expo compartilhando os mesmos contratos.",
+          "API Laravel, workers Go, client Next.js e alvo de laboratório no mesmo monorepo.",
       },
       {
         title: "Pipeline assíncrono",
@@ -256,7 +256,7 @@ export const LANDING_SECTIONS: LandingSection[] = [
       {
         title: "Documentação completa",
         description:
-          "Arquitetura, API REST e guias de desenvolvimento web e mobile.",
+          "Arquitetura, API REST e guia de desenvolvimento do client web.",
       },
       {
         title: "Open source",

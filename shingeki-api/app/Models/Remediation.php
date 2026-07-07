@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\AttackCategory;
 use App\Enums\AttackScanType;
 use Database\Factories\RemediationFactory;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -54,5 +55,16 @@ class Remediation extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    protected function codeSnippet(): Attribute
+    {
+        return Attribute::get(function (?string $value): ?string {
+            if ($value === null) {
+                return null;
+            }
+
+            return str_replace(['\\r\\n', '\\n', '\\t'], ["\n", "\n", "\t"], $value);
+        });
     }
 }
