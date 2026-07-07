@@ -10,11 +10,12 @@ import (
 )
 
 type Cloner struct {
-	timeout time.Duration
+	timeout       time.Duration
+	githubToken   string
 }
 
-func NewCloner(timeout time.Duration) *Cloner {
-	return &Cloner{timeout: timeout}
+func NewCloner(timeout time.Duration, githubToken string) *Cloner {
+	return &Cloner{timeout: timeout, githubToken: githubToken}
 }
 
 func (c *Cloner) Clone(ctx context.Context, repositoryURL string) (string, func(), error) {
@@ -31,7 +32,8 @@ func (c *Cloner) Clone(ctx context.Context, repositoryURL string) (string, func(
 	defer cancel()
 
 	repoDir := filepath.Join(dir, "repo")
-	cmd := exec.CommandContext(cloneCtx, "git", "clone", "--depth", "1", repositoryURL, repoDir)
+	cloneURL := withGitHubToken(repositoryURL, c.githubToken)
+	cmd := exec.CommandContext(cloneCtx, "git", "clone", "--depth", "1", cloneURL, repoDir)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 	output, err := cmd.CombinedOutput()
 	if err != nil {

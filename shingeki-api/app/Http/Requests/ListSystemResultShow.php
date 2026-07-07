@@ -24,8 +24,20 @@ class ListSystemResultShow extends FormRequest
     {
         return [
             ...$this->pageRules(),
+            'results_page' => ['sometimes', 'integer', 'min:1'],
+            'results_per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'filter' => ['sometimes', Rule::enum(DispatchProbeListFilter::class)],
         ];
+    }
+
+    public function resultsPage(): int
+    {
+        return max(1, (int) $this->validated('results_page', 1));
+    }
+
+    public function resultsPerPage(): int
+    {
+        return min(100, max(1, (int) $this->validated('results_per_page', 25)));
     }
 
     public function filter(): DispatchProbeListFilter

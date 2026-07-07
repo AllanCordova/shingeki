@@ -61,10 +61,11 @@ Ver [`shingeki-sast-worker/.env.example`](https://github.com/AllanCordova/shinge
 | `SAST_CLONE_TIMEOUT` | `10m` | Timeout do `git clone` |
 | `SAST_SCAN_TIMEOUT` | `20m` | Timeout do scan |
 | `SAST_LANGUAGES` | `php,typescript,javascript` | Linguagens analisadas |
+| `GITHUB_TOKEN` | — | Clone de repositórios privados no GitHub |
+| `SAST_LAB_REPOSITORY_PATH` | — | Fallback dev-only quando `repository_url` está vazio |
 
 ## Limitações (MVP)
 
-- Repositórios **públicos** apenas (sem autenticação Git).
 - Um item de catálogo SAST cobre todos os findings (`attack_id` do primeiro ataque do batch).
 - Campo `http_request` reutilizado como contexto de código (nome legado do contrato DAST).
 

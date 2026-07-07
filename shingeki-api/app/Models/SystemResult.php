@@ -28,7 +28,22 @@ class SystemResult extends Model
         'payload_used',
         'evidence',
         'http_request',
+        'source_file',
+        'start_line',
+        'end_line',
+        'matched_snippet',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'start_line' => 'integer',
+            'end_line' => 'integer',
+        ];
+    }
 
     public function system(): BelongsTo
     {

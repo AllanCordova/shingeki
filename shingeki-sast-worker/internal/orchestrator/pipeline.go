@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/shingeki/sast-worker/internal/config"
@@ -15,10 +16,11 @@ import (
 )
 
 type Pipeline struct {
-	cloner  *repository.Cloner
-	scanner *scanner.SemgrepScanner
-	publisher *queue.Publisher
-	logger  *slog.Logger
+	cloner            *repository.Cloner
+	scanner           *scanner.SemgrepScanner
+	publisher         *queue.Publisher
+	logger            *slog.Logger
+	labRepositoryPath string
 }
 
 func NewPipeline(
@@ -30,37 +32,24 @@ func NewPipeline(
 		logger = slog.Default()
 	}
 	return &Pipeline{
-		cloner:    repository.NewCloner(cfg.Scanner.CloneTimeout),
-		scanner:   scanner.NewSemgrepScanner(cfg.Scanner),
-		publisher: publisher,
-		logger:    logger,
+		cloner:            repository.NewCloner(cfg.Scanner.CloneTimeout, cfg.Scanner.GitHubToken),
+		scanner:           scanner.NewSemgrepScanner(cfg.Scanner),
+		publisher:         publisher,
+		logger:            logger,
+		labRepositoryPath: cfg.Scanner.LabRepositoryPath,
 	}
 }
 
 func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error {
 	start := time.Now()
-	published := 0
-
-	defer func() {
-		completion := contracts.DispatchCompletionMessage{
-			Event:         contracts.EventDispatchCompleted,
-			DispatchID:    batch.DispatchID,
-			SystemID:      batch.SystemID,
-			DurationMs:    time.Since(start).Milliseconds(),
-			FindingsCount: published,
-		}
-
-		if err := p.publisher.PublishCompletion(context.Background(), completion); err != nil {
-			p.logger.Error("failed to publish dispatch completion", "error", err, "dispatch_id", batch.DispatchID)
-		}
-	}()
 
 	p.logger.Info("starting sast pipeline",
 		"system_id", batch.SystemID,
 		"repository_url", batch.RepositoryURL,
+		"lab_repository_path", p.labRepositoryPath,
 	)
 
-	repoDir, cleanup, err := p.cloner.Clone(ctx, batch.RepositoryURL)
+	repoDir, cleanup, err := p.resolveRepository(ctx, batch.RepositoryURL)
 	if err != nil {
 		return fmt.Errorf("clone repository: %w", err)
 	}
@@ -73,12 +62,25 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 
 	p.logger.Info("semgrep scan finished", "findings", len(findings))
 
+	published := 0
 	for _, finding := range findings {
-		result := mapper.ToResultMessage(batch, finding)
+		result := mapper.ToResultMessage(batch, finding, repoDir)
 		if err := p.publisher.PublishResult(ctx, result); err != nil {
 			return fmt.Errorf("publish result: %w", err)
 		}
 		published++
+	}
+
+	completion := contracts.DispatchCompletionMessage{
+		Event:         contracts.EventDispatchCompleted,
+		DispatchID:    batch.DispatchID,
+		SystemID:      batch.SystemID,
+		DurationMs:    time.Since(start).Milliseconds(),
+		FindingsCount: published,
+	}
+
+	if err := p.publisher.PublishCompletion(ctx, completion); err != nil {
+		return fmt.Errorf("publish dispatch completion: %w", err)
 	}
 
 	p.logger.Info("sast pipeline finished",
@@ -88,4 +90,20 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	)
 
 	return nil
+}
+
+func (p *Pipeline) resolveRepository(ctx context.Context, repositoryURL string) (string, func(), error) {
+	if strings.TrimSpace(repositoryURL) != "" {
+		p.logger.Info("cloning system repository", "url", repositoryURL)
+
+		return p.cloner.Clone(ctx, repositoryURL)
+	}
+
+	if p.labRepositoryPath != "" {
+		p.logger.Warn("repository_url empty; using lab repository mount", "path", p.labRepositoryPath)
+
+		return p.labRepositoryPath, func() {}, nil
+	}
+
+	return "", nil, fmt.Errorf("repository_url is required")
 }

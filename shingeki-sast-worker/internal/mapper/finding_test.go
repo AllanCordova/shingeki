@@ -20,11 +20,11 @@ func TestToResultMessage(t *testing.T) {
 
 	result := mapper.ToResultMessage(batch, scanner.Finding{
 		CheckID: "php.lang.security.sql-injection",
-		Path:    "src/app.php",
+		Path:    "/tmp/shingeki-sast-1/repo/src/app.php",
 		Line:    42,
 		Message: "Possible SQL injection",
 		Snippet: "$query = $_GET['id'];",
-	})
+	}, "/tmp/shingeki-sast-1/repo")
 
 	if result.AttackID != "atk-1" {
 		t.Fatalf("unexpected attack id: %s", result.AttackID)
