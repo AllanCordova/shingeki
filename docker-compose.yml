@@ -22,6 +22,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - shingeki
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -46,7 +48,38 @@ services:
     networks:
       - shingeki
 
+  api-consumers:
+    build:
+      context: ./shingeki-api
+      dockerfile: Dockerfile.consumers
+    container_name: shingeki-api-consumers
+    restart: unless-stopped
+    env_file:
+      - .env
+      - path: ./shingeki-api/.env
+        required: false
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RUN_DB_SEED: ${RUN_DB_SEED:-true}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - shingeki
+
   sast-worker:
+    profiles: ["stack"]
     build:
       context: ./shingeki-sast-worker
       dockerfile: deployments/Dockerfile
@@ -64,6 +97,7 @@ services:
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RABBITMQ_ATTACKS_DISPATCH_QUEUE: ${RABBITMQ_ATTACKS_SAST_DISPATCH_QUEUE:-attacks.sast.dispatch}
       RABBITMQ_ATTACKS_RESULTS_QUEUE: ${RABBITMQ_ATTACKS_RESULTS_QUEUE:-attacks.results}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -71,6 +105,7 @@ services:
       - shingeki
 
   dast-worker:
+    profiles: ["stack"]
     build:
       context: ./shingeki-dast-worker
       dockerfile: deployments/Dockerfile
@@ -104,6 +139,7 @@ services:
       - shingeki
 
   vulnerable-target:
+    profiles: ["stack"]
     build:
       context: ./shingeki-vulnerable-target
     container_name: shingeki-vulnerable-target
