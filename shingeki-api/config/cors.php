@@ -2,7 +2,7 @@
 
 return [
 
-    'paths' => ['api/target-session/capture/*'],
+    'paths' => ['api/*', 'sanctum/csrf-cookie'],
 
     'allowed_methods' => ['*'],
 
@@ -12,6 +12,10 @@ return [
         'http://localhost:8090',
         'http://127.0.0.1:8000',
         'http://localhost:8000',
+        'http://127.0.0.1:8081',
+        'http://localhost:8081',
+        'http://127.0.0.1:19006',
+        'http://localhost:19006',
     ])),
 
     'allowed_origins_patterns' => [],
