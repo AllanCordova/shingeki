@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
 use App\Services\Remediation\RemediationResolver;
+use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Http\JsonResponse;
 
 class RemediationController extends Controller
@@ -65,6 +66,13 @@ class RemediationController extends Controller
 
     private function formatFinding(SystemResult $result, System $system): array
     {
+        $locationFields = SourceFileNormalizer::formatForApi(
+            $result->source_file,
+            $result->start_line,
+            $result->end_line,
+            $result->vulnerable_route,
+        );
+
         $data = [
             'system_result_id' => $result->id,
             'attack_dispatch_id' => $result->attack_dispatch_id,
@@ -73,6 +81,7 @@ class RemediationController extends Controller
             'payload_used' => $result->payload_used,
             'evidence' => $result->evidence,
             'http_request' => $result->http_request,
+            ...$locationFields,
             'remediations' => $this->remediationResolver->resolveForResult($result, $system->stacks),
         ];
 

@@ -183,10 +183,85 @@ Gera sugestões de correção via LLM (Gemini ou Groq) com contexto de código e
 | `AI_SOURCE_LINE_WINDOW` | Linhas de contexto ao redor do achado SAST |
 | `AI_SOURCE_DEFAULT_BRANCH` | Branch Git para fetch raw (padrão `main`) |
 
+## POST .../remediate/github-pr/preview
+
+`POST /api/projects/{project}/systems/{system}/remediate/github-pr/preview`
+
+Gera um **preview** das alterações (diff por arquivo, branches, título) **sem** commitar nem abrir PR. Mesmo body e validações de `github-pr`. Rate limit: **10 requisições/minuto**.
+
+Resposta inclui `files` (before/after por arquivo), `can_submit`, `skipped_files` e metadados do PR planejado.
+
+## POST .../remediate/github-pr
+
+`POST /api/projects/{project}/systems/{system}/remediate/github-pr`
+
+Abre um pull request no GitHub com correções geradas pela IA para achados **SAST**. Rate limit: **5 requisições/minuto**.
+
+**Body (JSON):**
+
+| Campo | Descrição |
+|-------|-----------|
+| `finding_ids` | UUIDs de `system_results` (obrigatório, máx. 10) |
+| `dispatch_id` | UUID do disparo SAST concluído |
+| `regenerate` | `true` para ignorar cache de sugestões IA |
+| `title` | Título customizado do PR |
+| `base_branch` | Branch base (padrão `GITHUB_DEFAULT_BRANCH` ou `main`) |
+
+**Pré-requisitos:**
+
+- `repository_url` do sistema apontando para GitHub
+- `GITHUB_TOKEN` com escopo `repo` (ou permissões de conteúdo + PR no repositório)
+- `GEMINI_API_KEY` ou `GROQ_API_KEY` (mesmo fluxo de `remediate/ai`)
+- Disparo **SAST** concluído; achados com sugestão IA `syntax_valid: true`
+
+**Fluxo:**
+
+1. Gera ou reutiliza sugestões IA (`AiRemediationService`)
+2. Agrupa patches por arquivo (`CodePatchApplier`)
+3. Reseta a branch `fix-security-{dispatch}` para a base no GitHub (`ensureBranchAt`, evita empilhar patches)
+4. Aplica patches a partir do conteúdo da branch base e **valida cada arquivo**:
+   - `php -l` no arquivo inteiro (sintaxe)
+   - o trecho vulnerável original não pode permanecer no arquivo (fix incompleto)
+   - o bloco de correção não pode aparecer duplicado
+   - arquivos que falham são **pulados** (`skipped_files`) e não são commitados
+5. Commita só os arquivos validados e abre PR
+6. Persiste registro em `github_remediation_pull_requests`
+
+> Se nenhum arquivo passar na validação, a API responde `422` com o motivo por achado — em vez de criar um PR que o SAST continuará apontando.
+
+**Resposta `201`:**
+
+```json
+{
+  "message": "GitHub pull request created successfully.",
+  "pull_request": {
+    "id": "uuid",
+    "number": 42,
+    "url": "https://github.com/org/repo/pull/42",
+    "head_branch": "fix-security-a1b2c3d4",
+    "base_branch": "main"
+  },
+  "files_changed": 2,
+  "findings_applied": 3,
+  "provider": "gemini",
+  "model": "gemini-2.0-flash"
+}
+```
+
+### Variáveis de ambiente (GitHub)
+
+| Variável | Descrição |
+|----------|-----------|
+| `GITHUB_TOKEN` | Personal access token ou token de GitHub App |
+| `GITHUB_DEFAULT_BRANCH` | Branch base para PR (padrão `main`; repo [AllanCordova/vulnerable-target](https://github.com/AllanCordova/vulnerable-target) usa `master`) |
+| `GITHUB_REPOSITORY_SOURCE_PREFIX` | Prefixo no repo GitHub quando o SAST escaneia só a subpasta (ex.: `shingeki-vulnerable-target`) |
+| `GITHUB_REMEDIATION_BRANCH_PREFIX` | Prefixo da branch (padrão `fix-security`) |
+
 ## Client web
 
 No formulário do sistema, selecione as stacks. Na página do sistema ou do disparo:
 
 - **Gerar correções** — catálogo síncrono (`POST .../remediate`).
 - **Sugerir com IA** — LLM com toggle entre visões *Shingeki remediações* e *IA*.
+- **Abrir PR no GitHub** — preview com diff (`POST .../remediate/github-pr/preview`), depois confirmação (`POST .../remediate/github-pr`) para achados SAST com sugestão IA válida.
 - **Remover** — excluir disparo individual ou todos (modais de confirmação).

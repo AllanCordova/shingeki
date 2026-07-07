@@ -9,6 +9,7 @@ use App\Http\Controllers\CatalogImportController;
 use App\Http\Controllers\CatalogRemediationController;
 use App\Http\Controllers\CatalogRemediationImportController;
 use App\Http\Controllers\CoverUploadController;
+use App\Http\Controllers\GitHubRemediationController;
 use App\Http\Controllers\ManualProxyController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RemediationController;
@@ -42,9 +43,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('notifications')->group(function () {
         Route::get('/', [UserNotificationController::class, 'index']);
+        Route::delete('/', [UserNotificationController::class, 'destroyAll']);
         Route::get('/unread-count', [UserNotificationController::class, 'unreadCount']);
         Route::post('/read-all', [UserNotificationController::class, 'markAllRead']);
         Route::patch('/{userNotification}/read', [UserNotificationController::class, 'markRead']);
+        Route::delete('/{userNotification}', [UserNotificationController::class, 'destroy']);
     });
 
     Route::middleware('role:ADMIN,SPECIALIST')->prefix('catalog')->group(function () {
@@ -86,6 +89,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);
     Route::post('projects/{project}/systems/{system}/remediate/ai', [AiRemediationController::class, 'remediate'])
         ->middleware('throttle:10,1');
+    Route::post('projects/{project}/systems/{system}/remediate/github-pr/preview', [GitHubRemediationController::class, 'previewPullRequest'])
+        ->middleware('throttle:10,1');
+    Route::post('projects/{project}/systems/{system}/remediate/github-pr', [GitHubRemediationController::class, 'openPullRequest'])
+        ->middleware('throttle:5,1');
 
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
     Route::delete('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'deleteAll']);
