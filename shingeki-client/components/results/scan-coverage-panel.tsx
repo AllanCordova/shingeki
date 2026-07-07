@@ -7,6 +7,7 @@ import type {
   PaginationMeta,
 } from "@/lib/contracts";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
+import { cn } from "@/lib/utils";
 import {
   Badge,
   Card,
@@ -39,11 +40,14 @@ export function ScanCoveragePanel({
   probesCount,
   jobsPlanned,
   vectorsDiscovered,
-  targetUrl,
   filter,
   pagination,
   isFetching,
   onPageChange,
+  compactWhenEmpty = false,
+  className,
+  contentClassName,
+  listClassName,
 }: {
   probes: DispatchProbe[];
   isPending: boolean;
@@ -51,25 +55,31 @@ export function ScanCoveragePanel({
   probesCount?: number | null;
   jobsPlanned?: number | null;
   vectorsDiscovered?: number | null;
-  targetUrl?: string;
   filter: DispatchProbeListFilter;
   pagination?: PaginationMeta;
   isFetching?: boolean;
   onPageChange: (page: number) => void;
+  compactWhenEmpty?: boolean;
+  className?: string;
+  contentClassName?: string;
+  listClassName?: string;
 }) {
   const emptyForFilter = !isPending && probes.length === 0 && (pagination?.total ?? 0) === 0;
+  const useCompactEmpty = compactWhenEmpty && emptyForFilter;
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className={cn(useCompactEmpty && "border-dashed shadow-none", className)}>
+      <CardHeader className={cn(useCompactEmpty && "py-4")}>
         <div>
-          <CardTitle>Cobertura do scan</CardTitle>
-          <CardDescription>
-            Rotas testadas e payloads aplicados neste disparo.
-          </CardDescription>
+          <CardTitle className={cn(useCompactEmpty && "text-base")}>Cobertura do scan</CardTitle>
+          {!useCompactEmpty ? (
+            <CardDescription>
+              Historico do scan: rotas verificadas e evidencias coletadas.
+            </CardDescription>
+          ) : null}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className={cn(useCompactEmpty ? "pt-0 pb-4" : undefined, contentClassName)}>
         {emptyForFilter ? (
           <EmptyState
             title={emptyTitle(filter, isPending)}
@@ -78,12 +88,16 @@ export function ScanCoveragePanel({
               isPending,
               jobsPlanned,
               probesCount,
-              targetUrl,
             })}
+            className={
+              useCompactEmpty
+                ? "items-start rounded-none border-0 bg-transparent px-0 py-0 text-left [&_p]:max-w-none"
+                : undefined
+            }
           />
         ) : (
           <>
-            <ul className="flex flex-col divide-y divide-border">
+            <ul className={cn("flex flex-col divide-y divide-border", listClassName)}>
               {probes.map((probe) => (
                 <li key={probe.id} className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -137,7 +151,7 @@ export function ScanCoveragePanel({
 }
 
 function emptyTitle(filter: DispatchProbeListFilter, isPending: boolean): string {
-  if (isPending) return "Iniciando cobertura do scan";
+  if (isPending) return "Scan em andamento";
   if (filter === "vulnerable") return "Nenhum teste vulneravel neste filtro";
   if (filter === "clean") return "Nenhum teste limpo neste filtro";
   return "Nenhum teste registrado";
@@ -148,39 +162,29 @@ function emptyDescription({
   isPending,
   jobsPlanned,
   probesCount,
-  targetUrl,
 }: {
   filter: DispatchProbeListFilter;
   isPending: boolean;
   jobsPlanned?: number | null;
   probesCount?: number | null;
-  targetUrl?: string;
 }): string {
   if (filter !== "all") {
     return "Nenhum registro corresponde ao filtro selecionado.";
   }
 
   if (isPending) {
-    return "Os testes executados aparecerao aqui conforme o worker avanca.";
+    return "Os testes aparecerao aqui conforme o scan avanca.";
   }
-
-  const usesLocalhost =
-    typeof targetUrl === "string" &&
-    /\/\/(localhost|127\.0\.0\.1)(:|\/|$)/i.test(targetUrl);
 
   if (jobsPlanned === 0) {
-    return "Nenhum teste foi mapeado para este alvo. Verifique se o worker DAST esta atualizado e se o target_url e acessivel a partir dele.";
-  }
-
-  if (usesLocalhost) {
-    return "Use http://127.0.0.1:8090 (ou localhost) como target_url. O worker Docker recebe a URL correta automaticamente; host.docker.internal nao abre no navegador.";
+    return "Nenhum teste foi aplicavel a este sistema. Verifique se a URL do alvo esta correta e acessivel.";
   }
 
   if (probesCount === 0) {
-    return "O disparo concluiu sem registrar testes. Reinicie o worker DAST e o consumer (attacks:consume-results) e dispare novamente.";
+    return "O scan foi concluido sem registrar testes. Execute o scan novamente ou revise a URL do sistema.";
   }
 
-  return "Nenhuma rota foi testada neste disparo.";
+  return "Nenhum teste foi registrado neste scan.";
 }
 
 function ProbeDetail({

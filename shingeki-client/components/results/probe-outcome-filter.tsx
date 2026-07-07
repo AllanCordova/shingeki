@@ -2,6 +2,7 @@
 
 import type { DispatchProbeListFilter, ProbeOutcomeCounts } from "@/lib/contracts";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const FILTER_OPTIONS: {
   value: DispatchProbeListFilter;
@@ -26,13 +27,15 @@ export function ProbeOutcomeFilter({
   filter,
   probeCounts,
   onFilterChange,
+  className,
 }: {
   filter: DispatchProbeListFilter;
   probeCounts?: ProbeOutcomeCounts;
   onFilterChange: (filter: DispatchProbeListFilter) => void;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className={cn("flex flex-wrap gap-2", className)}>
       {FILTER_OPTIONS.map((option) => {
         const count = filterCount(option.value, probeCounts);
         const active = filter === option.value;

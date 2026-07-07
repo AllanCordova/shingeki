@@ -16,7 +16,7 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
   /** Largura do painel. Padrao `md`. Formularios com capa: `xl`. */
   size?: ModalSize;
@@ -82,7 +82,9 @@ export function Modal({
             ) : null}
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+        {children ? (
+          <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
+        ) : null}
         {footer ? (
           <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border p-5">
             {footer}

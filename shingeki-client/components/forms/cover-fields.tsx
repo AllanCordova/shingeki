@@ -27,8 +27,7 @@ function CoverFieldsContent({
   control,
   errors,
   currentCoverPath,
-  isEdit,
-}: Omit<CoverFieldsProps, "collapsible">) {
+}: Omit<CoverFieldsProps, "collapsible" | "isEdit">) {
   const {
     uploads,
     count,
@@ -73,7 +72,7 @@ function CoverFieldsContent({
                 currentCoverPath={currentCoverPath}
                 error={errors.cover?.message}
                 libraryError={errors.cover_upload_id?.message}
-                required={!isEdit}
+                required={false}
                 hint={undefined}
               />
             )}
@@ -102,7 +101,6 @@ export function CoverFields({
         control={control}
         errors={errors}
         currentCoverPath={currentCoverPath}
-        isEdit={isEdit}
       />
     );
   }
@@ -111,15 +109,13 @@ export function CoverFields({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2 rounded-app border border-border bg-surface-muted px-3 py-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-foreground">
-            Capa{isEdit ? "" : " *"}
-          </p>
+          <p className="text-sm font-medium text-foreground">Capa</p>
           <p className="text-xs text-muted-foreground">
             {isCoverVisible
               ? "Escolha uma origem abaixo."
               : isEdit
                 ? "Opcional. Clique no olho para alterar a capa."
-                : "Obrigatoria na criacao. Clique no olho para definir."}
+                : "Opcional. Clique no olho para definir uma capa."}
           </p>
         </div>
         <Button
@@ -145,7 +141,6 @@ export function CoverFields({
           control={control}
           errors={errors}
           currentCoverPath={currentCoverPath}
-          isEdit={isEdit}
         />
       ) : null}
     </div>

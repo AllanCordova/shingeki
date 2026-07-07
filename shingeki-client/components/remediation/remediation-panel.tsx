@@ -3,9 +3,10 @@
 import { useState, type ReactNode } from "react";
 import type { RemediatedFinding } from "@/lib/contracts";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
-import { useAiRemediateSystem, useRemediateSystem } from "@/lib/hooks/use-remediate";
+import { useAiRemediateSystem, useGitHubRemediationPr, useRemediateSystem } from "@/lib/hooks/use-remediate";
 import { notify } from "@/lib/notify";
 import { AiRemediationFindingCard } from "@/components/remediation/ai-remediation-finding-card";
+import { GitHubPrPreviewModal } from "@/components/remediation/github-pr-preview-modal";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import { cn } from "@/lib/utils";
 import {
@@ -51,14 +52,59 @@ export function RemediationPanel({
     error: aiError,
     reset: resetAi,
   } = useAiRemediateSystem(projectId, systemId);
+  const {
+    openPullRequest,
+    isLoading: githubPrLoading,
+    error: githubPrError,
+  } = useGitHubRemediationPr(projectId, systemId);
 
   const [hasCatalog, setHasCatalog] = useState(false);
   const [hasAi, setHasAi] = useState(false);
   const [view, setView] = useState<RemediationView>("catalog");
+  const [prPreviewOpen, setPrPreviewOpen] = useState(false);
 
   const baseInput = dispatchId ? { dispatch_id: dispatchId } : {};
   const paginatedInput = { ...baseInput, per_page: DEFAULT_PAGE_SIZE };
   const showResults = hasCatalog || hasAi;
+  const patchableFindingIds =
+    aiData?.findings
+      .filter(
+        (finding) =>
+          finding.scan_type === "SAST" &&
+          finding.ai_suggestion.validation.syntax_valid,
+      )
+      .map((finding) => finding.system_result_id) ?? [];
+
+  const githubPrInput =
+    patchableFindingIds.length > 0
+      ? { ...baseInput, finding_ids: patchableFindingIds }
+      : null;
+
+  const submitGitHubPullRequest = async () => {
+    if (!githubPrInput) return;
+
+    const result = await openPullRequest(githubPrInput);
+    const skippedCount = result.skipped_files?.length ?? 0;
+    const compareOnly = result.pull_request.compare_only === true;
+
+    if (compareOnly) {
+      notify.warning(
+        "Commits enviados ao GitHub. Abra o link para criar o PR manualmente (token sem permissao de Pull requests).",
+      );
+    } else if (skippedCount > 0) {
+      const skippedPaths = result.skipped_files
+        ?.map((entry) => entry.scan_path)
+        .join(", ");
+      notify.warning(
+        `PR #${result.pull_request.number} atualizado. ${skippedCount} arquivo(s) ausente(s) no GitHub: ${skippedPaths}.`,
+      );
+    } else {
+      notify.success(`PR #${result.pull_request.number} criado no GitHub.`);
+    }
+
+    setPrPreviewOpen(false);
+    window.open(result.pull_request.url, "_blank", "noopener,noreferrer");
+  };
 
   const loadCatalogPage = async (page: number, notifyOnSuccess = false) => {
     reset();
@@ -101,6 +147,9 @@ export function RemediationPanel({
       <CardContent className="flex flex-col gap-4">
         {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
         {aiError && !aiError.hasFieldErrors ? <ErrorShow error={aiError} /> : null}
+        {githubPrError && !githubPrError.hasFieldErrors ? (
+          <ErrorShow error={githubPrError} />
+        ) : null}
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -143,11 +192,32 @@ export function RemediationPanel({
               Regenerar IA
             </Button>
           ) : null}
+          {hasAi && patchableFindingIds.length > 0 ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPrPreviewOpen(true)}
+            >
+              Abrir PR no GitHub
+            </Button>
+          ) : null}
         </div>
+
+        <GitHubPrPreviewModal
+          open={prPreviewOpen}
+          onClose={() => setPrPreviewOpen(false)}
+          projectId={projectId}
+          systemId={systemId}
+          input={githubPrInput}
+          isConfirming={githubPrLoading}
+          onConfirm={() =>
+            void runAction(submitGitHubPullRequest, "Nao foi possivel abrir o pull request no GitHub.")
+          }
+        />
 
         {showResults ? (
           <>
-            <div className="inline-flex w-full max-w-md rounded-app border border-border p-1 sm:w-auto">
+            <div className="grid w-full grid-cols-2 gap-1 rounded-app border border-border p-1">
               <ViewToggleButton
                 active={view === "catalog"}
                 disabled={!hasCatalog}
@@ -255,7 +325,7 @@ function ViewToggleButton({
       disabled={disabled}
       onClick={onClick}
       className={cn(
-        "flex-1 rounded-[calc(var(--radius)-2px)] px-4 py-2 text-sm font-medium transition-colors sm:flex-none sm:min-w-[7.5rem]",
+        "w-full rounded-[calc(var(--radius)-2px)] px-4 py-2 text-sm font-medium transition-colors",
         active
           ? "bg-primary text-primary-foreground"
           : "text-muted-foreground hover:bg-surface-muted hover:text-foreground",

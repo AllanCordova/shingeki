@@ -30,3 +30,7 @@ export interface UserNotificationReadResponse {
   message: string;
   notification: UserNotification;
 }
+
+export interface UserNotificationDeleteResponse {
+  message: string;
+}

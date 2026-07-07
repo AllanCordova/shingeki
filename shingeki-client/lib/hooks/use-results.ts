@@ -10,6 +10,8 @@ import { queryKeys } from "@/lib/query-keys";
 const DEFAULT_RESULTS_QUERY: Required<ResultsQueryParams> = {
   page: 1,
   per_page: DEFAULT_PAGE_SIZE,
+  results_page: 1,
+  results_per_page: DEFAULT_PAGE_SIZE,
   filter: "all",
 };
 
@@ -17,6 +19,8 @@ function buildResultsQuery(params?: ResultsQueryParams): Required<ResultsQueryPa
   return {
     page: params?.page ?? DEFAULT_RESULTS_QUERY.page,
     per_page: params?.per_page ?? DEFAULT_RESULTS_QUERY.per_page,
+    results_page: params?.results_page ?? DEFAULT_RESULTS_QUERY.results_page,
+    results_per_page: params?.results_per_page ?? DEFAULT_RESULTS_QUERY.results_per_page,
     filter: params?.filter ?? DEFAULT_RESULTS_QUERY.filter,
   };
 }
@@ -63,6 +67,8 @@ export function useResults(
       const search = new URLSearchParams({
         page: String(queryParams.page),
         per_page: String(queryParams.per_page),
+        results_page: String(queryParams.results_page),
+        results_per_page: String(queryParams.results_per_page),
         filter: queryParams.filter,
       });
 
@@ -82,6 +88,7 @@ export function useResults(
   return {
     dispatch: query.data?.dispatch,
     results: query.data?.results ?? [],
+    resultsPagination: query.data?.results_pagination,
     probes: query.data?.probes ?? [],
     probesPagination: query.data?.probes_pagination,
     probeCounts: query.data?.probe_counts,

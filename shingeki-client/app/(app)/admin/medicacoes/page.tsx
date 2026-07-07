@@ -146,19 +146,21 @@ export default function AdminMedicacoesPage() {
         />
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {remediations.map((remediation) => (
-              <Card key={remediation.id}>
-                <CardHeader className="flex flex-row items-start justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-base">{remediation.title}</CardTitle>
-                    <CardDescription>
+              <Card key={remediation.id} className="min-w-0">
+                <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="break-words text-base">
+                      {remediation.title}
+                    </CardTitle>
+                    <CardDescription className="break-words">
                       {remediation.stack?.name ?? "Stack"} ·{" "}
                       {remediation.attack_category ?? "Qualquer categoria"} ·{" "}
                       {remediation.scan_type ?? "Qualquer scan"}
                     </CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
                     <Badge tone="neutral">{remediation.author?.name ?? "—"}</Badge>
                     <Badge tone="neutral">{remediation.stack?.slug ?? "—"}</Badge>
                     {remediation.permissions.delete ? (
@@ -182,7 +184,7 @@ export default function AdminMedicacoesPage() {
                   <p className="text-sm text-muted-foreground">
                     {remediation.description}
                   </p>
-                  <pre className="overflow-x-auto rounded-app bg-muted p-3 text-xs">
+                  <pre className="max-w-full overflow-x-auto whitespace-pre-wrap break-words rounded-app bg-muted p-3 text-xs">
                     {remediation.code_snippet}
                   </pre>
                 </CardContent>

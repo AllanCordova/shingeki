@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import type { UserNotification, UserNotificationStatus } from "@/lib/contracts";
 import {
@@ -26,6 +27,7 @@ function statusLabel(status: UserNotificationStatus): string {
 }
 
 export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -72,7 +74,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
     }
   };
 
-  const handleClick = async (notification: UserNotification) => {
+  const handleNotificationClick = async (notification: UserNotification) => {
     if (notification.read_at === null && notification.status !== "pending") {
       try {
         await markRead(notification.id);
@@ -82,6 +84,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
     }
 
     setOpen(false);
+    router.push("/notificacoes");
   };
 
   return (
@@ -125,16 +128,16 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
               <div className="p-4">
                 <EmptyState
                   title="Nenhuma notificacao"
-                  description="Scans e importacoes aparecem aqui quando forem enfileirados."
+                  description="Scans e importacoes aparecem aqui quando houver atualizacoes."
                 />
               </div>
             ) : (
               <ul className="divide-y divide-border">
                 {notifications.map((notification) => (
                   <li key={notification.id}>
-                    <NotificationItem
+                    <NotificationPreviewItem
                       notification={notification}
-                      onClick={() => void handleClick(notification)}
+                      onClick={() => void handleNotificationClick(notification)}
                     />
                   </li>
                 ))}
@@ -143,7 +146,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
           </div>
 
           {notifications.length > 0 ? (
-            <div className="border-t border-border px-4 py-2">
+            <div className="flex flex-col gap-1 border-t border-border px-4 py-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -154,15 +157,32 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
               >
                 Marcar todas como lidas
               </Button>
+              <Link
+                href="/notificacoes"
+                onClick={() => setOpen(false)}
+                className="inline-flex h-8 w-full items-center justify-center rounded-app border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
+              >
+                Ver todas as notificacoes
+              </Link>
             </div>
-          ) : null}
+          ) : (
+            <div className="border-t border-border px-4 py-2">
+              <Link
+                href="/notificacoes"
+                onClick={() => setOpen(false)}
+                className="inline-flex h-8 w-full items-center justify-center rounded-app border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
+              >
+                Ver todas as notificacoes
+              </Link>
+            </div>
+          )}
         </div>
       ) : null}
     </div>
   );
 }
 
-function NotificationItem({
+function NotificationPreviewItem({
   notification,
   onClick,
 }: {
@@ -170,32 +190,21 @@ function NotificationItem({
   onClick: () => void;
 }) {
   const unread = notification.read_at === null && notification.status !== "pending";
-  const content = (
-    <div
-      className={cn(
-        "flex w-full flex-col gap-2 px-4 py-3 text-left transition-colors hover:bg-surface-muted",
-        unread && "bg-primary/5",
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">{notification.title}</p>
-        <Badge tone={statusTone(notification.status)}>{statusLabel(notification.status)}</Badge>
-      </div>
-      <p className="text-xs text-muted-foreground">{notification.body}</p>
-    </div>
-  );
-
-  if (notification.action_url && notification.status !== "pending") {
-    return (
-      <Link href={notification.action_url} onClick={onClick} className="block">
-        {content}
-      </Link>
-    );
-  }
 
   return (
     <button type="button" onClick={onClick} className="block w-full">
-      {content}
+      <div
+        className={cn(
+          "flex w-full flex-col gap-2 px-4 py-3 text-left transition-colors hover:bg-surface-muted",
+          unread && "bg-primary/5",
+        )}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-medium text-foreground">{notification.title}</p>
+          <Badge tone={statusTone(notification.status)}>{statusLabel(notification.status)}</Badge>
+        </div>
+        <p className="text-xs text-muted-foreground">{notification.body}</p>
+      </div>
     </button>
   );
 }
