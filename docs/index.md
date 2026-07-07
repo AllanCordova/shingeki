@@ -8,7 +8,7 @@ Plataforma para detecção automatizada e remediação interativa de vulnerabili
 |-------|------|
 | 1. Rodar API, Docker e seed | [Como rodar o projeto](RUN-PROJECT.md) |
 | 2. Entender o monorepo | [Arquitetura](ARCHITECTURE.md) |
-| 3. Desenvolver web ou mobile | [Clientes](CLIENTS.md) |
+| 3. Desenvolver o client web | [Clientes](CLIENTS.md) |
 | 4. Consultar rotas HTTP | [API REST](API.md) |
 | 5. Lint e testes antes do PR | [CI](ci/overview.md) |
 
@@ -16,7 +16,7 @@ Plataforma para detecção automatizada e remediação interativa de vulnerabili
 
 - **API Laravel** (`shingeki-api`) — projetos, sistemas, assinaturas, dispatch DAST/SAST, resultados e remediação.
 - **Workers** — DAST (Go) e SAST (Semgrep) via RabbitMQ.
-- **Clients** — web (Next.js) e mobile (Expo).
+- **Client web** — Next.js com BFF e autenticação por cookie.
 - **Lab** — alvo PHP vulnerável para testes locais.
 
 Diagrama e pacotes: [Arquitetura](ARCHITECTURE.md).

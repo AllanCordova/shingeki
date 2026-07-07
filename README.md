@@ -12,7 +12,6 @@ Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](d
 |-----------|-----------|
 | [`shingeki-api/`](shingeki-api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
 | [`shingeki-client/`](shingeki-client/) | Frontend Next.js (BFF, React Query, autenticação) |
-| [`shingeki-mobile/`](shingeki-mobile/) | App Expo / React Native (mesma API) |
 | [`shingeki-dast-worker/`](shingeki-dast-worker/) | Worker Go (discovery, ataques, evidências) |
 | [`shingeki-vulnerable-target/`](shingeki-vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
 
@@ -20,12 +19,20 @@ Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](d
 
 **[https://allancordova.github.io/shingeki/](https://allancordova.github.io/shingeki/)**
 
+Guia completo: **[docs/RUN-PROJECT.md](docs/RUN-PROJECT.md)**
+
+```bash
+docker compose up -d          # MySQL + RabbitMQ
+cd shingeki-api && php artisan serve
+cd shingeki-client && npm run dev
+```
+
 | Tópico | Arquivo no repositório |
 |--------|-------------------------|
 | Arquitetura | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
 | Como rodar | [docs/RUN-PROJECT.md](docs/RUN-PROJECT.md) |
 | API REST | [docs/API.md](docs/API.md) |
-| Client web / mobile | [docs/WEB-DEVELOPMENT.md](docs/WEB-DEVELOPMENT.md) · [docs/MOBILE-DEVELOPMENT.md](docs/MOBILE-DEVELOPMENT.md) |
+| Client web | [docs/WEB-DEVELOPMENT.md](docs/WEB-DEVELOPMENT.md) |
 | CI | [docs/ci/overview.md](docs/ci/overview.md) |
 
 Preview local da documentação:
