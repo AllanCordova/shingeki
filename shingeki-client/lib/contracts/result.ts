@@ -42,6 +42,16 @@ export interface SystemResult extends Timestamps {
   payload_used: string | null;
   evidence: string | null;
   http_request: string | null;
+  source_file?: string | null;
+  start_line?: number | null;
+  end_line?: number | null;
+  matched_snippet?: string | null;
+  source_location?: {
+    file: string;
+    start_line: number;
+    end_line: number | null;
+    label: string;
+  } | null;
   attack?: {
     id: string;
     scan_type?: AttackScanTypeValue;
@@ -58,6 +68,7 @@ export interface DispatchesResponse {
 export interface ResultsResponse {
   dispatch: AttackDispatch;
   results: SystemResult[];
+  results_pagination: PaginationMeta;
   probes: DispatchProbe[];
   probes_pagination: PaginationMeta;
   probe_counts: ProbeOutcomeCounts;
@@ -67,5 +78,7 @@ export interface ResultsResponse {
 export interface ResultsQueryParams {
   page?: number;
   per_page?: number;
+  results_page?: number;
+  results_per_page?: number;
   filter?: DispatchProbeListFilter;
 }

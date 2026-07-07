@@ -11,7 +11,7 @@ import {
 } from "@/lib/contracts";
 import { applyApiFieldErrors } from "@/lib/forms";
 import type { ApiError } from "@/lib/api/error-handler";
-import { Button, ErrorShow, Field, Input, Select, Textarea } from "@/components/ui";
+import { Button, ErrorShow, Field, Select, Textarea } from "@/components/ui";
 
 const defaultPayload = '{\n  "parameter": "q",\n  "value": "<script>alert(1)</script>"\n}';
 

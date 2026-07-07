@@ -1,6 +1,7 @@
 "use client";
 
 import type { AiRemediatedFinding } from "@/lib/contracts";
+import { formatFindingSourceLocation } from "@/lib/results/source-location";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
@@ -25,6 +26,11 @@ export function AiRemediationFindingCard({
 }) {
   const suggestion = finding.ai_suggestion;
   const isSast = finding.scan_type === "SAST";
+  const sourceLocation =
+    formatFindingSourceLocation(finding) ??
+    (finding.source_context.file && finding.source_context.line
+      ? `${finding.source_context.file}:${finding.source_context.line}`
+      : null);
 
   return (
     <Card>
@@ -46,7 +52,13 @@ export function AiRemediationFindingCard({
         </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4 text-sm">
-        {finding.vulnerable_route ? (
+        {sourceLocation ? (
+          <Detail
+            label={isSast ? "Arquivo e linha(s)" : "Local"}
+            value={sourceLocation}
+            mono={isSast}
+          />
+        ) : finding.vulnerable_route ? (
           <Detail label="Local" value={finding.vulnerable_route} />
         ) : null}
         {finding.payload_used ? (

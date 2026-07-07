@@ -36,18 +36,7 @@ export const coverUpdateFields = {
 };
 
 export function createWithCoverSchema<T extends z.ZodRawShape>(base: T) {
-  return withCoverSelection({ ...base, ...coverCreateFields }).superRefine(
-    (data, ctx) => {
-      const record = data as { cover?: File; cover_upload_id?: string };
-      if (!record.cover && !record.cover_upload_id) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Envie uma imagem ou selecione uma da biblioteca.",
-          path: ["cover"],
-        });
-      }
-    },
-  );
+  return withCoverSelection({ ...base, ...coverCreateFields });
 }
 
 export function updateWithCoverSchema<T extends z.ZodRawShape>(base: T) {

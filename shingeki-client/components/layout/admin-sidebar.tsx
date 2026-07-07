@@ -11,6 +11,7 @@ import {
   PanelLeftCloseIcon,
   ShieldAlertIcon,
   PillIcon,
+  FolderIcon,
 } from "@/components/ui/icons";
 
 const navItems = [
@@ -32,19 +33,23 @@ const navItems = [
     exact: false,
     Icon: PillIcon,
   },
+  {
+    href: "/projetos",
+    label: "Projetos",
+    exact: false,
+    Icon: FolderIcon,
+  },
 ] as const;
 
 function NavItem({
   href,
   label,
-  exact,
   Icon,
   active,
   collapsed,
 }: {
   href: string;
   label: string;
-  exact: boolean;
   Icon: ComponentType<{ className?: string }>;
   active: boolean;
   collapsed: boolean;
@@ -122,7 +127,6 @@ export function AdminSidebar() {
               key={item.href}
               href={item.href}
               label={item.label}
-              exact={item.exact}
               Icon={item.Icon}
               active={active}
               collapsed={collapsed}
