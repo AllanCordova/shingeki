@@ -8,7 +8,6 @@ CRUD de entidades: [PROJECTS-AND-SYSTEMS.md](PROJECTS-AND-SYSTEMS.md).
 
 - Disco: `public` → `storage/app/public/covers`
 - Path persistido: `/storage/covers/{uuid}.{ext}`
-- Requer `php artisan storage:link` na API
 
 ## Seleção de capa (create / update)
 
@@ -21,7 +20,7 @@ Envie **apenas um** dos campos de capa por requisição (quando quiser definir c
 | `cover` | arquivo imagem (PNG, JPG, WebP), máx. 5 MB | opcional |
 | `cover_upload_id` | UUID existente na biblioteca do usuário | opcional |
 
-Regras: `prohibits` impede enviar `cover` e `cover_upload_id` juntos. Upload de capa no **client web**; o app mobile consome a API em JSON e apenas exibe capas já existentes.
+Regras: `prohibits` impede enviar `cover` e `cover_upload_id` juntos. Upload de capa apenas no **client web**.
 
 Ao enviar arquivo novo, a API registra entrada na biblioteca (`user_cover_uploads`).
 
