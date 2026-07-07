@@ -27,6 +27,8 @@ Base: `/api/notifications` — exige `auth:sanctum` (qualquer papel autenticado)
 | GET | `/api/notifications/unread-count` | Badge (unread + pending) |
 | PATCH | `/api/notifications/{id}/read` | Marca uma como lida |
 | POST | `/api/notifications/read-all` | Marca todas como lidas |
+| DELETE | `/api/notifications/{id}` | Remove uma notificacao |
+| DELETE | `/api/notifications` | Remove todas do usuario |
 
 ### Query params (GET lista)
 

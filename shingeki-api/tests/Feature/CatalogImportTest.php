@@ -213,4 +213,23 @@ describe('POST /api/catalog/remediations/import', function () {
 
         expect(Remediation::query()->where('user_id', $admin->id)->count())->toBe(1);
     });
+
+    test('remediation import normalizes escaped newlines in code snippets', function () {
+        $validator = app(\App\Services\CatalogImport\CatalogRemediationRowValidator::class);
+        Stack::factory()->create(['slug' => 'vanilla_php']);
+
+        $result = $validator->validate([
+            'stack_slug' => 'vanilla_php',
+            'scan_type' => 'SAST',
+            'attack_category' => 'XSS',
+            'semgrep_rule_id' => 'php.lang.security.injection.echoed-request.echoed-request',
+            'title' => 'Escape output',
+            'description' => 'Use encoding',
+            'code_snippet' => "echo 'x';\\nif (\$ok) {\\n    exit;\\n}",
+            'references' => 'https://example.com',
+        ]);
+
+        expect($result['errors'])->toBe([])
+            ->and($result['data']['code_snippet'])->toBe("echo 'x';\nif (\$ok) {\n    exit;\n}");
+    });
 });

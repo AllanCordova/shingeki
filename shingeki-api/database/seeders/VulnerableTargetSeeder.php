@@ -10,6 +10,8 @@ use App\Models\System;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 class VulnerableTargetSeeder extends Seeder
 {
@@ -18,6 +20,10 @@ class VulnerableTargetSeeder extends Seeder
     public const PROJECT_NAME = 'Pentest Lab';
 
     public const SYSTEM_NAME = 'Vulnerable PHP Target';
+
+    private const PROJECT_COVER_FILE = 'pentest-lab.jpg';
+
+    private const SYSTEM_COVER_FILE = 'vulnerable-php-target.jpg';
 
     public function run(): void
     {
@@ -30,14 +36,14 @@ class VulnerableTargetSeeder extends Seeder
         $targetUrl = rtrim((string) config('attacks.vulnerable_target_url'), '/');
         $signatureToken = (string) config('attacks.vulnerable_target_signature_token');
 
-        $project = Project::query()->firstOrCreate(
+        $project = Project::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'name' => self::PROJECT_NAME,
             ],
             [
                 'description' => 'Local intentionally vulnerable app for DAST validation.',
-                'cover_path' => '/storage/covers/pentest-lab.png',
+                'cover_path' => $this->publishSeedCover(self::PROJECT_COVER_FILE),
             ],
         );
 
@@ -47,9 +53,9 @@ class VulnerableTargetSeeder extends Seeder
                 'name' => self::SYSTEM_NAME,
             ],
             [
-                'cover_path' => '/storage/covers/vulnerable-php-target.png',
+                'cover_path' => $this->publishSeedCover(self::SYSTEM_COVER_FILE),
                 'target_url' => $targetUrl,
-                'repository_url' => 'https://github.com/shingeki/vulnerable-target',
+                'repository_url' => 'https://github.com/AllanCordova/vulnerable-target',
             ],
         );
 
@@ -73,5 +79,21 @@ class VulnerableTargetSeeder extends Seeder
                 'expiration' => now()->addYear(),
             ],
         );
+    }
+
+    private function publishSeedCover(string $filename): string
+    {
+        $source = database_path('seeders/assets/covers/'.$filename);
+
+        if (! is_file($source)) {
+            throw new RuntimeException("Seed cover asset missing: {$source}");
+        }
+
+        Storage::disk('public')->put(
+            'covers/'.$filename,
+            file_get_contents($source),
+        );
+
+        return '/storage/covers/'.$filename;
     }
 }

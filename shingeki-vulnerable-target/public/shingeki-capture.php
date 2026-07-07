@@ -41,19 +41,30 @@ if ($ticket === '') {
     exit;
 }
 
-$ticketJson = json_encode($ticket, JSON_THROW_ON_ERROR);
-$clientOriginJson = json_encode($clientOrigin, JSON_THROW_ON_ERROR);
-$browserApiBaseJson = json_encode($browserApiBase, JSON_THROW_ON_ERROR);
-$connectedTypeJson = json_encode('shingeki-target-session-connected', JSON_THROW_ON_ERROR);
+$capturePayload = json_encode([
+    'ticket' => $ticket,
+    'clientOrigin' => $clientOrigin,
+    'apiBase' => $browserApiBase,
+    'connectedType' => 'shingeki-target-session-connected',
+], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR);
 
-echo <<<HTML
-<p id="capture-status">Enviando sessao para o Shingeki...</p>
+// Embed request-derived values as an HTML-escaped data attribute (read via
+// dataset in JS). htmlspecialchars keeps the payload out of any executable
+// context, so nothing tainted is echoed into the inline <script>.
+$payloadAttr = htmlspecialchars($capturePayload, ENT_QUOTES, 'UTF-8');
+
+echo '<p id="capture-status">Enviando sessao para o Shingeki...</p>';
+echo '<div id="shingeki-capture-data" data-payload="'.$payloadAttr.'"></div>';
+
+echo <<<'HTML'
 <script>
 (function () {
-  var ticket = {$ticketJson};
-  var clientOrigin = {$clientOriginJson};
-  var apiBase = {$browserApiBaseJson};
-  var connectedType = {$connectedTypeJson};
+  var dataEl = document.getElementById("shingeki-capture-data");
+  var payload = JSON.parse(dataEl.getAttribute("data-payload") || "{}");
+  var ticket = payload.ticket;
+  var clientOrigin = payload.clientOrigin;
+  var apiBase = payload.apiBase;
+  var connectedType = payload.connectedType;
   var statusEl = document.getElementById("capture-status");
 
   function notifyOpener() {

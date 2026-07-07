@@ -99,6 +99,77 @@ describe('user notifications api', function () {
 
         expect(UserNotification::query()->whereNull('read_at')->count())->toBe(0);
     });
+
+    test('destroys a notification', function () {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $notification = UserNotification::query()->create([
+            'user_id' => $user->id,
+            'type' => UserNotificationType::AttackDispatch,
+            'status' => UserNotificationStatus::Completed,
+            'title' => 'Scan finalizado',
+            'body' => 'ok',
+        ]);
+
+        $this->deleteJson(NOTIFICATIONS.'/'.$notification->id)
+            ->assertOk()
+            ->assertJsonPath('message', 'Notification deleted.');
+
+        expect(UserNotification::query()->find($notification->id))->toBeNull();
+    });
+
+    test('cannot destroy another users notification', function () {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        Sanctum::actingAs($viewer);
+
+        $notification = UserNotification::query()->create([
+            'user_id' => $owner->id,
+            'type' => UserNotificationType::AttackDispatch,
+            'status' => UserNotificationStatus::Completed,
+            'title' => 'Privada',
+            'body' => 'nao deve excluir',
+        ]);
+
+        $this->deleteJson(NOTIFICATIONS.'/'.$notification->id)->assertNotFound();
+        expect(UserNotification::query()->find($notification->id))->not->toBeNull();
+    });
+
+    test('destroys all notifications for authenticated user', function () {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        UserNotification::query()->create([
+            'user_id' => $user->id,
+            'type' => UserNotificationType::AttackDispatch,
+            'status' => UserNotificationStatus::Completed,
+            'title' => 'A',
+            'body' => 'a',
+        ]);
+        UserNotification::query()->create([
+            'user_id' => $user->id,
+            'type' => UserNotificationType::CatalogImport,
+            'status' => UserNotificationStatus::Failed,
+            'title' => 'B',
+            'body' => 'b',
+        ]);
+        UserNotification::query()->create([
+            'user_id' => $other->id,
+            'type' => UserNotificationType::CatalogImport,
+            'status' => UserNotificationStatus::Completed,
+            'title' => 'Outro usuario',
+            'body' => 'permanece',
+        ]);
+
+        $this->deleteJson(NOTIFICATIONS)
+            ->assertOk()
+            ->assertJsonPath('message', 'All notifications deleted.');
+
+        expect(UserNotification::query()->where('user_id', $user->id)->count())->toBe(0)
+            ->and(UserNotification::query()->where('user_id', $other->id)->count())->toBe(1);
+    });
 });
 
 describe('notification lifecycle integration', function () {
