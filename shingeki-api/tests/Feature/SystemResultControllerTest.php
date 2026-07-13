@@ -48,6 +48,19 @@ describe('GET system-results', function () {
             'findings_count' => 0,
         ]);
 
+        DispatchProbe::factory()->for($system)->for($latest)->create([
+            'attack_dispatch_id' => $latest->id,
+            'outcome' => DispatchProbeOutcome::Vulnerable,
+        ]);
+        DispatchProbe::factory()->for($system)->for($latest)->create([
+            'attack_dispatch_id' => $latest->id,
+            'outcome' => DispatchProbeOutcome::Clean,
+        ]);
+        DispatchProbe::factory()->for($system)->for($older)->create([
+            'attack_dispatch_id' => $older->id,
+            'outcome' => DispatchProbeOutcome::Error,
+        ]);
+
         Sanctum::actingAs($user);
 
         $this->getJson(systemResultsUrl($project, $system))
@@ -56,7 +69,13 @@ describe('GET system-results', function () {
             ->assertJsonPath('dispatches.0.id', $latest->id)
             ->assertJsonPath('dispatches.1.id', $older->id)
             ->assertJsonPath('dispatches.0.duration_ms', 3400)
-            ->assertJsonPath('dispatches.0.status', 'completed');
+            ->assertJsonPath('dispatches.0.status', 'completed')
+            ->assertJsonPath('dispatches.0.probe_counts.all', 2)
+            ->assertJsonPath('dispatches.0.probe_counts.vulnerable', 1)
+            ->assertJsonPath('dispatches.0.probe_counts.clean', 1)
+            ->assertJsonPath('dispatches.0.probe_counts.error', 0)
+            ->assertJsonPath('dispatches.1.probe_counts.all', 1)
+            ->assertJsonPath('dispatches.1.probe_counts.error', 1);
     });
 
     test('returns empty list when system has no dispatches', function () {

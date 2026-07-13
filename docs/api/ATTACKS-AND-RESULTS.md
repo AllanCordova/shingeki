@@ -15,17 +15,21 @@ docker compose up -d
 docker compose --profile stack up -d --build
 ```
 
-Em terminais separados na API:
+Em terminais separados:
 
 ```bash
 cd shingeki-api
-php artisan migrate --seed
 php artisan serve
-php artisan attacks:consume-results
-php artisan catalog:consume-imports
 ```
 
-Client web: `cd shingeki-client && npm run dev`. Detalhes: [RUN-PROJECT.md](../RUN-PROJECT.md).
+```bash
+cd shingeki-client
+npm run dev
+```
+
+Os consumers Laravel (`attacks:consume-results`, `catalog:consume-imports`) rodam no container **`api-consumers`** — não é necessário executá-los no host, a menos que você opte pelo fluxo sem Docker descrito em [RUN-PROJECT.md](../RUN-PROJECT.md).
+
+Client web: detalhes em [RUN-PROJECT.md](../RUN-PROJECT.md) e [WEB-DEVELOPMENT.md](../WEB-DEVELOPMENT.md).
 
 O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 

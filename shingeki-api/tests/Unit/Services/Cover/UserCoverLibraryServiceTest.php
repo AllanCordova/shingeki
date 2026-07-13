@@ -91,13 +91,18 @@ test('deleteUpload removes unused upload and file', function () {
     Storage::disk('public')->assertMissing('covers/remove.jpg');
 });
 
-test('deleteUpload throws when path is in use', function () {
+test('deleteUpload removes library entry but keeps file when path is in use', function () {
     $user = User::factory()->create();
-    $upload = UserCoverUpload::factory()->for($user)->create();
+    $upload = UserCoverUpload::factory()->for($user)->create([
+        'path' => '/storage/covers/in-use.jpg',
+    ]);
+    Storage::disk('public')->put('covers/in-use.jpg', 'data');
     Project::factory()->for($user)->create(['cover_path' => $upload->path]);
 
-    expect(fn () => $this->service->deleteUpload($user, $upload))
-        ->toThrow(ValidationException::class);
+    $this->service->deleteUpload($user, $upload);
+
+    $this->assertDatabaseMissing('user_cover_uploads', ['id' => $upload->id]);
+    Storage::disk('public')->assertExists('covers/in-use.jpg');
 });
 
 test('isPathInUseByUser detects project and system usage', function () {
