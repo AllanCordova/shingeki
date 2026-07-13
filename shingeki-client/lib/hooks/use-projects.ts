@@ -10,20 +10,34 @@ import type {
   ProjectResponse,
   ProjectUpdateInput,
   ProjectsResponse,
+  User,
 } from "@/lib/contracts";
 import {
   buildProjectCreateFormData,
   buildProjectUpdateFormData,
 } from "@/lib/multipart";
+import { useMe } from "@/lib/hooks/use-auth";
+
+function projectsKey(userId?: string) {
+  return queryKeys.projects(userId ?? "");
+}
+
+function sidebarKey(userId?: string) {
+  return queryKeys.sidebarNavigation(userId ?? "");
+}
 
 /** Lista de projetos (baixa volatilidade). */
 export function useProjects() {
+  const { user } = useMe();
+  const userId = user?.id;
+
   const query = useQuery({
-    queryKey: queryKeys.projects,
+    queryKey: projectsKey(userId),
     queryFn: async () => {
       const { data } = await apiClient.get<ProjectsResponse>("/projects");
       return data.projects;
     },
+    enabled: Boolean(userId),
   });
 
   return {
@@ -68,8 +82,12 @@ export function useCreateProject() {
       return data.project;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      const user = queryClient.getQueryData<User>(queryKeys.me);
+      if (!user?.id) return;
+
+      queryClient.invalidateQueries({ queryKey: projectsKey(user.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
+      queryClient.invalidateQueries({ queryKey: sidebarKey(user.id) });
     },
   });
 
@@ -98,7 +116,10 @@ export function useUpdateProject(projectId: string) {
       return data.project;
     },
     onSuccess: (project: Project) => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      const user = queryClient.getQueryData<User>(queryKeys.me);
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: projectsKey(user.id) });
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
       queryClient.setQueryData(queryKeys.project(projectId), project);
     },
@@ -121,7 +142,10 @@ export function useDeleteProject() {
       return projectId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      const user = queryClient.getQueryData<User>(queryKeys.me);
+      if (user?.id) {
+        queryClient.invalidateQueries({ queryKey: projectsKey(user.id) });
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });

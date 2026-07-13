@@ -18,3 +18,7 @@ export * from "./catalog-list";
 export * from "./catalog-import";
 export * from "./notification";
 export * from "./manual-proxy";
+export * from "./project-dashboard";
+export * from "./dispatch-compare";
+export * from "./remediation-history";
+export * from "./sidebar-navigation";

@@ -6,6 +6,7 @@ use App\Http\Requests\ProjectCreate;
 use App\Http\Requests\ProjectUpdate;
 use App\Models\Project;
 use App\Services\Cover\UserCoverLibraryService;
+use App\Services\Project\ProjectDashboardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -13,6 +14,7 @@ class ProjectController extends Controller
 {
     public function __construct(
         private readonly UserCoverLibraryService $coverLibrary,
+        private readonly ProjectDashboardService $dashboard,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -57,6 +59,15 @@ class ProjectController extends Controller
 
         return response()->json([
             'project' => $this->formatProject($project),
+        ]);
+    }
+
+    public function dashboard(Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+
+        return response()->json([
+            'dashboard' => $this->dashboard->build($project),
         ]);
     }
 

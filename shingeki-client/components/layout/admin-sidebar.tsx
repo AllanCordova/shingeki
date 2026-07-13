@@ -5,16 +5,15 @@ import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { useUiStore } from "@/lib/stores/ui-store";
-import { Button } from "@/components/ui/button";
 import {
   LayoutGridIcon,
-  PanelLeftCloseIcon,
   ShieldAlertIcon,
   PillIcon,
-  FolderIcon,
 } from "@/components/ui/icons";
+import { ProjectsSidebarNav } from "@/components/layout/projects-sidebar-nav";
+import { SidebarHeader } from "@/components/layout/sidebar-header";
 
-const navItems = [
+const adminNavItems = [
   {
     href: "/admin",
     label: "Visao geral",
@@ -32,12 +31,6 @@ const navItems = [
     label: "Medicacoes",
     exact: false,
     Icon: PillIcon,
-  },
-  {
-    href: "/projetos",
-    label: "Projetos",
-    exact: false,
-    Icon: FolderIcon,
   },
 ] as const;
 
@@ -76,7 +69,6 @@ function NavItem({
 export function AdminSidebar() {
   const pathname = usePathname();
   const collapsed = useUiStore((state) => state.adminSidebarCollapsed);
-  const toggleAdminSidebar = useUiStore((state) => state.toggleAdminSidebar);
 
   return (
     <aside
@@ -85,39 +77,10 @@ export function AdminSidebar() {
         collapsed ? "w-16" : "w-64",
       )}
     >
-      <div
-        className={cn(
-          "flex items-center border-b border-border",
-          collapsed ? "justify-center px-2 py-3" : "justify-between gap-3 px-4 py-4",
-        )}
-      >
-        {!collapsed ? (
-          <div className="min-w-0">
-            <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-              Admin
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Catalogo global
-            </p>
-          </div>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn("shrink-0", collapsed && "h-9 w-9 p-0")}
-          onClick={toggleAdminSidebar}
-          aria-label={collapsed ? "Expandir painel admin" : "Recolher painel admin"}
-          title={collapsed ? "Expandir painel" : "Recolher painel"}
-        >
-          <PanelLeftCloseIcon
-            className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")}
-          />
-        </Button>
-      </div>
+      <SidebarHeader />
 
-      <nav className="flex flex-1 flex-col gap-1 px-2 py-3">
-        {navItems.map((item) => {
+      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
+        {adminNavItems.map((item) => {
           const active = item.exact
             ? pathname === item.href
             : pathname.startsWith(item.href);
@@ -133,6 +96,10 @@ export function AdminSidebar() {
             />
           );
         })}
+
+        <div className={cn("mt-2 border-t border-border pt-2", collapsed && "mt-1 pt-1")}>
+          <ProjectsSidebarNav collapsed={collapsed} />
+        </div>
       </nav>
     </aside>
   );

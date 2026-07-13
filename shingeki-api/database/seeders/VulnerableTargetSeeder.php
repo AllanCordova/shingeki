@@ -8,13 +8,13 @@ use App\Models\Signature;
 use App\Models\Stack;
 use App\Models\System;
 use App\Models\User;
+use Database\Seeders\Concerns\PublishesSeedCovers;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 
 class VulnerableTargetSeeder extends Seeder
 {
+    use PublishesSeedCovers;
     use WithoutModelEvents;
 
     public const PROJECT_NAME = 'Pentest Lab';
@@ -79,21 +79,5 @@ class VulnerableTargetSeeder extends Seeder
                 'expiration' => now()->addYear(),
             ],
         );
-    }
-
-    private function publishSeedCover(string $filename): string
-    {
-        $source = database_path('seeders/assets/covers/'.$filename);
-
-        if (! is_file($source)) {
-            throw new RuntimeException("Seed cover asset missing: {$source}");
-        }
-
-        Storage::disk('public')->put(
-            'covers/'.$filename,
-            file_get_contents($source),
-        );
-
-        return '/storage/covers/'.$filename;
     }
 }

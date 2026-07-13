@@ -12,7 +12,7 @@ Conecta a sessao autenticada do alvo para o worker DAST acessar rotas protegidas
    - **Alvo externo**: redirect para `/shingeki-capture.php?ticket=...` no alvo (incluido no lab).
 5. Popup fecha e o client atualiza o status via `postMessage`.
 
-Importacao manual (`POST .../target-session`) permanece disponivel apenas como opcao avancada.
+Importacao manual via `POST .../target-session` tambem esta disponivel no client, para cookie ou token Bearer.
 
 Base: `/api/projects/{project}/systems/{system}/target-session`
 

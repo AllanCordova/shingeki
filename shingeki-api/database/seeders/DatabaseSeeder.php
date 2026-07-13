@@ -30,6 +30,16 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        User::firstOrCreate(
+            ['email' => 'admin@admin.com'],
+            [
+                'name' => 'Admin User',
+                'password' => Hash::make('password'),
+                'role' => UserRole::Admin,
+            ],
+        );
+
         $this->call(VulnerableTargetSeeder::class);
+        $this->call(DemoProjectsSeeder::class);
     }
 }

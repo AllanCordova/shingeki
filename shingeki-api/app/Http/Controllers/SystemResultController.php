@@ -2,21 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\DispatchProbeOutcome;
 use App\Enums\DispatchProbeListFilter;
+use App\Enums\DispatchProbeOutcome;
+use App\Http\Controllers\Concerns\AppliesLogSearchFilters;
 use App\Http\Controllers\Concerns\FormatsPagination;
+use App\Http\Requests\CompareDispatchesRequest;
 use App\Http\Requests\ListSystemResultShow;
 use App\Models\AttackDispatch;
 use App\Models\DispatchProbe;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
+use App\Services\Results\DispatchCompareService;
 use App\Services\Source\SourceFileNormalizer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 
 class SystemResultController extends Controller
 {
+    use AppliesLogSearchFilters;
     use FormatsPagination;
+
+    public function __construct(
+        private readonly DispatchCompareService $dispatchCompare,
+    ) {}
 
     public function index(Project $project, System $system): JsonResponse
     {
@@ -27,9 +36,23 @@ class SystemResultController extends Controller
             ->latest('dispatched_at')
             ->get();
 
+        $probeCountsByDispatch = $this->probeOutcomeCountsByDispatch(
+            $dispatches->pluck('id')->all(),
+        );
+
         return response()->json([
             'dispatches' => $dispatches
-                ->map(fn (AttackDispatch $dispatch) => $this->formatDispatch($dispatch))
+                ->map(function (AttackDispatch $dispatch) use ($probeCountsByDispatch) {
+                    return [
+                        ...$this->formatDispatch($dispatch),
+                        'probe_counts' => $probeCountsByDispatch[$dispatch->id] ?? [
+                            'all' => 0,
+                            'vulnerable' => 0,
+                            'clean' => 0,
+                            'error' => 0,
+                        ],
+                    ];
+                })
                 ->values()
                 ->all(),
         ]);
@@ -39,17 +62,22 @@ class SystemResultController extends Controller
     {
         $this->authorize('viewBatch', $attackDispatch);
 
-        $results = SystemResult::query()
+        $resultsQuery = SystemResult::query()
             ->with('attack')
             ->where('attack_dispatch_id', $attackDispatch->id)
-            ->latest()
-            ->paginate(
-                perPage: $request->resultsPerPage(),
-                page: $request->resultsPage(),
-            );
+            ->latest();
+
+        $this->applyResultLogFilters($resultsQuery, $request);
+
+        $results = $resultsQuery->paginate(
+            perPage: $request->resultsPerPage(),
+            page: $request->resultsPage(),
+        );
 
         $probeBaseQuery = DispatchProbe::query()
             ->where('attack_dispatch_id', $attackDispatch->id);
+
+        $this->applyProbeLogFilters($probeBaseQuery, $request);
 
         $probeCounts = $this->probeOutcomeCounts($probeBaseQuery);
 
@@ -79,7 +107,28 @@ class SystemResultController extends Controller
             'probes_pagination' => $this->formatPagination($probes),
             'probe_counts' => $probeCounts,
             'filter' => $request->filter()->value,
+            'log_filters' => $request->logFilters(),
         ]);
+    }
+
+    public function compare(
+        CompareDispatchesRequest $request,
+        Project $project,
+        System $system,
+    ): JsonResponse {
+        $this->authorize('viewAny', [SystemResult::class, $system]);
+
+        $baseline = AttackDispatch::query()
+            ->where('system_id', $system->id)
+            ->findOrFail($request->baselineId());
+
+        $target = AttackDispatch::query()
+            ->where('system_id', $system->id)
+            ->findOrFail($request->targetId());
+
+        return response()->json(
+            $this->dispatchCompare->compare($baseline, $target),
+        );
     }
 
     public function destroy(Project $project, System $system, AttackDispatch $attackDispatch): JsonResponse
@@ -214,7 +263,7 @@ class SystemResultController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<DispatchProbe>  $query
+     * @param  Builder<DispatchProbe>  $query
      */
     private function applyProbeFilter($query, DispatchProbeListFilter $filter): void
     {
@@ -232,7 +281,48 @@ class SystemResultController extends Controller
     }
 
     /**
-     * @param  \Illuminate\Database\Eloquent\Builder<DispatchProbe>  $query
+     * @param  list<string>  $dispatchIds
+     * @return array<string, array{all: int, vulnerable: int, clean: int, error: int}>
+     */
+    private function probeOutcomeCountsByDispatch(array $dispatchIds): array
+    {
+        $counts = [];
+
+        foreach ($dispatchIds as $dispatchId) {
+            $counts[$dispatchId] = [
+                'all' => 0,
+                'vulnerable' => 0,
+                'clean' => 0,
+                'error' => 0,
+            ];
+        }
+
+        if ($dispatchIds === []) {
+            return $counts;
+        }
+
+        $rows = DispatchProbe::query()
+            ->whereIn('attack_dispatch_id', $dispatchIds)
+            ->selectRaw('attack_dispatch_id, outcome, COUNT(*) as total')
+            ->groupBy('attack_dispatch_id', 'outcome')
+            ->get();
+
+        foreach ($rows as $row) {
+            $dispatchId = $row->attack_dispatch_id;
+            $outcome = $row->outcome instanceof DispatchProbeOutcome
+                ? $row->outcome->value
+                : (string) $row->outcome;
+            $total = (int) $row->total;
+
+            $counts[$dispatchId]['all'] += $total;
+            $counts[$dispatchId][$outcome] = ($counts[$dispatchId][$outcome] ?? 0) + $total;
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @param  Builder<DispatchProbe>  $query
      * @return array{all: int, vulnerable: int, clean: int, error: int}
      */
     private function probeOutcomeCounts($query): array

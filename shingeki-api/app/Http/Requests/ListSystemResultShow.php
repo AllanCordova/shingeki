@@ -27,6 +27,10 @@ class ListSystemResultShow extends FormRequest
             'results_page' => ['sometimes', 'integer', 'min:1'],
             'results_per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'filter' => ['sometimes', Rule::enum(DispatchProbeListFilter::class)],
+            'category' => ['sometimes', 'string', 'max:64'],
+            'risk_level' => ['sometimes', 'string', Rule::in(['LOW', 'MEDIUM', 'HIGH'])],
+            'route' => ['sometimes', 'string', 'max:2048'],
+            'q' => ['sometimes', 'string', 'max:255'],
         ];
     }
 
@@ -53,5 +57,46 @@ class ListSystemResultShow extends FormRequest
         }
 
         return DispatchProbeListFilter::All;
+    }
+
+    public function category(): ?string
+    {
+        $value = $this->validated('category');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function riskLevel(): ?string
+    {
+        $value = $this->validated('risk_level');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function routeQuery(): ?string
+    {
+        $value = $this->validated('route');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    public function searchQuery(): ?string
+    {
+        $value = $this->validated('q');
+
+        return is_string($value) && $value !== '' ? $value : null;
+    }
+
+    /**
+     * @return array<string, string|null>
+     */
+    public function logFilters(): array
+    {
+        return [
+            'category' => $this->category(),
+            'risk_level' => $this->riskLevel(),
+            'route' => $this->routeQuery(),
+            'q' => $this->searchQuery(),
+        ];
     }
 }

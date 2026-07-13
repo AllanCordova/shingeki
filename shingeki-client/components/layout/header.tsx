@@ -7,6 +7,7 @@ import { UserAvatarLink } from "@/components/ui/user-avatar-link";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { useLogout, useMe } from "@/lib/hooks/use-auth";
 import { notify } from "@/lib/notify";
+import { SettingsIcon } from "@/components/ui/icons";
 import { ThemeToggle } from "./theme-toggle";
 
 export function Header() {
@@ -42,6 +43,14 @@ export function Header() {
                 {user.name}
               </span>
               <NotificationBell enabled />
+              <Link
+                href="/configuracoes"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-app text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Configuracoes"
+                title="Configuracoes"
+              >
+                <SettingsIcon className="h-4 w-4 shrink-0" />
+              </Link>
               <UserAvatarLink name={user.name} avatarPath={user.avatar_path} />
             </>
           ) : null}

@@ -1,14 +1,18 @@
 "use client";
 
+import { useState } from "react";
 import { useProjects, useCreateProject } from "@/lib/hooks/use-projects";
 import type { ProjectCreateInput } from "@/lib/contracts";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { ProjectForm } from "@/components/forms/project-form";
 import { ProjectCard } from "@/components/projects/project-card";
+import { ProjectTemplatePicker } from "@/components/projects/project-template-picker";
+import { ReopenGuidedSetupButton } from "@/components/onboarding/reopen-guided-setup-button";
 import { notify } from "@/lib/notify";
 import { FORM_MODAL_SIZE } from "@/lib/ui";
 import {
   AddActionButton,
+  Button,
   EmptyState,
   ErrorShow,
   Loading,
@@ -16,6 +20,7 @@ import {
 } from "@/components/ui";
 
 const MODAL_KEY = "create-project";
+const TEMPLATE_MODAL_KEY = "create-from-template";
 
 export default function ProjetosPage() {
   const { projects, isLoading, isError, error, refetch } = useProjects();
@@ -30,6 +35,7 @@ export default function ProjetosPage() {
   const openModal = useUiStore((state) => state.openModal);
   const closeModal = useUiStore((state) => state.closeModal);
   const isOpen = Boolean(openModals[MODAL_KEY]);
+  const templateOpen = Boolean(openModals[TEMPLATE_MODAL_KEY]);
 
   const handleOpen = () => {
     reset();
@@ -52,11 +58,17 @@ export default function ProjetosPage() {
             Organize seus sistemas e testes de seguranca.
           </p>
         </div>
-        <AddActionButton
-          onClick={handleOpen}
-          aria-label="Novo projeto"
-          title="Novo projeto"
-        />
+        <div className="flex items-center gap-2">
+          <ReopenGuidedSetupButton />
+          <Button variant="outline" onClick={() => openModal(TEMPLATE_MODAL_KEY)}>
+            Usar template
+          </Button>
+          <AddActionButton
+            onClick={handleOpen}
+            aria-label="Novo projeto"
+            title="Novo projeto"
+          />
+        </div>
       </div>
 
       {isLoading ? (
@@ -106,6 +118,11 @@ export default function ProjetosPage() {
           />
         ) : null}
       </Modal>
+
+      <ProjectTemplatePicker
+        open={templateOpen}
+        onClose={() => closeModal(TEMPLATE_MODAL_KEY)}
+      />
     </div>
   );
 }

@@ -19,6 +19,20 @@ until php -r "
   sleep 2
 done
 
+echo "Waiting for RabbitMQ at ${RABBITMQ_HOST:-rabbitmq}:${RABBITMQ_PORT:-5672}..."
+until php -r "
+  \$errno = 0;
+  \$errstr = '';
+  \$fp = @fsockopen('${RABBITMQ_HOST:-rabbitmq}', (int) '${RABBITMQ_PORT:-5672}', \$errno, \$errstr, 2);
+  if (\$fp) {
+    fclose(\$fp);
+    exit(0);
+  }
+  exit(1);
+" 2>/dev/null; do
+  sleep 2
+done
+
 php artisan package:discover --ansi
 php artisan migrate --force
 

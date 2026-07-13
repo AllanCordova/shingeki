@@ -28,6 +28,10 @@ export function isSpecialist(user: User | undefined): boolean {
   return hasRole(user, "SPECIALIST");
 }
 
+export function isCommonUser(user: User | undefined): boolean {
+  return hasRole(user, "USER");
+}
+
 export function hasCatalogCapability(
   user: User | undefined,
   capability: CatalogCapability,
