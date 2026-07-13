@@ -63,3 +63,29 @@ export async function forwardFormToApi(
 
   return { status: response.status, data: response.data };
 }
+
+/**
+ * Encaminha operacoes GraphQL ao Lighthouse em /graphql
+ * (fora do prefixo /api usado pelo REST).
+ */
+export async function forwardToGraphql(
+  body: unknown,
+  options?: { token?: string },
+): Promise<{ status: number; data: unknown }> {
+  const authToken = options?.token ?? (await cookies()).get(AUTH_COOKIE)?.value;
+  const laravelOrigin = API_BASE_URL.replace(/\/api$/, "");
+
+  const api = axios.create({
+    baseURL: laravelOrigin,
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
+    validateStatus: () => true,
+  });
+
+  const response = await api.post("/graphql", body);
+
+  return { status: response.status, data: response.data };
+}

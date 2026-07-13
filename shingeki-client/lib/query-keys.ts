@@ -95,7 +95,5 @@ export const queryKeys = {
 
   remediationHistory: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId, "remediation-history"] as const,
-
-  sidebarNavigation: (userId: string) => ["navigation", "sidebar", userId] as const,
 };
 

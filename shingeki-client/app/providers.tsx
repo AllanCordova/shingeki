@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { ApolloProvider } from "@apollo/client/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppToaster } from "@/components/providers/app-toaster";
+import { getApolloClient } from "@/lib/graphql/apollo-client";
 
 /**
- * Providers globais do app (client component).
- * - React Query: gerencia todo dado vindo da API.
- *   staleTime padrao moderado (baixa volatilidade); hooks de alta volatilidade
- *   sobrescrevem com staleTime 0 + refetchInterval.
+ * Providers globais do app.
+ * React Query cobre REST; Apollo cobre GraphQL (sidebar navigation).
  */
 export function Providers({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -26,11 +26,14 @@ export function Providers({ children }: { children: ReactNode }) {
         },
       }),
   );
+  const [apolloClient] = useState(() => getApolloClient());
 
   return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      <AppToaster />
-    </QueryClientProvider>
+    <ApolloProvider client={apolloClient}>
+      <QueryClientProvider client={queryClient}>
+        {children}
+        <AppToaster />
+      </QueryClientProvider>
+    </ApolloProvider>
   );
 }
