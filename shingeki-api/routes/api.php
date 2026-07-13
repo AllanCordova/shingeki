@@ -12,7 +12,6 @@ use App\Http\Controllers\CatalogRemediationImportController;
 use App\Http\Controllers\CoverUploadController;
 use App\Http\Controllers\GitHubRemediationController;
 use App\Http\Controllers\ManualProxyController;
-use App\Http\Controllers\SidebarNavigationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RemediationController;
 use App\Http\Controllers\RemediationHistoryController;
@@ -41,9 +40,6 @@ Route::post('target-session/capture/{ticket}', [TargetSessionCaptureController::
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('cover-uploads', [CoverUploadController::class, 'index']);
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
-
-    Route::get('navigation/sidebar', [SidebarNavigationController::class, 'show']);
-    Route::put('navigation/sidebar', [SidebarNavigationController::class, 'update']);
 
     Route::get('stacks', [StackController::class, 'index']);
 

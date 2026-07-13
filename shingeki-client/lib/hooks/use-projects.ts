@@ -17,13 +17,10 @@ import {
   buildProjectUpdateFormData,
 } from "@/lib/multipart";
 import { useMe } from "@/lib/hooks/use-auth";
+import { invalidateSidebarNavigation } from "@/lib/hooks/use-sidebar-navigation";
 
 function projectsKey(userId?: string) {
   return queryKeys.projects(userId ?? "");
-}
-
-function sidebarKey(userId?: string) {
-  return queryKeys.sidebarNavigation(userId ?? "");
 }
 
 /** Lista de projetos (baixa volatilidade). */
@@ -87,7 +84,7 @@ export function useCreateProject() {
 
       queryClient.invalidateQueries({ queryKey: projectsKey(user.id) });
       queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
-      queryClient.invalidateQueries({ queryKey: sidebarKey(user.id) });
+      invalidateSidebarNavigation();
     },
   });
 

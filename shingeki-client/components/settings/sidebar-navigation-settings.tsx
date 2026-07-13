@@ -239,7 +239,17 @@ export function SidebarNavigationSettings() {
   const { items, isLoading, isError, error, refetch } = useSidebarNavigation();
   const { updateSidebar, isLoading: isSaving, error: saveError } =
     useUpdateSidebarNavigation();
-  const initialGroups = useMemo(() => groupItems(items), [items]);
+  const itemsSignature = useMemo(
+    () =>
+      items
+        .map(
+          (item) =>
+            `${item.type}:${item.project_id}:${item.system_id ?? ""}:${item.visible}:${item.sort_order}:${item.name}`,
+        )
+        .join("|"),
+    [items],
+  );
+  const initialGroups = useMemo(() => groupItems(items), [itemsSignature]);
   const [groups, setGroups] = useState(initialGroups);
   const [dirty, setDirty] = useState(false);
 
