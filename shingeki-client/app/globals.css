@@ -120,6 +120,32 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+.guided-setup-section {
+  scroll-margin-top: 6rem;
+  border-radius: var(--radius);
+  transition:
+    outline-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.guided-setup-highlight {
+  outline: 2px solid var(--primary);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+  animation: guided-setup-highlight-pulse 1.5s ease-in-out 3;
+}
+
+@keyframes guided-setup-highlight-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+  }
+
+  50% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--primary) 32%, transparent);
+  }
+}
+
 /* Landing page — minimalista, alinhado ao tema P&B do app */
 .landing-page {
   color-scheme: dark;

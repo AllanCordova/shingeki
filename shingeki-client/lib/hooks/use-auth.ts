@@ -12,6 +12,7 @@ import type {
   User,
 } from "@/lib/contracts";
 import { buildProfileUpdateFormData } from "@/lib/multipart";
+import { resetClientAuthCache } from "@/lib/auth/session-cache";
 
 async function fetchMe(): Promise<User> {
   const { data } = await apiClient.get<MeResponse>("/auth/me");
@@ -49,7 +50,7 @@ export function useLogin() {
       return data.user;
     },
     onSuccess: (user) => {
-      queryClient.setQueryData(queryKeys.me, user);
+      resetClientAuthCache(queryClient, user);
     },
   });
 
@@ -73,7 +74,7 @@ export function useRegister() {
       return data.user;
     },
     onSuccess: (user) => {
-      queryClient.setQueryData(queryKeys.me, user);
+      resetClientAuthCache(queryClient, user);
     },
   });
 
@@ -93,7 +94,7 @@ export function useLogout() {
       await apiClient.post("/auth/logout");
     },
     onSuccess: () => {
-      queryClient.clear();
+      resetClientAuthCache(queryClient);
     },
   });
 
