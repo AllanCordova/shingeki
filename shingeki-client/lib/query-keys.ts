@@ -39,8 +39,9 @@ export const queryKeys = {
     ] as const,
   notificationUnreadCount: ["notifications", "unread-count"] as const,
 
-  projects: ["projects"] as const,
+  projects: (userId: string) => ["projects", userId] as const,
   project: (projectId: string) => ["projects", projectId] as const,
+  projectDashboard: (projectId: string) => ["projects", projectId, "dashboard"] as const,
 
   systems: (projectId: string) => ["projects", projectId, "systems"] as const,
   system: (projectId: string, systemId: string) =>
@@ -70,6 +71,31 @@ export const queryKeys = {
       params?.results_page ?? 1,
       params?.results_per_page ?? DEFAULT_PAGE_SIZE,
       params?.filter ?? "all",
+      params?.category ?? "",
+      params?.risk_level ?? "",
+      params?.route ?? "",
+      params?.q ?? "",
     ] as const,
+
+  dispatchCompare: (
+    projectId: string,
+    systemId: string,
+    baselineId: string | null,
+    targetId: string | null,
+  ) =>
+    [
+      "projects",
+      projectId,
+      "systems",
+      systemId,
+      "compare",
+      baselineId ?? "",
+      targetId ?? "",
+    ] as const,
+
+  remediationHistory: (projectId: string, systemId: string) =>
+    ["projects", projectId, "systems", systemId, "remediation-history"] as const,
+
+  sidebarNavigation: (userId: string) => ["navigation", "sidebar", userId] as const,
 };
 

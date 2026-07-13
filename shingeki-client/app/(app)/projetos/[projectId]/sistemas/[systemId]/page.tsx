@@ -17,6 +17,7 @@ import { AttackForm } from "@/components/attack/attack-form";
 import { canUseManualProxy } from "@/lib/auth/roles";
 import { useMe } from "@/lib/hooks/use-auth";
 import { DispatchesList } from "@/components/results/dispatches-list";
+import { RemediationHistoryPanel } from "@/components/remediation/remediation-history-panel";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { notify } from "@/lib/notify";
 import { FORM_MODAL_SIZE } from "@/lib/ui";
@@ -107,13 +108,30 @@ export default function SystemDetailPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <SignaturePanel projectId={projectId} systemId={systemId} />
-        <AttackForm projectId={projectId} systemId={systemId} />
+        <div id="guided-signature-panel" className="guided-setup-section">
+          <SignaturePanel projectId={projectId} systemId={systemId} />
+        </div>
+        <div id="guided-attack-form" className="guided-setup-section">
+          <AttackForm projectId={projectId} systemId={systemId} />
+        </div>
       </div>
 
-      <TargetSessionPanel projectId={projectId} systemId={systemId} />
+      <div id="guided-target-session" className="guided-setup-section">
+        <TargetSessionPanel projectId={projectId} systemId={systemId} />
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Link
+          href={`/projetos/${projectId}/sistemas/${systemId}/comparar`}
+          className="text-sm text-primary hover:underline"
+        >
+          Comparar disparos
+        </Link>
+      </div>
 
       <DispatchesList projectId={projectId} systemId={systemId} />
+
+      <RemediationHistoryPanel projectId={projectId} systemId={systemId} />
 
       <RemediationPanel projectId={projectId} systemId={systemId} />
 

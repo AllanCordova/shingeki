@@ -6,9 +6,11 @@ import { useDispatches } from "@/lib/hooks/use-results";
 import { formatDate } from "@/lib/utils";
 import { DeleteAllDispatchesModal } from "@/components/results/delete-all-dispatches-modal";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
+import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
+  BarChartIcon,
   Button,
   Card,
   CardContent,
@@ -32,6 +34,10 @@ export function DispatchesList({
   const { dispatches, isLoading, isFetching, isError, error, refetch } =
     useDispatches(projectId, systemId);
   const [deleteTarget, setDeleteTarget] = useState<{
+    id: string;
+    label: string;
+  } | null>(null);
+  const [exportTarget, setExportTarget] = useState<{
     id: string;
     label: string;
   } | null>(null);
@@ -103,6 +109,14 @@ export function DispatchesList({
                       </div>
                     </Link>
                     <div className="flex shrink-0 items-center gap-2">
+                      <Link
+                        href={`/projetos/${projectId}/sistemas/${systemId}/resultados/${dispatch.id}/grafico`}
+                        className="inline-flex h-8 items-center justify-center rounded-app border border-border bg-surface px-2 text-foreground transition-colors hover:bg-surface-muted"
+                        aria-label={`Ver grafico do disparo de ${formatDate(dispatch.dispatched_at)}`}
+                        title="Ver grafico"
+                      >
+                        <BarChartIcon className="h-4 w-4" />
+                      </Link>
                       <Badge
                         tone={
                           dispatch.status === "completed" ? "success" : "warning"
@@ -112,6 +126,20 @@ export function DispatchesList({
                           ? "Concluido"
                           : "Processando"}
                       </Badge>
+                      {dispatch.status === "completed" ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setExportTarget({
+                              id: dispatch.id,
+                              label: formatDate(dispatch.dispatched_at),
+                            })
+                          }
+                        >
+                          Exportar
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -142,6 +170,17 @@ export function DispatchesList({
           systemId={systemId}
           dispatchId={deleteTarget.id}
           dispatchLabel={deleteTarget.label}
+        />
+      ) : null}
+
+      {exportTarget ? (
+        <ExportAuditReportModal
+          open={Boolean(exportTarget)}
+          onClose={() => setExportTarget(null)}
+          projectId={projectId}
+          systemId={systemId}
+          dispatchId={exportTarget.id}
+          dispatchLabel={exportTarget.label}
         />
       ) : null}
 

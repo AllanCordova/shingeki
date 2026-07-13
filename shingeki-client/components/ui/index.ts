@@ -5,7 +5,7 @@ export { CoverLibraryPicker } from "./cover-library-picker";
 export { CoverStockPicker } from "./cover-stock-picker";
 export { StackSelect } from "./stack-select";
 export { AddActionButton } from "./add-action-button";
-export { ImageUploadIcon, PlusIcon, TrashIcon, EyeIcon, EyeOffIcon, BellIcon } from "./icons";
+export { ImageUploadIcon, PlusIcon, TrashIcon, EyeIcon, EyeOffIcon, BellIcon, BarChartIcon, StarIcon } from "./icons";
 export { UserAvatarLink } from "./user-avatar-link";
 export { Button } from "./button";
 export { Checkbox } from "./checkbox";

@@ -50,6 +50,7 @@ export function TargetSessionPanel({
   const revokeSession = useRevokeTargetSession(projectId, systemId);
   const storeSession = useStoreTargetSession(projectId, systemId);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [manualAuthType, setManualAuthType] = useState<"cookie" | "bearer">("cookie");
   const allowedOriginsRef = useRef<string[]>([window.location.origin]);
   const pollTimerRef = useRef<number | null>(null);
 
@@ -215,7 +216,9 @@ export function TargetSessionPanel({
             className="text-sm text-muted-foreground underline hover:text-foreground"
             onClick={() => setShowAdvanced((value) => !value)}
           >
-            {showAdvanced ? "Ocultar importacao manual" : "Importacao manual (avancado)"}
+            {showAdvanced
+              ? "Ocultar importacao manual"
+              : "Importar sessao manualmente"}
           </button>
 
           {showAdvanced ? (
@@ -230,29 +233,51 @@ export function TargetSessionPanel({
                     auth_type: formData.get("auth_type") as "cookie" | "bearer",
                     credential: String(formData.get("credential") ?? ""),
                   })
-                  .then(() => notify.success("Sessao importada manualmente."))
+                  .then(() => notify.success("Sessao salva com sucesso."))
                   .catch((err) =>
-                    notify.fromApiError(err, "Nao foi possivel importar a sessao."),
+                    notify.fromApiError(err, "Nao foi possivel salvar a sessao."),
                   );
               }}
             >
-              <select
-                name="auth_type"
-                className="w-full rounded-app border border-border bg-surface px-3 py-2 text-sm"
-                defaultValue="cookie"
-              >
-                <option value="cookie">Cookie</option>
-                <option value="bearer">Bearer token</option>
-              </select>
-              <textarea
-                name="credential"
-                rows={3}
-                className="w-full rounded-app border border-border bg-surface px-3 py-2 font-mono text-xs"
-                placeholder="Cole o cookie ou token apenas se souber o que esta fazendo."
-                required
-              />
+              <p className="text-sm text-muted-foreground">
+                Use quando o login automatico nao estiver disponivel. Informe o
+                cookie ou token que o navegador envia ao acessar o sistema
+                autenticado.
+              </p>
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  Tipo de autenticacao
+                </span>
+                <select
+                  name="auth_type"
+                  className="w-full rounded-app border border-border bg-surface px-3 py-2 text-sm"
+                  value={manualAuthType}
+                  onChange={(event) =>
+                    setManualAuthType(event.target.value as "cookie" | "bearer")
+                  }
+                >
+                  <option value="cookie">Cookie</option>
+                  <option value="bearer">Bearer token</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="font-medium text-foreground">
+                  {manualAuthType === "cookie" ? "Cookie" : "Token Bearer"}
+                </span>
+                <textarea
+                  name="credential"
+                  rows={3}
+                  className="w-full rounded-app border border-border bg-surface px-3 py-2 font-mono text-xs"
+                  placeholder={
+                    manualAuthType === "cookie"
+                      ? "Cole aqui o cookie (ex.: PHPSESSID=abc123)"
+                      : "Cole aqui seu token Bearer"
+                  }
+                  required
+                />
+              </label>
               <Button type="submit" variant="outline" isLoading={storeSession.isLoading}>
-                Importar manualmente
+                Salvar sessao
               </Button>
             </form>
           ) : null}

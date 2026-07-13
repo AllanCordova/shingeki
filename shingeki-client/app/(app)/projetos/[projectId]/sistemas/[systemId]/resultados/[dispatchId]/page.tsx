@@ -11,7 +11,12 @@ import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
 import { formatFindingSourceLocation, isSastResult } from "@/lib/results/source-location";
 import { formatDate } from "@/lib/utils";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
+import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
 import { ProbeOutcomeFilter } from "@/components/results/probe-outcome-filter";
+import {
+  LogSearchFilters,
+  type LogSearchFilterValues,
+} from "@/components/results/log-search-filters";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
@@ -45,9 +50,22 @@ export default function ResultsDetailPage() {
   }>();
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [resultsPage, setResultsPage] = useState(1);
   const [probePage, setProbePage] = useState(1);
   const [probeFilter, setProbeFilter] = useState<DispatchProbeListFilter>("all");
+  const [logFilterDraft, setLogFilterDraft] = useState<LogSearchFilterValues>({
+    category: "",
+    risk_level: "",
+    route: "",
+    q: "",
+  });
+  const [appliedLogFilters, setAppliedLogFilters] = useState<LogSearchFilterValues>({
+    category: "",
+    risk_level: "",
+    route: "",
+    q: "",
+  });
 
   const {
     dispatch,
@@ -67,6 +85,10 @@ export default function ResultsDetailPage() {
     results_page: resultsPage,
     results_per_page: DEFAULT_PAGE_SIZE,
     filter: probeFilter,
+    category: appliedLogFilters.category,
+    risk_level: appliedLogFilters.risk_level,
+    route: appliedLogFilters.route,
+    q: appliedLogFilters.q,
   });
   const dispatchLabel = dispatch?.dispatched_at
     ? formatDate(dispatch.dispatched_at)
@@ -122,9 +144,16 @@ export default function ResultsDetailPage() {
           ← Voltar ao sistema
         </Link>
         {dispatch ? (
-          <Button variant="danger" onClick={() => setDeleteOpen(true)}>
-            Remover
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {dispatch.status === "completed" ? (
+              <Button variant="outline" onClick={() => setExportOpen(true)}>
+                Exportar relatorio
+              </Button>
+            ) : null}
+            <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+              Remover
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -174,6 +203,23 @@ export default function ResultsDetailPage() {
             probeCounts={probeCounts}
             onFilterChange={(nextFilter) => {
               setProbeFilter(nextFilter);
+              setProbePage(1);
+              setResultsPage(1);
+            }}
+          />
+
+          <LogSearchFilters
+            values={logFilterDraft}
+            onChange={setLogFilterDraft}
+            onApply={() => {
+              setAppliedLogFilters(logFilterDraft);
+              setProbePage(1);
+              setResultsPage(1);
+            }}
+            onClear={() => {
+              const empty = { category: "", risk_level: "", route: "", q: "" };
+              setLogFilterDraft(empty);
+              setAppliedLogFilters(empty);
               setProbePage(1);
               setResultsPage(1);
             }}
@@ -235,6 +281,15 @@ export default function ResultsDetailPage() {
           router.push(`/projetos/${projectId}/sistemas/${systemId}`);
           router.refresh();
         }}
+      />
+
+      <ExportAuditReportModal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        projectId={projectId}
+        systemId={systemId}
+        dispatchId={dispatchId}
+        dispatchLabel={dispatchLabel}
       />
     </div>
   );

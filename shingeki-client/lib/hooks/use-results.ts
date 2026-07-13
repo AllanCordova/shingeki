@@ -13,6 +13,10 @@ const DEFAULT_RESULTS_QUERY: Required<ResultsQueryParams> = {
   results_page: 1,
   results_per_page: DEFAULT_PAGE_SIZE,
   filter: "all",
+  category: "",
+  risk_level: "",
+  route: "",
+  q: "",
 };
 
 function buildResultsQuery(params?: ResultsQueryParams): Required<ResultsQueryParams> {
@@ -22,6 +26,10 @@ function buildResultsQuery(params?: ResultsQueryParams): Required<ResultsQueryPa
     results_page: params?.results_page ?? DEFAULT_RESULTS_QUERY.results_page,
     results_per_page: params?.results_per_page ?? DEFAULT_RESULTS_QUERY.results_per_page,
     filter: params?.filter ?? DEFAULT_RESULTS_QUERY.filter,
+    category: params?.category ?? DEFAULT_RESULTS_QUERY.category,
+    risk_level: params?.risk_level ?? DEFAULT_RESULTS_QUERY.risk_level,
+    route: params?.route ?? DEFAULT_RESULTS_QUERY.route,
+    q: params?.q ?? DEFAULT_RESULTS_QUERY.q,
   };
 }
 
@@ -71,6 +79,11 @@ export function useResults(
         results_per_page: String(queryParams.results_per_page),
         filter: queryParams.filter,
       });
+
+      if (queryParams.category) search.set("category", queryParams.category);
+      if (queryParams.risk_level) search.set("risk_level", queryParams.risk_level);
+      if (queryParams.route) search.set("route", queryParams.route);
+      if (queryParams.q) search.set("q", queryParams.q);
 
       const { data } = await apiClient.get<ResultsResponse>(
         `/projects/${projectId}/systems/${systemId}/system-results/${dispatchId}?${search.toString()}`,

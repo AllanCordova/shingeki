@@ -13,6 +13,7 @@ import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
 import { ProjectForm } from "@/components/forms/project-form";
 import { SystemForm } from "@/components/forms/system-form";
 import { SystemCard } from "@/components/systems/system-card";
+import { ProjectDashboardPanel } from "@/components/projects/project-dashboard-panel";
 import { notify } from "@/lib/notify";
 import { FORM_MODAL_SIZE } from "@/lib/ui";
 import type { SystemCreateInput } from "@/lib/contracts";
@@ -103,6 +104,11 @@ export default function ProjectDetailPage() {
           </div>
         </div>
       </CoverHero>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold text-foreground">Painel</h2>
+        <ProjectDashboardPanel projectId={projectId} />
+      </section>
 
       <section className="flex flex-col gap-4">
         <div className="flex items-center justify-between">
