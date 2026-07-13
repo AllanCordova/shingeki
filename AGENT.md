@@ -29,3 +29,4 @@ Permanent instructions for agents (Cursor and similar) working in this repositor
 - Comments: documentation only; do not narrate the obvious.
 - Tests: validate what changed before calling it done.
 - Git: base `develop`; branch names, commits, and PRs in English.
+- Commits: author is the configured git user (never Cursor); never add `Co-authored-by: Cursor`.

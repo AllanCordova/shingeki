@@ -66,6 +66,13 @@ git log -5 --oneline
 
 Stage only files that belong to the change. Do not add secrets (`.env`, credentials, tokens).
 
+### Authorship (required)
+
+- Author and committer must be the **repo owner** from local git config (e.g. `AllanCordova` / their email). Never override with a Cursor/agent identity.
+- **Never** add `Co-authored-by: Cursor <cursoragent@cursor.com>` (or any Cursor/agent co-author trailer).
+- Do not add other `Co-authored-by` lines unless the user explicitly asks.
+- After committing, verify with `git log -1 --format=full`. If a Cursor co-author trailer was injected, remove it with amend **before push** when the amend safety rules allow; if already pushed, ask the user before force-pushing.
+
 Message: **short, descriptive, English**, matching repo style:
 
 ```text
@@ -128,3 +135,5 @@ If the branch already tracks a remote and no PR exists yet, only run `gh pr crea
 - Huge PRs with unrelated features.
 - Force-pushing a shared branch without an explicit request.
 - Forgetting `fetch`/`pull` of `develop` before branching.
+- Adding `Co-authored-by: Cursor <cursoragent@cursor.com>` (or any agent co-author).
+- Committing as Cursor/agent instead of the configured user (`user.name` / `user.email`).
