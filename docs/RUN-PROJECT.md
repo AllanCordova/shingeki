@@ -22,7 +22,7 @@ Suba a infraestrutura e os consumers:
 docker compose up -d --remove-orphans
 ```
 
-Isso sobe **MySQL**, **RabbitMQ** e **`api-consumers`** (filas `attacks:consume-results` e `catalog:consume-imports`). Remove containers antigos (`shingeki-api`, `shingeki-client`) se ainda existirem.
+Isso sobe **MySQL**, **RabbitMQ** e **`api-consumers`** (consumers Laravel: `attacks:consume-results` e `catalog:consume-imports`).
 
 Instale e prepare a API:
 
@@ -95,12 +95,29 @@ Na primeira vez, ou após mudar código dos workers, use `--build`.
 
 O alvo de laboratório fica em `http://127.0.0.1:8090` (porta `VULNERABLE_TARGET_PORT`).
 
+### Fluxo de um disparo DAST
+
+| Etapa | Quem consome/publica |
+|-------|----------------------|
+| 1. API enfileira o lote | publica em `attacks.dispatch` |
+| 2. Worker DAST | consome `attacks.dispatch`, publica resultados em `attacks.results` |
+| 3. `api-consumers` | consome `attacks.results`, grava no MySQL e marca o dispatch como concluído |
+
+Se o disparo ficar **pendente** com o worker DAST rodando, verifique se `api-consumers` está ativo e se a fila `attacks.results` tem consumer:
+
+```bash
+docker logs shingeki-api-consumers --tail 30
+docker exec shingeki-rabbitmq rabbitmqctl list_queues name messages consumers
+```
+
+`attacks.results` com mensagens e **0 consumers** → reinicie o container: `docker compose restart api-consumers`.
+
 ## Credenciais do seed {#credenciais-do-seed}
 
 | E-mail | Senha | Perfil |
 |--------|-------|--------|
-| `test@example.com` | `password` | `SPECIALIST` — projeto **Pentest Lab**, sistema **Vulnerable PHP Target** |
-| `admin@admin.com` | `password` | `ADMIN` — catálogo global |
+| `test@example.com` | `password` | `SPECIALIST` — **Pentest Lab** + projetos demo (Netflix, Mercado Livre, Nubank, iFood) |
+| `admin@admin.com` | `password` | `ADMIN` — catálogo global + mesmos projetos demo |
 
 Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 

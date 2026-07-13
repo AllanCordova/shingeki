@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiRemediationController;
 use App\Http\Controllers\AttackController;
+use App\Http\Controllers\AuditReportController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CatalogAttackController;
 use App\Http\Controllers\CatalogAttackImportController;
@@ -11,8 +12,10 @@ use App\Http\Controllers\CatalogRemediationImportController;
 use App\Http\Controllers\CoverUploadController;
 use App\Http\Controllers\GitHubRemediationController;
 use App\Http\Controllers\ManualProxyController;
+use App\Http\Controllers\SidebarNavigationController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RemediationController;
+use App\Http\Controllers\RemediationHistoryController;
 use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\StackController;
 use App\Http\Controllers\SystemController;
@@ -39,6 +42,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('cover-uploads', [CoverUploadController::class, 'index']);
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
 
+    Route::get('navigation/sidebar', [SidebarNavigationController::class, 'show']);
+    Route::put('navigation/sidebar', [SidebarNavigationController::class, 'update']);
+
     Route::get('stacks', [StackController::class, 'index']);
 
     Route::prefix('notifications')->group(function () {
@@ -61,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::apiResource('projects', ProjectController::class);
+    Route::get('projects/{project}/dashboard', [ProjectController::class, 'dashboard']);
     Route::apiResource('projects.systems', SystemController::class);
 
     Route::prefix('projects/{project}/systems/{system}/signatures')->group(function () {
@@ -94,8 +101,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/systems/{system}/remediate/github-pr', [GitHubRemediationController::class, 'openPullRequest'])
         ->middleware('throttle:5,1');
 
+    Route::get('projects/{project}/systems/{system}/remediation-history', [RemediationHistoryController::class, 'index']);
+
     Route::get('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'index']);
+    Route::get('projects/{project}/systems/{system}/system-results/compare', [SystemResultController::class, 'compare']);
     Route::delete('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'deleteAll']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);
+    Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}/export', [AuditReportController::class, 'export']);
     Route::delete('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'destroy']);
 });

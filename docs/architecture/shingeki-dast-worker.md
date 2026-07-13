@@ -74,7 +74,7 @@ flowchart LR
 }
 ```
 
-A API consome essa fila via `php artisan attacks:consume-results` e persiste `SystemResult` vinculado ao `AttackDispatch`.
+A API consome essa fila via `attacks:consume-results` (container **`api-consumers`** no setup padrão) e persiste `SystemResult` vinculado ao `AttackDispatch`.
 
 ## Discovery
 

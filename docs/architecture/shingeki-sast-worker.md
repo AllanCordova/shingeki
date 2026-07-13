@@ -38,7 +38,7 @@ flowchart LR
 | `attacks.sast.dispatch` | API → worker | Batch SAST (`scan_type: SAST`, `repository_url` obrigatório) |
 | `attacks.results` | worker → API | Achados e `attack.dispatch.completed` (compartilhada com DAST) |
 
-O comando `php artisan attacks:consume-results` processa resultados de **ambos** os workers.
+O comando `attacks:consume-results` (no container **`api-consumers`**) processa resultados de **ambos** os workers.
 
 ## Mapeamento de achados SAST
 

@@ -96,11 +96,9 @@ class UserCoverLibraryService
     public function deleteUpload(User $user, UserCoverUpload $upload): void
     {
         if ($this->isPathInUseByUser($user->id, $upload->path)) {
-            throw ValidationException::withMessages([
-                'cover_upload' => [
-                    'Esta imagem esta em uso em um projeto ou sistema e nao pode ser removida.',
-                ],
-            ]);
+            $upload->delete();
+
+            return;
         }
 
         $this->coverImages->delete($upload->path);

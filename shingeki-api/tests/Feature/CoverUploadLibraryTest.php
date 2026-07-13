@@ -155,16 +155,24 @@ describe('DELETE /api/cover-uploads/{coverUpload}', function () {
         Storage::disk('public')->assertMissing('covers/remove-me.jpg');
     });
 
-    test('rejects delete when image is used by a project', function () {
+    test('removes library entry but keeps file when image is used by a project', function () {
+        Storage::fake('public');
+
         $user = User::factory()->create();
-        $upload = UserCoverUpload::factory()->for($user)->create();
+        $upload = UserCoverUpload::factory()->for($user)->create([
+            'path' => '/storage/covers/in-use.jpg',
+        ]);
+        Storage::disk('public')->put('covers/in-use.jpg', 'data');
         Project::factory()->for($user)->create(['cover_path' => $upload->path]);
 
         Sanctum::actingAs($user);
 
         $this->deleteJson(coverUploadUrl($upload))
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['cover_upload']);
+            ->assertOk();
+
+        $this->assertDatabaseMissing('user_cover_uploads', ['id' => $upload->id]);
+        Storage::disk('public')->assertExists('covers/in-use.jpg');
+        $this->assertDatabaseHas('projects', ['cover_path' => $upload->path]);
     });
 
     test('returns not found for another users upload', function () {

@@ -49,7 +49,9 @@ Limite configurável em `COVER_MAX_UPLOADS_PER_USER` (padrão **20**). Ver `conf
 
 ### DELETE /api/cover-uploads/{coverUpload}
 
-Remove entrada e arquivo do disco se a imagem **não** estiver referenciada em projeto ou sistema do usuário.
+Remove a entrada da biblioteca do usuario. Se a imagem **nao** estiver referenciada em projeto ou sistema, o arquivo tambem e apagado do disco.
+
+Se a imagem **estiver em uso**, apenas a entrada da biblioteca e removida — o projeto ou sistema continua exibindo a capa ate voce trocar ou excluir a entidade.
 
 **Resposta `200`:**
 
@@ -59,20 +61,7 @@ Remove entrada e arquivo do disco se a imagem **não** estiver referenciada em p
 }
 ```
 
-**Resposta `422`** (em uso):
-
-```json
-{
-  "message": "...",
-  "errors": {
-    "cover_upload": [
-      "Esta imagem esta em uso em um projeto ou sistema e nao pode ser removida."
-    ]
-  }
-}
-```
-
-O `{coverUpload}` deve pertencer ao usuário autenticado (route binding); caso contrário `404`.
+O `{coverUpload}` deve pertencer ao usuario autenticado (route binding); caso contrario `404`.
 
 ## Comportamento ao editar
 

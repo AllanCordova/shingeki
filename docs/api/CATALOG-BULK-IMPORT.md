@@ -22,11 +22,13 @@ CATALOG_IMPORT_CHUNK_SIZE=50
 
 ## Consumer
 
+No setup padrão com Docker, o consumer roda no container **`api-consumers`** (`catalog:consume-imports`).
+
+Alternativa no host (sem Docker para consumers):
+
 ```bash
 php artisan catalog:consume-imports
 ```
-
-Rode junto com `php artisan attacks:consume-results` enquanto a API estiver ativa.
 
 ## Endpoints (ADMIN, SPECIALIST)
 
