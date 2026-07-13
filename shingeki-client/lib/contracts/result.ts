@@ -73,6 +73,7 @@ export interface ResultsResponse {
   probes_pagination: PaginationMeta;
   probe_counts: ProbeOutcomeCounts;
   filter: DispatchProbeListFilter;
+  log_filters?: LogFilters;
 }
 
 export interface ResultsQueryParams {
@@ -81,4 +82,15 @@ export interface ResultsQueryParams {
   results_page?: number;
   results_per_page?: number;
   filter?: DispatchProbeListFilter;
+  category?: string;
+  risk_level?: string;
+  route?: string;
+  q?: string;
+}
+
+export interface LogFilters {
+  category: string | null;
+  risk_level: string | null;
+  route: string | null;
+  q: string | null;
 }

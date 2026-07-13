@@ -59,6 +59,23 @@ export function ProfileForm({
     <form onSubmit={submit} className="flex flex-col gap-6" noValidate>
       {error && !error.hasFieldErrors ? <ErrorShow error={error} /> : null}
 
+      <Field label="Nome" error={errors.name?.message}>
+        <Controller
+          control={control}
+          name="name"
+          render={({ field }) => (
+            <Input
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              autoComplete="name"
+              placeholder="Seu nome"
+              hasError={Boolean(errors.name)}
+            />
+          )}
+        />
+      </Field>
+
       <AvatarFields
         control={control}
         errors={errors}
@@ -84,23 +101,6 @@ export function ProfileForm({
           </Button>
         </div>
       ) : null}
-
-      <Field label="Nome" error={errors.name?.message}>
-        <Controller
-          control={control}
-          name="name"
-          render={({ field }) => (
-            <Input
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-              autoComplete="name"
-              placeholder="Seu nome"
-              hasError={Boolean(errors.name)}
-            />
-          )}
-        />
-      </Field>
 
       <div className="flex justify-end">
         <Button type="submit" isLoading={isLoading}>

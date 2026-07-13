@@ -48,3 +48,31 @@ export async function forwardCsvTemplate(apiPath: string, fallbackFilename: stri
     },
   });
 }
+
+/** Encaminha download de PDF da API Laravel. */
+export async function forwardPdfDownload(apiPath: string, fallbackFilename: string) {
+  const api = await createServerApi();
+  const response = await api.get(apiPath, { responseType: "arraybuffer" });
+
+  if (response.status >= 400) {
+    try {
+      const text = new TextDecoder().decode(response.data as ArrayBuffer);
+      return NextResponse.json(JSON.parse(text), { status: response.status });
+    } catch {
+      return NextResponse.json(
+        { message: "Nao foi possivel exportar o relatorio." },
+        { status: response.status },
+      );
+    }
+  }
+
+  return new NextResponse(response.data, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition":
+        response.headers["content-disposition"] ??
+        `attachment; filename="${fallbackFilename}"`,
+    },
+  });
+}

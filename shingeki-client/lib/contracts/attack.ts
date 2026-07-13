@@ -38,6 +38,12 @@ export interface AttackDispatch extends Timestamps {
   vectors_discovered: number | null;
   jobs_planned: number | null;
   status: DispatchStatus;
+  probe_counts?: {
+    all: number;
+    vulnerable: number;
+    clean: number;
+    error: number;
+  };
 }
 
 export interface AttackDispatchResponse {
