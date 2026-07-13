@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
+import type { User } from "@/lib/contracts";
 import { queryKeys } from "@/lib/query-keys";
 import type {
   System,
@@ -16,7 +17,7 @@ import {
   buildSystemUpdateFormData,
 } from "@/lib/multipart";
 
-export function useSystems(projectId: string) {
+export function useSystems(projectId: string, options?: { enabled?: boolean }) {
   const query = useQuery({
     queryKey: queryKeys.systems(projectId),
     queryFn: async () => {
@@ -25,7 +26,7 @@ export function useSystems(projectId: string) {
       );
       return data.systems;
     },
-    enabled: Boolean(projectId),
+    enabled: Boolean(projectId) && (options?.enabled ?? true),
   });
 
   return {
@@ -74,6 +75,12 @@ export function useCreateSystem(projectId: string) {
         queryKey: queryKeys.systems(projectId),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
+      const user = queryClient.getQueryData<User>(queryKeys.me);
+      if (user?.id) {
+        queryClient.invalidateQueries({
+          queryKey: queryKeys.sidebarNavigation(user.id),
+        });
+      }
     },
   });
 
