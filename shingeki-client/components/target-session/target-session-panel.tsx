@@ -232,9 +232,10 @@ export function TargetSessionPanel({
       <CardHeader>
         <CardTitle>Sessao do alvo</CardTitle>
         <CardDescription>
-          Conecte a sessao autenticada para o scan acessar areas protegidas.
-          Em sites externos (SaaS), use a extensao Chrome/Edge Shingeki; no lab
-          vulneravel o popup ainda captura sozinho.
+          Conecte a sessao autenticada para o scan acessar areas protegidas do
+          alvo. Em sistemas externos, use a extensao Shingeki para Chrome ou
+          Edge. Em alvos que cooperam com a captura, o popup do navegador tambem
+          pode concluir a conexao.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -244,8 +245,8 @@ export function TargetSessionPanel({
         {extensionReady === false ? (
           <div className="flex flex-col gap-2 rounded-app border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
             <p>
-              Extensao nao detectada. Para Bling e outros SaaS, instale a
-              extensao Chrome/Edge:
+              Extensao nao detectada. Baixe e instale a extensao Shingeki para
+              conectar a sessao autenticada do alvo:
             </p>
             <ol className="list-decimal space-y-1 pl-4">
               <li>
@@ -254,22 +255,23 @@ export function TargetSessionPanel({
                   className="text-primary underline hover:no-underline"
                   download
                 >
-                  Baixar shingeki-target-session.zip
+                  Baixar a extensao Shingeki
                 </a>
               </li>
               <li>
-                Extraia a pasta e abra{" "}
-                <code className="font-mono text-xs">chrome://extensions</code>
+                Extraia o arquivo e abra{" "}
+                <code className="font-mono text-xs">chrome://extensions</code>{" "}
+                (ou a pagina de extensoes do Edge)
               </li>
               <li>
-                Modo do desenvolvedor → Carregar sem compactacao → selecione a
-                pasta extraida
+                Ative o modo do desenvolvedor → Carregar sem compactacao →
+                selecione a pasta extraida
               </li>
-              <li>Recarregue esta pagina do Shingeki</li>
+              <li>Volte ao Shingeki e recarregue esta pagina</li>
             </ol>
             <p>
-              Em producao o caminho ideal e publicar na Chrome Web Store; o ZIP
-              serve para instalação local / piloto.
+              Depois de instalada, use Conectar ao alvo e confirme a captura no
+              icone da extensao.
             </p>
           </div>
         ) : null}

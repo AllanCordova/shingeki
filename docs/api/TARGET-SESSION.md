@@ -14,7 +14,7 @@ Pacote [`shingeki-extension`](../../shingeki-extension/README.md).
 4. Na extensao: **Capturar sessao** → a extensao resolve a aba do `target_origin` (mesmo se a aba ativa for outra) → `POST /api/target-session/capture/{ticket}`.
 5. O client atualiza o status via polling (2s / 120s) ou mensagem da extensao.
 
-Download piloto da extensao: `/extensions/shingeki-target-session.zip` (servido pelo client). Publicacao na Chrome Web Store e o caminho para clientes finais.
+Download da extensao empacotada pelo client: `/extensions/shingeki-target-session.zip`. Distribuicao via Chrome Web Store / Edge Add-ons fica documentada no README da extensao (fora da UI do produto).
 
 ### 2. Popup cooperativo (lab)
 
