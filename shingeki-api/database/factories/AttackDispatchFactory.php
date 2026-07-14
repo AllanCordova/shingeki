@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AttackDepth;
 use App\Enums\AttackScanType;
 use App\Models\AttackDispatch;
 use App\Models\System;
@@ -24,6 +25,7 @@ class AttackDispatchFactory extends Factory
             'system_id' => System::factory(),
             'user_id' => User::factory(),
             'scan_type' => AttackScanType::Dast,
+            'depth' => AttackDepth::Full,
             'attacks_count' => 3,
             'dispatched_at' => now(),
         ];

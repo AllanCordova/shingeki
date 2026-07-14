@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AttackDepth;
 use App\Enums\AttackScanType;
 use Database\Factories\AttackDispatchFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -26,6 +27,7 @@ class AttackDispatch extends Model
         'system_id',
         'user_id',
         'scan_type',
+        'depth',
         'attacks_count',
         'dispatched_at',
         'completed_at',
@@ -43,6 +45,7 @@ class AttackDispatch extends Model
     {
         return [
             'scan_type' => AttackScanType::class,
+            'depth' => AttackDepth::class,
             'dispatched_at' => 'datetime',
             'completed_at' => 'datetime',
             'duration_ms' => 'integer',

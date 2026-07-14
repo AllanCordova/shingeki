@@ -6,7 +6,7 @@ export * from "./cover-stock-image";
 export * from "./cover-upload";
 export * from "./project";
 export * from "./system";
-export * from "./signature";
+export * from "./attack-acknowledgment";
 export * from "./attack";
 export * from "./result";
 export * from "./stack";

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui";
+import { Button, MapIcon } from "@/components/ui";
 import { useSidebarNavigation } from "@/lib/hooks/use-sidebar-navigation";
 import {
   GUIDED_SETUP_SESSION_EVENT,
@@ -42,8 +42,15 @@ export function ReopenGuidedSetupButton() {
   };
 
   return (
-    <Button type="button" variant="outline" onClick={handleReopen}>
-      Reabrir guia
+    <Button
+      type="button"
+      variant="outline"
+      className="px-2.5"
+      onClick={handleReopen}
+      aria-label="Reabrir guia"
+      title="Reabrir guia"
+    >
+      <MapIcon className="h-4 w-4" />
     </Button>
   );
 }

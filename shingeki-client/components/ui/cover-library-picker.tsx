@@ -99,7 +99,7 @@ export function CoverLibraryPicker({
             Nenhuma imagem na biblioteca ainda. Envie a primeira capa abaixo.
           </p>
         ) : (
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-2">
             {uploads.map((upload) => {
               const src = resolveCoverSrc(upload.path);
               const isSelected = selectedId === upload.id;

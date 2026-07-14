@@ -21,6 +21,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CheckCheckIcon,
   EmptyState,
   ErrorShow,
   ListPagination,
@@ -112,14 +113,17 @@ export function NotificationsList() {
                     type="button"
                     variant="ghost"
                     size="sm"
+                    className="px-2.5"
                     isLoading={isMarkingAll}
+                    aria-label="Marcar todas como lidas"
+                    title="Marcar todas como lidas"
                     onClick={() =>
                       void notify.run(() => markAllRead(), {
                         success: "Todas marcadas como lidas.",
                       })
                     }
                   >
-                    Marcar todas como lidas
+                    <CheckCheckIcon className="h-4 w-4" />
                   </Button>
                   <Button
                     type="button"

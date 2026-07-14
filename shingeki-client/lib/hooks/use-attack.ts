@@ -3,6 +3,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
+import { ATTACK_ACKNOWLEDGMENT } from "@/lib/contracts/attack-acknowledgment";
+import type { AttackDepth } from "@/lib/contracts/attack";
 import { queryKeys } from "@/lib/query-keys";
 import type { AttackDispatchResponse } from "@/lib/contracts";
 
@@ -17,15 +19,30 @@ function dispatchPath(
   return scanType === "sast" ? `${base}/sast` : base;
 }
 
-/** Dispara o catalogo DAST ou SAST contra um sistema (assinatura resolvida no servidor). */
+/** Dispatches DAST/SAST catalog after explicit attack acknowledgment. */
 export function useDispatchAttack(projectId: string, systemId: string) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async (scanType: AttackScanType) => {
+    mutationFn: async ({
+      scanType,
+      depth,
+      acceptedResponsibility,
+      acceptedLegalTerms,
+    }: {
+      scanType: AttackScanType;
+      depth: AttackDepth;
+      acceptedResponsibility: boolean;
+      acceptedLegalTerms: boolean;
+    }) => {
       const { data } = await apiClient.post<AttackDispatchResponse>(
         dispatchPath(projectId, systemId, scanType),
-        {},
+        {
+          accepted_responsibility: acceptedResponsibility,
+          accepted_legal_terms: acceptedLegalTerms,
+          terms_version: ATTACK_ACKNOWLEDGMENT.termsVersion,
+          depth,
+        },
       );
       return { ...data, scanType };
     },
@@ -38,10 +55,23 @@ export function useDispatchAttack(projectId: string, systemId: string) {
   });
 
   const pendingScanType =
-    mutation.isPending && mutation.variables ? mutation.variables : null;
+    mutation.isPending && mutation.variables ? mutation.variables.scanType : null;
 
   return {
-    dispatchAttack: (scanType: AttackScanType) => mutation.mutateAsync(scanType),
+    dispatchAttack: (
+      scanType: AttackScanType,
+      acknowledgment: {
+        acceptedResponsibility: boolean;
+        acceptedLegalTerms: boolean;
+      },
+      depth: AttackDepth = "full",
+    ) =>
+      mutation.mutateAsync({
+        scanType,
+        depth,
+        acceptedResponsibility: acknowledgment.acceptedResponsibility,
+        acceptedLegalTerms: acknowledgment.acceptedLegalTerms,
+      }),
     data: mutation.data,
     isLoading: mutation.isPending,
     pendingScanType,

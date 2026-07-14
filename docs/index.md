@@ -14,7 +14,7 @@ Plataforma para detecção automatizada e remediação interativa de vulnerabili
 
 ## O que é o Shingeki
 
-- **API Laravel** (`shingeki-api`) — projetos, sistemas, assinaturas, dispatch DAST/SAST, resultados e remediação.
+- **API Laravel** (`shingeki-api`) — projetos, sistemas, dispatch DAST/SAST (com aceite), resultados e remediação.
 - **Workers** — DAST (Go) e SAST (Semgrep) via RabbitMQ.
 - **Client web** — Next.js com BFF e autenticação por cookie.
 - **Lab** — alvo PHP vulnerável para testes locais.

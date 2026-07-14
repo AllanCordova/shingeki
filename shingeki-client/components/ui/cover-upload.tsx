@@ -226,7 +226,7 @@ export function CoverUpload({
         </p>
 
         <div
-          className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface-muted p-1"
+          className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-surface-muted p-1"
           role="tablist"
           aria-label={isAvatar ? "Origem da foto" : "Origem da capa"}
         >
@@ -237,17 +237,19 @@ export function CoverUpload({
               role="tab"
               aria-selected={activeTab === tab.id}
               className={cn(
-                "flex-1 min-w-[5.5rem] rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 py-2 text-center transition-colors",
                 activeTab === tab.id
                   ? "bg-surface text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setActiveTab(tab.id)}
             >
-              {tab.label}
+              <span className="w-full truncate text-xs font-medium sm:text-sm">
+                {tab.label}
+              </span>
               {tab.id === "library" ? (
-                <span className="ml-1 text-xs font-normal opacity-70">
-                  ({libraryCount}/{libraryLimit})
+                <span className="text-[10px] font-normal leading-none opacity-70 sm:text-xs">
+                  {libraryCount}/{libraryLimit}
                 </span>
               ) : null}
             </button>

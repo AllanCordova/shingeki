@@ -31,7 +31,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { badgeCount } = useNotificationUnreadCount(enabled);
+  const { badgeCount: closedBadgeCount } = useNotificationUnreadCount(enabled && !open);
   const {
     notifications,
     isLoading,
@@ -42,6 +42,8 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
   } = useNotifications(1, enabled && open);
   const { markRead } = useMarkNotificationRead();
   const { markAllRead, isLoading: isMarkingAll } = useMarkAllNotificationsRead();
+
+  const badgeCount = open ? unreadCount + pendingCount : closedBadgeCount;
 
   useEffect(() => {
     if (!open) return;

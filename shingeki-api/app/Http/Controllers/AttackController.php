@@ -2,25 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttackDepth;
 use App\Enums\AttackScanType;
 use App\Http\Requests\AttackDispatch as AttackDispatchRequest;
 use App\Models\Attack;
+use App\Models\AttackAcknowledgment;
 use App\Models\AttackDispatch;
 use App\Models\Project;
 use App\Models\System;
 use App\Services\Attack\AttackCatalogService;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Services\Notification\UserNotificationService;
-use App\Services\Signature\SignatureAuthorizationService;
 use App\Services\TargetSession\TargetSessionService;
-use Illuminate\Auth\Access\AuthorizationException;
+use App\Support\AttackAcknowledgmentTerms;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
 class AttackController extends Controller
 {
     public function __construct(
-        private readonly SignatureAuthorizationService $signatureAuthorization,
         private readonly AttackCatalogService $attackCatalog,
         private readonly AttackQueuePublisher $attackQueuePublisher,
         private readonly TargetSessionService $targetSessionService,
@@ -52,17 +52,6 @@ class AttackController extends Controller
         $this->authorize('create', [Attack::class, $system]);
 
         try {
-            $this->signatureAuthorization->assertPermittedForSystem(
-                $request->user(),
-                $system,
-            );
-        } catch (AuthorizationException $exception) {
-            return response()->json([
-                'message' => $exception->getMessage(),
-            ], 403);
-        }
-
-        try {
             $attacks = $this->attackCatalog->catalogAttacksOrFail($scanType);
         } catch (RuntimeException $exception) {
             return response()->json([
@@ -70,12 +59,28 @@ class AttackController extends Controller
             ], 422);
         }
 
+        $depth = $request->attackDepth();
+
         $dispatch = AttackDispatch::create([
             'system_id' => $system->id,
             'user_id' => $request->user()->id,
             'scan_type' => $scanType,
+            'depth' => $depth,
             'attacks_count' => $attacks->count(),
             'dispatched_at' => now(),
+        ]);
+
+        AttackAcknowledgment::query()->create([
+            'user_id' => $request->user()->id,
+            'project_id' => $project->id,
+            'system_id' => $system->id,
+            'attack_dispatch_id' => $dispatch->id,
+            'accepted_responsibility' => true,
+            'accepted_legal_terms' => true,
+            'terms_version' => AttackAcknowledgmentTerms::VERSION,
+            'ip_address' => $request->ip(),
+            'user_agent' => $request->userAgent(),
+            'acknowledged_at' => now(),
         ]);
 
         $this->attackQueuePublisher->publishDispatchBatch(
@@ -111,6 +116,7 @@ class AttackController extends Controller
             'system_id' => $dispatch->system_id,
             'user_id' => $dispatch->user_id,
             'scan_type' => $dispatch->scan_type->value,
+            'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,

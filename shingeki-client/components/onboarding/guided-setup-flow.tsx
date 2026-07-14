@@ -32,9 +32,10 @@ import {
 import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { Button, Card, CardContent } from "@/components/ui";
+import { ChevronDownIcon, ChevronUpIcon } from "@/components/ui/icons";
 
 const FORM_STEPS = new Set<GuidedSetupStep>(["project", "system"]);
-const PAGE_STEPS = new Set<GuidedSetupStep>(["target", "signature", "dast"]);
+const PAGE_STEPS = new Set<GuidedSetupStep>(["target", "dast"]);
 
 function StepProgress({
   currentStep,
@@ -103,6 +104,7 @@ function GuidedSetupHeader({
   onDismiss,
   onStepSelect,
   currentStep,
+  onMinimize,
 }: {
   step: (typeof GUIDED_SETUP_STEPS)[GuidedSetupStep];
   currentStepNumber: number;
@@ -111,6 +113,7 @@ function GuidedSetupHeader({
   onDismiss: () => void;
   onStepSelect: (step: GuidedSetupStep) => void;
   currentStep: GuidedSetupStep;
+  onMinimize?: () => void;
 }) {
   return (
     <div className="flex flex-col gap-4 border-b border-border px-4 py-5 sm:px-8">
@@ -127,6 +130,19 @@ function GuidedSetupHeader({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {onMinimize ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="px-2.5"
+              onClick={onMinimize}
+              aria-label="Minimizar guia"
+              title="Minimizar guia"
+            >
+              <ChevronDownIcon className="h-4 w-4" />
+            </Button>
+          ) : null}
           {canGoBack ? (
             <Button type="button" variant="outline" size="sm" onClick={onBack}>
               Voltar
@@ -138,6 +154,57 @@ function GuidedSetupHeader({
         </div>
       </div>
       <StepProgress currentStep={currentStep} onStepSelect={onStepSelect} />
+    </div>
+  );
+}
+
+function GuidedSetupMinimizedBar({
+  stepTitle,
+  currentStepNumber,
+  onExpand,
+  onDismiss,
+}: {
+  stepTitle: string;
+  currentStepNumber: number;
+  onExpand: () => void;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 p-3 shadow-2xl backdrop-blur"
+      role="dialog"
+      aria-label="Guia minimizado"
+    >
+      <div className="mx-auto flex w-full max-w-5xl items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-foreground">
+            Passo {currentStepNumber}: {stepTitle}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            Guia minimizado — conclua a acao na pagina
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="shrink-0 px-2.5"
+          onClick={onExpand}
+          aria-label="Expandir guia"
+          title="Expandir guia"
+        >
+          <ChevronUpIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="shrink-0"
+          onClick={onDismiss}
+        >
+          Fechar
+        </Button>
+      </div>
     </div>
   );
 }
@@ -181,6 +248,7 @@ export function GuidedSetupFlow() {
   const pathname = usePathname();
   const { meta, isLoading } = useSidebarNavigation();
   const [session, setSession] = useState(readGuidedSetupSession());
+  const [pageGuideMinimized, setPageGuideMinimized] = useState(false);
   const { createProject, isLoading: creatingProject, error: projectError, reset: resetProject } =
     useCreateProject();
   const projectIdForSystem = session.projectId ?? "";
@@ -197,6 +265,9 @@ export function GuidedSetupFlow() {
     (nextStep: GuidedSetupStep, patch?: Partial<typeof session>) => {
       const next = writeGuidedSetupSession({ step: nextStep, ...patch });
       setSession(next);
+      if (PAGE_STEPS.has(nextStep)) {
+        setPageGuideMinimized(false);
+      }
 
       const targetPath = guidedSetupPathForStep(nextStep, next);
       if (pathname !== targetPath) {
@@ -474,6 +545,22 @@ export function GuidedSetupFlow() {
   }
 
   if (isPageStep) {
+    if (pageGuideMinimized) {
+      return (
+        <GuidedSetupMinimizedBar
+          stepTitle={step.title}
+          currentStepNumber={currentStepNumber}
+          onExpand={() => {
+            setPageGuideMinimized(false);
+            window.setTimeout(() => {
+              focusGuidedSection(step.anchorId);
+            }, 100);
+          }}
+          onDismiss={handleDismiss}
+        />
+      );
+    }
+
     return (
       <div
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 shadow-2xl backdrop-blur"
@@ -481,11 +568,14 @@ export function GuidedSetupFlow() {
         aria-label="Configuracao inicial"
       >
         <div className="mx-auto w-full max-w-5xl">
-          <GuidedSetupHeader {...headerProps} />
+          <GuidedSetupHeader
+            {...headerProps}
+            onMinimize={() => setPageGuideMinimized(true)}
+          />
           <div className="px-4 pb-6 pt-2 sm:px-8">
             <p className="mb-4 text-sm text-muted-foreground sm:text-base">
-              A secao correspondente foi destacada na pagina. Conclua a acao e avance quando
-              estiver pronto.
+              A secao correspondente foi destacada na pagina. Minimize o guia para ver a
+              tela inteira, conclua a acao e avance quando estiver pronto.
             </p>
             {pageStepContent}
           </div>

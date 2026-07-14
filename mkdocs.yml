@@ -73,7 +73,7 @@ nav:
       - Stacks: api/STACKS.md
       - Capas: api/COVERS.md
     - Scan e segurança:
-      - Assinaturas: api/SIGNATURES.md
+      - Aceite de responsabilidade: api/ATTACK-ACKNOWLEDGMENT.md
       - Sessão do alvo: api/TARGET-SESSION.md
       - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
       - Arsenal manual: api/MANUAL-PROXY.md

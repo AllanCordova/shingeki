@@ -57,21 +57,55 @@ export function useCompareDispatches(
   };
 }
 
-export function useRemediationHistory(projectId: string, systemId: string) {
+export function useRemediationHistory(
+  projectId: string,
+  systemId: string,
+  filters: {
+    page?: number;
+    per_page?: number;
+    from?: string;
+    to?: string;
+    type?: string;
+  } = {},
+) {
+  const page = filters.page ?? 1;
+  const perPage = filters.per_page ?? 25;
+  const from = filters.from ?? "";
+  const to = filters.to ?? "";
+  const type = filters.type ?? "";
+
   const query = useQuery({
-    queryKey: queryKeys.remediationHistory(projectId, systemId),
+    queryKey: queryKeys.remediationHistory(projectId, systemId, {
+      page,
+      per_page: perPage,
+      from,
+      to,
+      type,
+    }),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ events: import("@/lib/contracts").RemediationHistoryEvent[] }>(
-        `/projects/${projectId}/systems/${systemId}/remediation-history`,
+      const search = new URLSearchParams({
+        page: String(page),
+        per_page: String(perPage),
+      });
+      if (from) search.set("from", from);
+      if (to) search.set("to", to);
+      if (type) search.set("type", type);
+
+      const { data } = await apiClient.get<
+        import("@/lib/contracts").RemediationHistoryResponse
+      >(
+        `/projects/${projectId}/systems/${systemId}/remediation-history?${search.toString()}`,
       );
-      return data.events;
+      return data;
     },
     enabled: Boolean(projectId && systemId),
   });
 
   return {
-    events: query.data ?? [],
+    events: query.data?.events ?? [],
+    pagination: query.data?.pagination ?? null,
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
     error: (query.error as ApiError | null) ?? null,
     refetch: query.refetch,

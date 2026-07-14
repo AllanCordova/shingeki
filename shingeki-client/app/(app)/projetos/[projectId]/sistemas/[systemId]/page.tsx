@@ -10,7 +10,6 @@ import {
 } from "@/lib/hooks/use-systems";
 import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
 import { SystemForm } from "@/components/forms/system-form";
-import { SignaturePanel } from "@/components/signature/signature-panel";
 import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
 import { SystemDetailHero } from "@/components/system/system-detail-hero";
 import { AttackForm } from "@/components/attack/attack-form";
@@ -107,13 +106,8 @@ export default function SystemDetailPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div id="guided-signature-panel" className="guided-setup-section">
-          <SignaturePanel projectId={projectId} systemId={systemId} />
-        </div>
-        <div id="guided-attack-form" className="guided-setup-section">
-          <AttackForm projectId={projectId} systemId={systemId} />
-        </div>
+      <div id="guided-attack-form" className="guided-setup-section">
+        <AttackForm projectId={projectId} systemId={systemId} />
       </div>
 
       <div id="guided-target-session" className="guided-setup-section">

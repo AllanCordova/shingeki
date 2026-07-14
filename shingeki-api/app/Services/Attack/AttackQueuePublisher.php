@@ -2,6 +2,7 @@
 
 namespace App\Services\Attack;
 
+use App\Enums\AttackDepth;
 use App\Enums\AttackScanType;
 use App\Models\Attack;
 use App\Models\AttackDispatch;
@@ -37,6 +38,7 @@ class AttackQueuePublisher
         $payload = [
             'event' => 'attack.dispatch.batch',
             'scan_type' => $scanType->value,
+            'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
             'dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'user_id' => $requestedBy->id,

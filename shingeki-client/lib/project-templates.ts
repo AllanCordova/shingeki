@@ -10,7 +10,7 @@ export interface ProjectTemplate {
     name: string;
     target_url: string;
     login_url?: string;
-    repository_url?: string;
+    repository_url: string;
     stackSlugs: string[];
   };
   suggestedScan: "dast" | "sast";
@@ -28,6 +28,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
     system: {
       name: "API principal",
       target_url: "https://api.exemplo.com",
+      repository_url: "https://github.com/org/api-rest",
       stackSlugs: ["express", "laravel"],
     },
     suggestedScan: "dast",
@@ -44,6 +45,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
       name: "App web",
       target_url: "https://app.exemplo.com",
       login_url: "https://app.exemplo.com/login",
+      repository_url: "https://github.com/org/spa-backend",
       stackSlugs: ["react", "nextjs", "express"],
     },
     suggestedScan: "dast",

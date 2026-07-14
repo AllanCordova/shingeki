@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RemediationRunType;
 use App\Http\Controllers\Concerns\FormatsPagination;
 use App\Http\Controllers\Concerns\ResolvesRemediationDispatch;
 use App\Http\Requests\RemediateSystem;
 use App\Models\Project;
 use App\Models\System;
 use App\Models\SystemResult;
+use App\Services\Remediation\RemediationHistoryService;
 use App\Services\Remediation\RemediationResolver;
 use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Http\JsonResponse;
@@ -19,6 +21,7 @@ class RemediationController extends Controller
 
     public function __construct(
         private readonly RemediationResolver $remediationResolver,
+        private readonly RemediationHistoryService $history,
     ) {}
 
     public function remediate(RemediateSystem $request, Project $project, System $system): JsonResponse
@@ -37,10 +40,11 @@ class RemediationController extends Controller
             return $this->missingDispatchResponse();
         }
 
+        $page = $request->page();
         $results = $this->paginatedDispatchResults(
             $system,
             $dispatch,
-            $request->page(),
+            $page,
             $request->perPage(),
         );
 
@@ -52,6 +56,16 @@ class RemediationController extends Controller
             ->map(fn (SystemResult $result) => $this->formatFinding($result, $system))
             ->values()
             ->all();
+
+        if ($page === 1) {
+            $this->history->recordRun(
+                $system,
+                $dispatch,
+                RemediationRunType::CatalogSuggestion,
+                $results->total(),
+                $request->user(),
+            );
+        }
 
         return response()->json([
             'message' => 'Remediation suggestions generated.',

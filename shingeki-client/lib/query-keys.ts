@@ -93,7 +93,28 @@ export const queryKeys = {
       targetId ?? "",
     ] as const,
 
-  remediationHistory: (projectId: string, systemId: string) =>
-    ["projects", projectId, "systems", systemId, "remediation-history"] as const,
+  remediationHistory: (
+    projectId: string,
+    systemId: string,
+    filters: {
+      page?: number;
+      per_page?: number;
+      from?: string;
+      to?: string;
+      type?: string;
+    } = {},
+  ) =>
+    [
+      "projects",
+      projectId,
+      "systems",
+      systemId,
+      "remediation-history",
+      filters.page ?? 1,
+      filters.per_page ?? 25,
+      filters.from ?? "",
+      filters.to ?? "",
+      filters.type ?? "",
+    ] as const,
 };
 

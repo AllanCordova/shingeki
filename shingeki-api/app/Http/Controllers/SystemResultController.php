@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttackDepth;
 use App\Enums\DispatchProbeListFilter;
 use App\Enums\DispatchProbeOutcome;
 use App\Http\Controllers\Concerns\AppliesLogSearchFilters;
@@ -175,6 +176,7 @@ class SystemResultController extends Controller
             'system_id' => $dispatch->system_id,
             'user_id' => $dispatch->user_id,
             'scan_type' => $dispatch->scan_type->value,
+            'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,

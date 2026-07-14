@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
 import type {
@@ -13,7 +13,18 @@ import type {
   RemediateSystemResponse,
 } from "@/lib/contracts";
 
+function invalidateRemediationHistory(
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string,
+  systemId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: ["projects", projectId, "systems", systemId, "remediation-history"],
+  });
+}
+
 export function useRemediateSystem(projectId: string, systemId: string) {
+  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (input: RemediateSystemInput = {}) => {
       const { data } = await apiClient.post<RemediateSystemResponse>(
@@ -21,6 +32,9 @@ export function useRemediateSystem(projectId: string, systemId: string) {
         input,
       );
       return data;
+    },
+    onSuccess: () => {
+      invalidateRemediationHistory(queryClient, projectId, systemId);
     },
   });
 
@@ -34,6 +48,7 @@ export function useRemediateSystem(projectId: string, systemId: string) {
 }
 
 export function useAiRemediateSystem(projectId: string, systemId: string) {
+  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (input: RemediateSystemAiInput = {}) => {
       const { data } = await apiClient.post<RemediateSystemAiResponse>(
@@ -41,6 +56,9 @@ export function useAiRemediateSystem(projectId: string, systemId: string) {
         input,
       );
       return data;
+    },
+    onSuccess: () => {
+      invalidateRemediationHistory(queryClient, projectId, systemId);
     },
   });
 
@@ -54,6 +72,7 @@ export function useAiRemediateSystem(projectId: string, systemId: string) {
 }
 
 export function useGitHubRemediationPr(projectId: string, systemId: string) {
+  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (input: OpenGitHubRemediationPrInput) => {
       const { data } = await apiClient.post<OpenGitHubRemediationPrResponse>(
@@ -61,6 +80,9 @@ export function useGitHubRemediationPr(projectId: string, systemId: string) {
         input,
       );
       return data;
+    },
+    onSuccess: () => {
+      invalidateRemediationHistory(queryClient, projectId, systemId);
     },
   });
 

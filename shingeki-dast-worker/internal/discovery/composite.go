@@ -11,10 +11,8 @@ import (
 )
 
 type CompositeEngine struct {
-	static  *static.CollyCrawler
-	dynamic *dynamic.RodCrawler
-	cfg     config.DiscoveryConfig
-	logger  *slog.Logger
+	cfg    config.Config
+	logger *slog.Logger
 }
 
 func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine {
@@ -22,21 +20,28 @@ func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine
 		logger = slog.Default()
 	}
 	return &CompositeEngine{
-		static:  static.NewCollyCrawler(cfg.Discovery, cfg.Attack, logger),
-		dynamic: dynamic.NewRodCrawler(cfg.Discovery, cfg.Attack, logger),
-		cfg:     cfg.Discovery,
-		logger:  logger,
+		cfg:    cfg,
+		logger: logger,
 	}
 }
 
-func (e *CompositeEngine) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
-	vectors, err := e.static.Discover(ctx, targetURL, authHeaders)
+func (e *CompositeEngine) Discover(
+	ctx context.Context,
+	targetURL string,
+	authHeaders map[string]string,
+	depth string,
+) ([]contracts.AttackVector, error) {
+	discCfg := ApplyDepth(e.cfg.Discovery, depth)
+	staticEngine := static.NewCollyCrawler(discCfg, e.cfg.Attack, e.logger)
+	dynamicEngine := dynamic.NewRodCrawler(discCfg, e.cfg.Attack, e.logger)
+
+	vectors, err := staticEngine.Discover(ctx, targetURL, authHeaders)
 	if err != nil {
 		return nil, err
 	}
 
-	if e.cfg.RodEnabled && len(vectors) < e.cfg.MinVectorsForRod {
-		dynamicVectors, rodErr := e.dynamic.Discover(ctx, targetURL, authHeaders)
+	if discCfg.RodEnabled && len(vectors) < discCfg.MinVectorsForRod {
+		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, authHeaders)
 		if rodErr != nil {
 			e.logger.Warn("dynamic discovery failed", "error", rodErr)
 		} else {
@@ -53,6 +58,16 @@ func (e *CompositeEngine) Discover(ctx context.Context, targetURL string, authHe
 			"discovery produced no vectors; using built-in fallback routes",
 			"target", targetURL,
 			"fallback_count", len(vectors),
+		)
+	}
+
+	beforeCap := len(vectors)
+	vectors = CapVectors(vectors, depth)
+	if len(vectors) < beforeCap {
+		e.logger.Info("capped discovery vectors for quick depth",
+			"before", beforeCap,
+			"after", len(vectors),
+			"depth", depth,
 		)
 	}
 

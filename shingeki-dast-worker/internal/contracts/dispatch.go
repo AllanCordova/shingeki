@@ -3,6 +3,7 @@ package contracts
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -10,19 +11,22 @@ const (
 	EventDispatchBatch = "attack.dispatch.batch"
 	ScanTypeDast       = "DAST"
 	ScanTypeSast       = "SAST"
+	DepthQuick         = "quick"
+	DepthFull          = "full"
 )
 
 type DispatchBatch struct {
-	Event          string       `json:"event"`
-	ScanType       string       `json:"scan_type"`
-	DispatchID     string       `json:"dispatch_id"`
-	SystemID       string       `json:"system_id"`
-	UserID         string       `json:"user_id"`
-	TargetURL      string       `json:"target_url"`
-	RepositoryURL  string       `json:"repository_url"`
-	Attacks        []AttackItem `json:"attacks"`
-	DispatchedAt   string       `json:"dispatched_at"`
-	Auth           *TargetAuth  `json:"auth,omitempty"`
+	Event         string       `json:"event"`
+	ScanType      string       `json:"scan_type"`
+	Depth         string       `json:"depth"`
+	DispatchID    string       `json:"dispatch_id"`
+	SystemID      string       `json:"system_id"`
+	UserID        string       `json:"user_id"`
+	TargetURL     string       `json:"target_url"`
+	RepositoryURL string       `json:"repository_url"`
+	Attacks       []AttackItem `json:"attacks"`
+	DispatchedAt  string       `json:"dispatched_at"`
+	Auth          *TargetAuth  `json:"auth,omitempty"`
 }
 
 func (b DispatchBatch) EffectiveScanType() string {
@@ -30,6 +34,15 @@ func (b DispatchBatch) EffectiveScanType() string {
 		return ScanTypeDast
 	}
 	return b.ScanType
+}
+
+func (b DispatchBatch) EffectiveDepth() string {
+	switch strings.ToLower(strings.TrimSpace(b.Depth)) {
+	case DepthQuick:
+		return DepthQuick
+	default:
+		return DepthFull
+	}
 }
 
 type AttackItem struct {

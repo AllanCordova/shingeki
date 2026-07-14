@@ -31,7 +31,7 @@ export function SystemDetailHero({
       >
         {backLabel}
       </Link>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 flex-1">
           {subtitle ? (
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">
@@ -45,12 +45,17 @@ export function SystemDetailHero({
             href={system.target_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 inline-block text-sm text-muted-foreground underline hover:text-foreground sm:text-base"
+            className="mt-2 block truncate text-sm text-muted-foreground underline hover:text-foreground sm:text-base"
+            title={system.target_url}
           >
             {system.target_url}
           </a>
         </div>
-        {actions ? <div className="flex shrink-0 flex-wrap gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
+            {actions}
+          </div>
+        ) : null}
       </div>
     </CoverHero>
   );

@@ -1,6 +1,6 @@
 # shingeki-client
 
-Cliente web **Next.js** (App Router) que cobre autenticação, projetos, sistemas, assinaturas, disparo de ataques, resultados e upload de capas. Consome a API Laravel via **BFF** (`app/api/*`).
+Cliente web **Next.js** (App Router) que cobre autenticação, projetos, sistemas, disparo de ataques (com aceite), resultados e upload de capas. Consome a API Laravel via **BFF** (`app/api/*`).
 
 ## Estrutura de pastas
 
@@ -13,15 +13,15 @@ app/
 proxy.ts             # Proteção de rotas privadas; `/` é pública
 lib/
   api/               # Cliente HTTP (browser/servidor) + error-handler (mensagens em PT)
-  contracts/         # Schemas Zod (formulários) + tipos de resposta da API
+  contracts/         # Schemas Zod (formulários) + tipos de resposta da API (incl. aceite de ataque)
   hooks/             # React Query (auth, projects, systems, attack, results, notifications, manual-proxy, …)
   catalog/           # list-query compartilhado para admin de catálogo
   stores/            # Zustand — tema e estado de UI
 components/
-  ui/                # Primitivos (Button, Input, Modal, CoverUpload, CoverLibraryPicker, …)
+  ui/                # Primitivos (Button, Input, Modal, DatePicker, CoverUpload, CoverLibraryPicker, …)
   forms/             # Project, System, CoverFields, login/register
   landing/           # Página inicial pública (seções, nav, scroll)
-  projects/ systems/ signature/ attack/ results/ remediation/ notifications/ manual-proxy/
+  projects/ systems/ attack/ results/ remediation/ notifications/ manual-proxy/
 ```
 
 ## BFF (Backend for Frontend)
@@ -65,9 +65,10 @@ components/
 | Fluxo | Onde |
 |-------|------|
 | Landing `/` | Pública; CTA para login ou área logada conforme cookie |
-| Dispatch | Sem campo de token — depende de assinatura validada no sistema |
-| Resultados | Lista com exclusão individual ou em massa (modais) |
+| Dispatch | Checkboxes de responsabilidade/termos + `terms_version`; modal de profundidade (`quick`/`full`) ao clicar DAST/SAST |
+| Resultados | Lista com exclusão individual ou em massa (modais); badge de profundidade nos dispatches |
 | Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
+| Historico do sistema | Preview na página do sistema + `/historico-remediacao` com datepicker e filtro por tipo |
 | Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações, **paginação**, **filtro por autor** e import CSV |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` — proxy HTTP, payload catalogado, mapa de rotas; link no hero do sistema |
 | Notificações | Sininho no header (`NotificationBell`); poll 20s; badge unread + pending; toasts após dispatch/import CSV |
