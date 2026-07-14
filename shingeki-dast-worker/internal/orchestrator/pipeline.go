@@ -69,6 +69,8 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 		"system_id", batch.SystemID,
 		"target", batch.TargetURL,
 		"depth", batch.EffectiveDepth(),
+		"start_path", batch.EffectiveStartPath(),
+		"max_routes", batch.EffectiveMaxRoutes(),
 	)
 
 	targetURL := targeturl.Normalize(batch.TargetURL)
@@ -77,7 +79,7 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	}
 
 	authHeaders := batch.AuthHeaders()
-	vectors, err := p.discovery.Discover(ctx, targetURL, authHeaders, batch.EffectiveDepth())
+	vectors, err := p.discovery.Discover(ctx, targetURL, authHeaders, discovery.OptionsFromBatch(batch))
 	if err != nil {
 		return fmt.Errorf("discovery: %w", err)
 	}

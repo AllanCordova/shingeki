@@ -127,6 +127,60 @@ describe('POST attacks/dispatch', function () {
         expect($dispatch?->depth)->toBe(AttackDepth::Quick);
     });
 
+    test('dispatches with start_path and max_routes scope', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once();
+
+        $this->postJson(attackDispatchUrl($project, $system), [
+            ...validAttackDispatchPayload(),
+            'depth' => 'quick',
+            'start_path' => 'products',
+            'max_routes' => 50,
+        ])
+            ->assertAccepted()
+            ->assertJsonPath('dispatch.depth', 'quick')
+            ->assertJsonPath('dispatch.start_path', '/products')
+            ->assertJsonPath('dispatch.max_routes', 50);
+
+        $dispatch = AttackDispatch::query()->where('system_id', $system->id)->first();
+
+        expect($dispatch?->start_path)->toBe('/products')
+            ->and($dispatch?->max_routes)->toBe(50);
+    });
+
+    test('defaults max_routes to 50 when start_path is set without max_routes', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once();
+
+        $this->postJson(attackDispatchUrl($project, $system), [
+            ...validAttackDispatchPayload(),
+            'start_path' => '/products',
+        ])
+            ->assertAccepted()
+            ->assertJsonPath('dispatch.start_path', '/products')
+            ->assertJsonPath('dispatch.max_routes', 50);
+    });
+
     test('returns unprocessable for invalid depth', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         Attack::factory()->for($admin)->create();

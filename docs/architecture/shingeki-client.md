@@ -65,10 +65,11 @@ components/
 | Fluxo | Onde |
 |-------|------|
 | Landing `/` | Pública; CTA para login ou área logada conforme cookie |
-| Dispatch | Checkboxes de responsabilidade/termos + `terms_version`; modal de profundidade (`quick`/`full`) ao clicar DAST/SAST |
+| Dispatch | Checkboxes de responsabilidade/termos + `terms_version`; modal de profundidade (`quick`/`full`) e escopo DAST (`start_path` / `max_routes`) ao clicar DAST/SAST |
 | Resultados | Lista com exclusão individual ou em massa (modais); badge de profundidade nos dispatches |
 | Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
 | Historico do sistema | Preview na página do sistema + `/historico-remediacao` com datepicker e filtro por tipo |
 | Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações, **paginação**, **filtro por autor** e import CSV |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` — proxy HTTP, payload catalogado, mapa de rotas; link no hero do sistema |
 | Notificações | Sininho no header (`NotificationBell`); poll 20s; badge unread + pending; toasts após dispatch/import CSV |
+| Sessao do alvo | Painel no sistema/arsenal; extensao Chrome (`shingeki-extension`) para SaaS; lab via popup; import manual |

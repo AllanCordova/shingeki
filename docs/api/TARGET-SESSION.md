@@ -2,23 +2,39 @@
 
 Conecta a sessao autenticada do alvo para o worker DAST acessar rotas protegidas. Voltar ao [indice da API](../API.md).
 
-## Fluxo recomendado (popup)
+## Fluxos de captura
+
+### 1. Extensao Chrome/Edge (recomendado para SaaS)
+
+Pacote [`shingeki-extension`](../../shingeki-extension/README.md).
+
+1. Client chama `POST .../target-session/connect/start`.
+2. Se a extensao estiver instalada e o modo for `external`, o client **arma** a extensao (`ticket`, `capture_api_base`, `target_origin`, `openUrl`) e a extensao abre o login em **aba normal** (nao popup).
+3. Usuario faz login na aba do alvo.
+4. Na extensao: **Capturar sessao** → a extensao resolve a aba do `target_origin` (mesmo se a aba ativa for outra) → `POST /api/target-session/capture/{ticket}`.
+5. O client atualiza o status via polling (2s / 120s) ou mensagem da extensao.
+
+Download piloto da extensao: `/extensions/shingeki-target-session.zip` (servido pelo client). Publicacao na Chrome Web Store e o caminho para clientes finais.
+
+### 2. Popup cooperativo (lab)
 
 1. Client chama `POST .../target-session/connect/start` com `client_origin`.
 2. Abre `popup_url` em janela separada.
 3. Usuario faz login no alvo.
 4. Sessao e capturada automaticamente:
    - **Mesma origem** (`target_url` = URL do client): pagina `/conectar-alvo`.
-   - **Alvo externo**: redirect para `/shingeki-capture.php?ticket=...` no alvo (incluido no lab).
+   - **Alvo externo cooperativo**: redirect para `/shingeki-capture.php?ticket=...` no alvo (incluido no lab).
 5. Popup fecha e o client atualiza o status via `postMessage`.
 
-Importacao manual via `POST .../target-session` tambem esta disponivel no client, para cookie ou token Bearer.
+### 3. Importacao manual
+
+`POST .../target-session` com cookie ou Bearer (UI avancada no painel).
 
 Base: `/api/projects/{project}/systems/{system}/target-session`
 
 ## POST .../target-session/connect/start
 
-Inicia captura via popup.
+Inicia captura via popup e/ou extensao.
 
 **Body (JSON):**
 
@@ -34,19 +50,36 @@ Inicia captura via popup.
   "ticket": "uuid",
   "mode": "same_origin",
   "popup_url": "http://localhost:3000/conectar-alvo?ticket=...",
-  "capture_callback_url": null
+  "open_url": "http://localhost:3000/conectar-alvo?ticket=...",
+  "capture_callback_url": null,
+  "capture_api_base": "http://127.0.0.1:8000/api",
+  "target_origin": "http://localhost:3000",
+  "client_origin": "http://localhost:3000",
+  "extension_supported": true,
+  "expires_at": "2026-07-14T12:00:00+00:00"
 }
 ```
 
-Para alvos externos, `mode` e `external` e `capture_callback_url` aponta para `/shingeki-capture.php` no alvo.
+| Campo | Uso |
+|-------|-----|
+| `popup_url` | Lab / same_origin: URL aberta pelo fluxo antigo (pode incluir `next` no lab) |
+| `open_url` | URL limpa para abrir com extensao (login sem depender do capture PHP) |
+| `capture_api_base` | Base da API usada pela extensao no POST publico |
+| `extension_supported` | Sempre `true` neste contrato (a UI decide se a extensao esta instalada) |
+
+Para alvos externos, `mode` e `external` e `capture_callback_url` aponta para `/shingeki-capture.php` no alvo (fluxo lab).
 
 No **shingeki-vulnerable-target**, apos login bem-sucedido em `/login.php`, a sessao PHP (`PHPSESSID`) e enviada automaticamente para a API quando o popup redireciona para `/shingeki-capture.php?ticket=...`. Rotas protegidas de teste: `/dashboard.php`, `/profile.php`, `/notes.php`, `/app/browse/{file}`.
 
 ## POST /api/target-session/capture/{ticket}
 
-Rota publica (sem Sanctum). Finaliza a captura usando o ticket de curta duracao.
+Rota publica (sem Sanctum). Finaliza a captura usando o ticket de curta duracao (15 min, uso unico).
+
+Usada pelo lab (`shingeki-capture.php`), pela pagina `/conectar-alvo` e pela **extensao**.
 
 **Body (JSON):** `cookie` ou `authorization`.
+
+CORS: origins de lab + padroes `chrome-extension://…` e localhost (ver `config/cors.php`).
 
 ## GET .../target-session
 
@@ -128,6 +161,12 @@ A resposta do dispatch inclui `target_session_connected: true|false`.
 
 ## Client web
 
-Na pagina do sistema, clique **Conectar ao alvo**, faca login na janela que abrir e aguarde a confirmacao.
+Na pagina do sistema: **Conectar ao alvo**.
 
-Campo opcional `login_url` no sistema sobrescreve a URL de login usada no popup externo.
+- Com extensao: login no site → Capturar na extensao.
+- Sem extensao / lab: popup automatico quando o alvo coopere.
+- Fallback: import manual Cookie/Bearer.
+
+Campo opcional `login_url` no sistema sobrescreve a URL de login (`open_url` / base do popup externo).
+
+Env opcional do client: `NEXT_PUBLIC_SHINGEKI_EXTENSION_ID` (so se quiser messaging direto; o content script em localhost nao precisa).

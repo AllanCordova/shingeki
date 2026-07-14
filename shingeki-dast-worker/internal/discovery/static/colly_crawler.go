@@ -28,9 +28,18 @@ func NewCollyCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.Attac
 	return &CollyCrawler{cfg: discoveryCfg, attack: attackCfg, logger: logger}
 }
 
-func (c *CollyCrawler) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
+func (c *CollyCrawler) Discover(
+	ctx context.Context,
+	targetURL string,
+	authHeaders map[string]string,
+	seedURL string,
+) ([]contracts.AttackVector, error) {
+	if strings.TrimSpace(seedURL) == "" {
+		seedURL = targetURL
+	}
+
 	queue := bfs.NewQueue()
-	queue.Enqueue(targetURL, 0)
+	queue.Enqueue(seedURL, 0)
 
 	var vectors []contracts.AttackVector
 	pagesVisited := 0
@@ -61,13 +70,15 @@ func (c *CollyCrawler) Discover(ctx context.Context, targetURL string, authHeade
 		pagesVisited++
 
 		for _, link := range links {
-			if bfs.SameOrigin(targetURL, link) {
-				queue.Enqueue(link, item.Depth+1)
+			if !bfs.IsAttackableDiscoveryURL(targetURL, link) {
+				continue
 			}
+			queue.Enqueue(link, item.Depth+1)
 		}
 	}
 
 	c.logger.Info("static discovery complete",
+		"seed", seedURL,
 		"pages", pagesVisited,
 		"vectors", len(vectors),
 	)
@@ -97,10 +108,10 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 			return
 		}
 		if resolved, ok := bfs.ResolveReference(pageURL, href); ok {
-			links = append(links, resolved)
-			if bfs.SameOrigin(pageURL, resolved) {
-				vectors = append(vectors, contracts.NewAttackVector(resolved, "GET", "URL_PATH"))
+			if bfs.IsBlockedDiscoveryURL(resolved) {
+				return
 			}
+			links = append(links, resolved)
 		}
 	})
 
@@ -130,6 +141,8 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 			vectors = append(vectors, vector)
 		}
 	})
+
+	vectors = append(vectors, contracts.NewAttackVector(pageURL, "GET", "URL_PATH"))
 
 	parsed, err := url.Parse(pageURL)
 	if err == nil && parsed.RawQuery != "" {

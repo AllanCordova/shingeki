@@ -7,6 +7,10 @@ import {
   useStoreTargetSession,
   useTargetSession,
 } from "@/lib/hooks/use-target-session";
+import {
+  armShingekiExtension,
+  pingShingekiExtension,
+} from "@/lib/extension/target-session-bridge";
 import { notify } from "@/lib/notify";
 import {
   Badge,
@@ -35,12 +39,21 @@ function isAllowedCaptureOrigin(
   );
 }
 
+function resolveCaptureApiBase(fromServer?: string): string {
+  if (fromServer) return fromServer.replace(/\/$/, "");
+  const media = process.env.NEXT_PUBLIC_MEDIA_BASE_URL?.replace(/\/$/, "");
+  if (media) return `${media}/api`;
+  return "http://127.0.0.1:8000/api";
+}
+
 export function TargetSessionPanel({
   projectId,
   systemId,
+  systemName,
 }: {
   projectId: string;
   systemId: string;
+  systemName?: string;
 }) {
   const { session, isLoading, error, refetch } = useTargetSession(
     projectId,
@@ -50,7 +63,10 @@ export function TargetSessionPanel({
   const revokeSession = useRevokeTargetSession(projectId, systemId);
   const storeSession = useStoreTargetSession(projectId, systemId);
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [manualAuthType, setManualAuthType] = useState<"cookie" | "bearer">("cookie");
+  const [manualAuthType, setManualAuthType] = useState<"cookie" | "bearer">(
+    "cookie",
+  );
+  const [extensionReady, setExtensionReady] = useState<boolean | null>(null);
   const allowedOriginsRef = useRef<string[]>([window.location.origin]);
   const pollTimerRef = useRef<number | null>(null);
 
@@ -68,7 +84,36 @@ export function TargetSessionPanel({
   };
 
   useEffect(() => {
+    const onReady = (event: MessageEvent) => {
+      if (
+        event.source === window &&
+        event.data?.source === "shingeki-extension" &&
+        event.data?.type === "shingeki.ready"
+      ) {
+        setExtensionReady(true);
+      }
+    };
+    window.addEventListener("message", onReady);
+    void pingShingekiExtension().then(setExtensionReady);
+    return () => window.removeEventListener("message", onReady);
+  }, []);
+
+  useEffect(() => {
     const onMessage = (event: MessageEvent) => {
+      if (
+        event.data?.type === TARGET_SESSION_CONNECTED ||
+        (event.data?.source === "shingeki-extension" &&
+          event.data?.type === TARGET_SESSION_CONNECTED)
+      ) {
+        if (
+          event.origin === window.location.origin ||
+          isAllowedCaptureOrigin(event.origin, allowedOriginsRef.current)
+        ) {
+          handleConnected();
+        }
+        return;
+      }
+
       if (event.data?.type !== TARGET_SESSION_CONNECTED) return;
       if (!isAllowedCaptureOrigin(event.origin, allowedOriginsRef.current)) {
         return;
@@ -110,6 +155,42 @@ export function TargetSessionPanel({
         ...(result.target_origin ? [result.target_origin] : []),
       ];
 
+      const hasExtension =
+        extensionReady === true || (await pingShingekiExtension());
+      setExtensionReady(hasExtension);
+
+      if (hasExtension && result.mode === "external") {
+        const apiBase = resolveCaptureApiBase(result.capture_api_base);
+        const openUrl = result.open_url || result.popup_url;
+        const expiresAt = result.expires_at
+          ? Date.parse(result.expires_at)
+          : Date.now() + 15 * 60 * 1000;
+
+        const armed = await armShingekiExtension({
+          ticket: result.ticket,
+          apiBase,
+          targetOrigin: result.target_origin ?? "",
+          clientOrigin: result.client_origin ?? window.location.origin,
+          openUrl,
+          systemName,
+          expiresAt,
+        });
+
+        if (!armed.ok) {
+          notify.error(
+            armed.error ??
+              "Extensao detectada, mas falhou ao armar a captura.",
+          );
+          return;
+        }
+
+        startCapturePolling();
+        notify.success(
+          "Aba do alvo aberta. Faca login la, depois clique no icone Shingeki → Capturar sessao.",
+        );
+        return;
+      }
+
       const popup = window.open(
         result.popup_url,
         "shingeki-target-login",
@@ -125,7 +206,9 @@ export function TargetSessionPanel({
 
       if (result.mode === "external") {
         notify.success(
-          "Faca login na janela aberta. A sessao sera capturada automaticamente.",
+          hasExtension
+            ? "Faca login na janela aberta."
+            : "Lab: faca login e aguarde o capture. Para SaaS (Bling etc.), instale a extensao Shingeki.",
         );
       } else {
         notify.success("Faca login na janela aberta para conectar a sessao.");
@@ -140,7 +223,7 @@ export function TargetSessionPanel({
       await revokeSession.revokeSession();
       notify.success("Sessao do alvo removida.");
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel remover a sessao do alvo.");
+      notify.fromApiError(err, "Nao foi possivel remover a sessao.");
     }
   };
 
@@ -149,14 +232,54 @@ export function TargetSessionPanel({
       <CardHeader>
         <CardTitle>Sessao do alvo</CardTitle>
         <CardDescription>
-          Conecte sua sessao autenticada para que o scan acesse areas protegidas do
-          sistema. Uma janela separada abrira para voce fazer login — sem copiar
-          cookies manualmente.
+          Conecte a sessao autenticada para o scan acessar areas protegidas.
+          Em sites externos (SaaS), use a extensao Chrome/Edge Shingeki; no lab
+          vulneravel o popup ainda captura sozinho.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         {error ? <ErrorShow error={error} onRetry={() => refetch()} /> : null}
         {startConnect.error ? <ErrorShow error={startConnect.error} /> : null}
+
+        {extensionReady === false ? (
+          <div className="flex flex-col gap-2 rounded-app border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+            <p>
+              Extensao nao detectada. Para Bling e outros SaaS, instale a
+              extensao Chrome/Edge:
+            </p>
+            <ol className="list-decimal space-y-1 pl-4">
+              <li>
+                <a
+                  href="/extensions/shingeki-target-session.zip"
+                  className="text-primary underline hover:no-underline"
+                  download
+                >
+                  Baixar shingeki-target-session.zip
+                </a>
+              </li>
+              <li>
+                Extraia a pasta e abra{" "}
+                <code className="font-mono text-xs">chrome://extensions</code>
+              </li>
+              <li>
+                Modo do desenvolvedor → Carregar sem compactacao → selecione a
+                pasta extraida
+              </li>
+              <li>Recarregue esta pagina do Shingeki</li>
+            </ol>
+            <p>
+              Em producao o caminho ideal e publicar na Chrome Web Store; o ZIP
+              serve para instalação local / piloto.
+            </p>
+          </div>
+        ) : null}
+        {extensionReady === true ? (
+          <p className="text-xs text-muted-foreground">
+            Extensao detectada. Conectar abre o login em aba normal; depois use
+            o icone Shingeki → Capturar sessao (nao precisa estar na aba do
+            Shingeki).
+          </p>
+        ) : null}
 
         {isLoading ? (
           <Loading label="Carregando sessao..." />
@@ -197,8 +320,8 @@ export function TargetSessionPanel({
         ) : (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              Clique abaixo, faca login na janela que abrir e aguarde a confirmacao
-              de conexao.
+              1) Conectar ao alvo (abre aba de login) → 2) faca login → 3) icone
+              da extensao → <strong>Capturar sessao</strong>.
             </p>
             <Button
               type="button"
@@ -235,14 +358,15 @@ export function TargetSessionPanel({
                   })
                   .then(() => notify.success("Sessao salva com sucesso."))
                   .catch((err) =>
-                    notify.fromApiError(err, "Nao foi possivel salvar a sessao."),
+                    notify.fromApiError(
+                      err,
+                      "Nao foi possivel salvar a sessao.",
+                    ),
                   );
               }}
             >
               <p className="text-sm text-muted-foreground">
-                Use quando o login automatico nao estiver disponivel. Informe o
-                cookie ou token que o navegador envia ao acessar o sistema
-                autenticado.
+                Fallback sem extensao: cole o Cookie ou Bearer do DevTools.
               </p>
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-foreground">
@@ -253,7 +377,9 @@ export function TargetSessionPanel({
                   className="w-full rounded-app border border-border bg-surface px-3 py-2 text-sm"
                   value={manualAuthType}
                   onChange={(event) =>
-                    setManualAuthType(event.target.value as "cookie" | "bearer")
+                    setManualAuthType(
+                      event.target.value as "cookie" | "bearer",
+                    )
                   }
                 >
                   <option value="cookie">Cookie</option>
@@ -276,7 +402,11 @@ export function TargetSessionPanel({
                   required
                 />
               </label>
-              <Button type="submit" variant="outline" isLoading={storeSession.isLoading}>
+              <Button
+                type="submit"
+                variant="outline"
+                isLoading={storeSession.isLoading}
+              >
                 Salvar sessao
               </Button>
             </form>

@@ -46,6 +46,8 @@ flowchart LR
   "event": "attack.dispatch.batch",
   "scan_type": "DAST",
   "depth": "full",
+  "start_path": "/products",
+  "max_routes": 50,
   "system_id": "uuid",
   "user_id": "uuid",
   "target_url": "https://target.example",
@@ -64,6 +66,8 @@ flowchart LR
 ```
 
 `depth` (`quick` | `full`) ajusta discovery: **quick** usa limites menores e desliga Rod; **full** (padrão) usa `DISCOVERY_MAX_*`.
+
+`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica.
 
 ### Saída: `attacks.results` (uma mensagem por achado)
 
@@ -84,7 +88,7 @@ A API consome essa fila via `attacks:consume-results` (container **`api-consumer
 
 - **Estático**: Colly segue links e formulários em HTML tradicional.
 - **Dinâmico** (opcional): headless Chromium (Rod) para rotas renderizadas no cliente.
-- **BFS**: limita profundidade e evita explosão de URLs no lab. O campo `depth` do batch (`quick`/`full`) sobrescreve `MaxDepth`/`MaxPages` e o uso do Rod por dispatch.
+- **BFS**: limita profundidade e evita explosão de URLs no lab. O campo `depth` do batch (`quick`/`full`) sobrescreve `MaxDepth`/`MaxPages` e o uso do Rod por dispatch. `start_path` define a semente do BFS; `max_routes` sobrescreve `MaxPages` para retestes focados.
 
 ## Execução de ataques
 

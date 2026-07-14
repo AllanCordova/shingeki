@@ -4,7 +4,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
 import { ATTACK_ACKNOWLEDGMENT } from "@/lib/contracts/attack-acknowledgment";
-import type { AttackDepth } from "@/lib/contracts/attack";
+import type {
+  AttackDepth,
+  AttackDiscoveryScope,
+} from "@/lib/contracts/attack";
 import { queryKeys } from "@/lib/query-keys";
 import type { AttackDispatchResponse } from "@/lib/contracts";
 
@@ -19,7 +22,6 @@ function dispatchPath(
   return scanType === "sast" ? `${base}/sast` : base;
 }
 
-/** Dispatches DAST/SAST catalog after explicit attack acknowledgment. */
 export function useDispatchAttack(projectId: string, systemId: string) {
   const queryClient = useQueryClient();
 
@@ -27,11 +29,15 @@ export function useDispatchAttack(projectId: string, systemId: string) {
     mutationFn: async ({
       scanType,
       depth,
+      start_path,
+      max_routes,
       acceptedResponsibility,
       acceptedLegalTerms,
     }: {
       scanType: AttackScanType;
       depth: AttackDepth;
+      start_path?: string;
+      max_routes?: number;
       acceptedResponsibility: boolean;
       acceptedLegalTerms: boolean;
     }) => {
@@ -42,6 +48,8 @@ export function useDispatchAttack(projectId: string, systemId: string) {
           accepted_legal_terms: acceptedLegalTerms,
           terms_version: ATTACK_ACKNOWLEDGMENT.termsVersion,
           depth,
+          ...(start_path ? { start_path } : {}),
+          ...(typeof max_routes === "number" ? { max_routes } : {}),
         },
       );
       return { ...data, scanType };
@@ -65,10 +73,13 @@ export function useDispatchAttack(projectId: string, systemId: string) {
         acceptedLegalTerms: boolean;
       },
       depth: AttackDepth = "full",
+      scope: AttackDiscoveryScope = {},
     ) =>
       mutation.mutateAsync({
         scanType,
         depth,
+        start_path: scope.start_path,
+        max_routes: scope.max_routes,
         acceptedResponsibility: acknowledgment.acceptedResponsibility,
         acceptedLegalTerms: acknowledgment.acceptedLegalTerms,
       }),

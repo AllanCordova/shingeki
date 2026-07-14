@@ -44,6 +44,9 @@ test('starts external popup capture flow with login redirect', function () {
     $response
         ->assertOk()
         ->assertJsonPath('mode', 'external')
+        ->assertJsonPath('open_url', 'http://127.0.0.1:8090/login.php')
+        ->assertJsonPath('extension_supported', true)
+        ->assertJsonPath('capture_api_base', fn ($url) => str_ends_with((string) $url, '/api'))
         ->assertJsonPath('popup_url', fn ($url) => str_contains($url, 'login.php')
             && str_contains($url, 'next=')
             && str_contains(urldecode($url), '/shingeki-capture.php'))

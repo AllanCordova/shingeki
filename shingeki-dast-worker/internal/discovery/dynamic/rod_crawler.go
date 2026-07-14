@@ -15,6 +15,7 @@ import (
 
 	"github.com/shingeki/dast-worker/internal/config"
 	"github.com/shingeki/dast-worker/internal/contracts"
+	"github.com/shingeki/dast-worker/internal/discovery/bfs"
 )
 
 type RodCrawler struct {
@@ -30,9 +31,17 @@ func NewRodCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.AttackC
 	return &RodCrawler{cfg: discoveryCfg, attack: attackCfg, logger: logger}
 }
 
-func (r *RodCrawler) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
+func (r *RodCrawler) Discover(
+	ctx context.Context,
+	targetURL string,
+	authHeaders map[string]string,
+	seedURL string,
+) ([]contracts.AttackVector, error) {
 	if !r.cfg.RodEnabled {
 		return nil, nil
+	}
+	if strings.TrimSpace(seedURL) == "" {
+		seedURL = targetURL
 	}
 
 	launchCtx, launchCancel := context.WithTimeout(ctx, r.cfg.BrowserLaunchTimeout)
@@ -73,7 +82,9 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string, authHeaders
 		}
 
 		key := method + " " + route
-		vectors[key] = vector
+		if bfs.IsAttackableDiscoveryURL(targetURL, route) {
+			vectors[key] = vector
+		}
 
 		if err := hctx.LoadResponse(http.DefaultClient, true); err != nil {
 			r.logger.Warn("hijack load response failed", "url", route, "error", err)
@@ -94,8 +105,8 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string, authHeaders
 		}
 	}
 
-	if err := page.Navigate(targetURL); err != nil {
-		return nil, fmt.Errorf("navigate %q: %w", targetURL, err)
+	if err := page.Navigate(seedURL); err != nil {
+		return nil, fmt.Errorf("navigate %q: %w", seedURL, err)
 	}
 
 	_ = page.WaitLoad()
@@ -109,7 +120,7 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string, authHeaders
 		result = append(result, v)
 	}
 
-	r.logger.Info("dynamic discovery complete", "vectors", len(result), "target", targetURL)
+	r.logger.Info("dynamic discovery complete", "vectors", len(result), "seed", seedURL, "target", targetURL)
 	return result, nil
 }
 
