@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\RemediationRunType;
 use App\Http\Controllers\Concerns\FormatsPagination;
 use App\Http\Controllers\Concerns\ResolvesRemediationDispatch;
 use App\Http\Requests\RemediateSystemAi;
 use App\Models\Project;
 use App\Models\System;
 use App\Services\Ai\AiRemediationService;
+use App\Services\Remediation\RemediationHistoryService;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
@@ -18,6 +20,7 @@ class AiRemediationController extends Controller
 
     public function __construct(
         private readonly AiRemediationService $aiRemediationService,
+        private readonly RemediationHistoryService $history,
     ) {}
 
     public function remediate(RemediateSystemAi $request, Project $project, System $system): JsonResponse
@@ -36,10 +39,11 @@ class AiRemediationController extends Controller
             return $this->missingDispatchResponse();
         }
 
+        $page = $request->page();
         $results = $this->paginatedDispatchResults(
             $system,
             $dispatch,
-            $request->page(),
+            $page,
             $request->perPage(),
         );
 
@@ -59,6 +63,18 @@ class AiRemediationController extends Controller
             return response()->json([
                 'message' => $exception->getMessage(),
             ], 503);
+        }
+
+        if ($page === 1) {
+            $this->history->recordRun(
+                $system,
+                $dispatch,
+                RemediationRunType::AiSuggestion,
+                count($generated['findings']),
+                $request->user(),
+                $generated['provider'],
+                $generated['model'],
+            );
         }
 
         return response()->json([

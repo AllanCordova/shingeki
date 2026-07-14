@@ -35,15 +35,12 @@ const MESSAGE_TRANSLATIONS: Record<string, string> = {
   "Invalid credentials.": "Credenciais invalidas.",
   "Unauthenticated.": "Sessao expirada. Faca login novamente.",
   "This action is unauthorized.": "Voce nao tem permissao para esta acao.",
-  "Signature token not found in system index.":
-    "Token de assinatura nao encontrado no HTML do sistema.",
-  "Signature not found.": "Assinatura nao encontrada.",
-  "No signature token found for this system.":
-    "Nenhum token de assinatura encontrado para este sistema.",
-  "Signature token is not permitted for attacks.":
-    "A assinatura ainda nao esta permitida. Valide a instalacao no alvo.",
-  "Signature token has expired.":
-    "O token de assinatura expirou. Gere um novo token.",
+  "You must accept responsibility for authorized testing.":
+    "Voce deve aceitar a responsabilidade pelos testes autorizados.",
+  "You must accept the attack authorization terms.":
+    "Voce deve aceitar os termos de autorizacao de ataque.",
+  "Acknowledgment terms version is outdated. Refresh and try again.":
+    "A versao dos termos de aceite esta desatualizada. Atualize a pagina e tente novamente.",
   "No AI provider is configured. Set GEMINI_API_KEY or GROQ_API_KEY.":
     "IA nao configurada no servidor. Defina GEMINI_API_KEY ou GROQ_API_KEY.",
   "AI remediation suggestions generated.":

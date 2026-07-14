@@ -21,7 +21,7 @@ O token é retornado em `POST /api/auth/register` e `POST /api/auth/login` (Lara
 
 | Tipo | `Content-Type` | Uso |
 |------|----------------|-----|
-| JSON | `application/json` | Auth, assinaturas, disparo de ataque |
+| JSON | `application/json` | Auth, disparo de ataque (com aceite), demais rotas JSON |
 | Multipart | `multipart/form-data` | Projetos e sistemas **com** capa opcional (`cover` ou `cover_upload_id`); criação/atualização sem capa pode usar JSON |
 
 ## Respostas de erro comuns
@@ -29,7 +29,7 @@ O token é retornado em `POST /api/auth/register` e `POST /api/auth/login` (Lara
 | Status | Situação |
 |--------|----------|
 | `401` | Token ausente, inválido ou credenciais incorretas no login |
-| `403` | Sem permissão (policy), papel insuficiente (`USER` em rotas de catálogo) ou assinatura ausente/expirada/não permitida no dispatch |
+| `403` | Sem permissão (policy) ou papel insuficiente (`USER` em rotas de catálogo) |
 | `404` | Recurso inexistente ou fora do escopo do usuário |
 | `422` | Validação (`errors` por campo) ou regra de negócio (ex.: capa em uso na biblioteca) |
 
@@ -61,7 +61,7 @@ Use esta página como índice. Detalhes de cada módulo ficam nos guias abaixo (
 
 | Módulo | Guia |
 |--------|------|
-| Assinaturas digitais | [api/SIGNATURES.md](api/SIGNATURES.md) |
+| Aceite de responsabilidade (dispatch) | [api/ATTACK-ACKNOWLEDGMENT.md](api/ATTACK-ACKNOWLEDGMENT.md) |
 | Sessão do alvo (DAST autenticado) | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Ataques DAST/SAST e resultados | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
 | Arsenal manual (proxy) | [api/MANUAL-PROXY.md](api/MANUAL-PROXY.md) |
@@ -103,9 +103,6 @@ Use esta página como índice. Detalhes de cada módulo ficam nos guias abaixo (
 - `GET|PUT|DELETE /api/projects/{project}`
 - `GET|POST /api/projects/{project}/systems`
 - `GET|PUT|DELETE /api/projects/{project}/systems/{system}`
-- `POST /api/projects/{project}/systems/{system}/signatures/generate`
-- `POST /api/projects/{project}/systems/{system}/signatures/validate`
-- `POST /api/projects/{project}/systems/{system}/signatures/revoke`
 - `GET /api/projects/{project}/systems/{system}/target-session`
 - `POST /api/projects/{project}/systems/{system}/target-session`
 - `POST /api/projects/{project}/systems/{system}/target-session/connect/start`

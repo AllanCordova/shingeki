@@ -85,7 +85,7 @@ export function DispatchesList({
             <ul className="flex flex-col divide-y divide-border">
               {dispatches.map((dispatch) => (
                 <li key={dispatch.id}>
-                  <div className="flex items-center justify-between gap-4 py-3">
+                  <div className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <Link
                       href={`/projetos/${projectId}/sistemas/${systemId}/resultados/${dispatch.id}`}
                       className="min-w-0 flex-1 transition-colors hover:opacity-80"
@@ -96,19 +96,38 @@ export function DispatchesList({
                             {formatDate(dispatch.dispatched_at)}
                           </span>
                           <ScanTypeBadge scanType={dispatch.scan_type} />
+                          {dispatch.depth ? (
+                            <Badge tone="neutral">
+                              {dispatch.depth === "quick"
+                                ? "Rapido"
+                                : "Completo"}
+                            </Badge>
+                          ) : null}
+                          <Badge
+                            tone={
+                              dispatch.status === "completed"
+                                ? "success"
+                                : "warning"
+                            }
+                          >
+                            {dispatch.status === "completed"
+                              ? "Concluido"
+                              : "Processando"}
+                          </Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">
                           {dispatch.attacks_count} ataque(s)
                           {dispatch.findings_count !== null
                             ? ` · ${dispatch.findings_count} achado(s)`
                             : ""}
-                          {dispatch.probes_count !== null && dispatch.probes_count > 0
+                          {dispatch.probes_count !== null &&
+                          dispatch.probes_count > 0
                             ? ` · ${dispatch.probes_count} teste(s)`
                             : ""}
                         </span>
                       </div>
                     </Link>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Link
                         href={`/projetos/${projectId}/sistemas/${systemId}/resultados/${dispatch.id}/grafico`}
                         className="inline-flex h-8 items-center justify-center rounded-app border border-border bg-surface px-2 text-foreground transition-colors hover:bg-surface-muted"
@@ -117,15 +136,6 @@ export function DispatchesList({
                       >
                         <BarChartIcon className="h-4 w-4" />
                       </Link>
-                      <Badge
-                        tone={
-                          dispatch.status === "completed" ? "success" : "warning"
-                        }
-                      >
-                        {dispatch.status === "completed"
-                          ? "Concluido"
-                          : "Processando"}
-                      </Badge>
                       {dispatch.status === "completed" ? (
                         <Button
                           variant="outline"

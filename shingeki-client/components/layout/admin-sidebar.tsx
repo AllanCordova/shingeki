@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/icons";
 import { ProjectsSidebarNav } from "@/components/layout/projects-sidebar-nav";
 import { SidebarHeader } from "@/components/layout/sidebar-header";
+import { AppSidebarFrame } from "@/components/layout/app-sidebar-frame";
 
 const adminNavItems = [
   {
@@ -54,14 +55,14 @@ function NavItem({
       aria-label={label}
       className={cn(
         "flex items-center rounded-app text-sm transition-colors",
-        collapsed ? "h-10 justify-center px-0" : "gap-3 px-3 py-2",
+        collapsed ? "h-10 justify-center px-0 max-lg:gap-3 max-lg:px-3 max-lg:py-2 max-lg:justify-start" : "gap-3 px-3 py-2",
         active
           ? "bg-primary/10 font-medium text-primary"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed ? <span className="truncate">{label}</span> : null}
+      <span className={cn("truncate", collapsed && "lg:hidden")}>{label}</span>
     </Link>
   );
 }
@@ -71,12 +72,7 @@ export function AdminSidebar() {
   const collapsed = useUiStore((state) => state.adminSidebarCollapsed);
 
   return (
-    <aside
-      className={cn(
-        "sticky top-16 flex h-[calc(100vh-4rem)] shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200",
-        collapsed ? "w-16" : "w-64",
-      )}
-    >
+    <AppSidebarFrame>
       <SidebarHeader />
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
@@ -101,6 +97,6 @@ export function AdminSidebar() {
           <ProjectsSidebarNav collapsed={collapsed} />
         </div>
       </nav>
-    </aside>
+    </AppSidebarFrame>
   );
 }

@@ -5,7 +5,6 @@ export type GuidedSetupStep =
   | "project"
   | "system"
   | "target"
-  | "signature"
   | "dast";
 
 export interface GuidedSetupSession {
@@ -26,7 +25,6 @@ export const GUIDED_SETUP_STEP_ORDER: GuidedSetupStep[] = [
   "project",
   "system",
   "target",
-  "signature",
   "dast",
 ];
 
@@ -49,11 +47,6 @@ export const GUIDED_SETUP_STEPS: Record<
     description: "Capture a sessao autenticada para o DAST ir mais fundo.",
     anchorId: "guided-target-session",
   },
-  signature: {
-    title: "Validar assinatura",
-    description: "Autorize legalmente o disparo de testes no alvo.",
-    anchorId: "guided-signature-panel",
-  },
   dast: {
     title: "Primeiro DAST",
     description: "Dispare o catalogo de ataques e acompanhe os resultados.",
@@ -68,13 +61,29 @@ function dispatchGuidedSetupSessionChange(session: GuidedSetupSession) {
   );
 }
 
+function normalizeGuidedSetupStep(step: unknown): GuidedSetupStep {
+  if (step === "signature") return "dast";
+  if (
+    step === "project" ||
+    step === "system" ||
+    step === "target" ||
+    step === "dast"
+  ) {
+    return step;
+  }
+  return DEFAULT_SESSION.step;
+}
+
 export function readGuidedSetupSession(): GuidedSetupSession {
   if (typeof window === "undefined") return DEFAULT_SESSION;
 
   try {
     const raw = window.sessionStorage.getItem(SESSION_KEY);
     if (!raw) return DEFAULT_SESSION;
-    return { ...DEFAULT_SESSION, ...JSON.parse(raw) } as GuidedSetupSession;
+    const parsed = { ...DEFAULT_SESSION, ...JSON.parse(raw) } as GuidedSetupSession & {
+      step: unknown;
+    };
+    return { ...parsed, step: normalizeGuidedSetupStep(parsed.step) };
   } catch {
     return DEFAULT_SESSION;
   }
@@ -227,9 +236,7 @@ export function guidedSetupResumePath(session: GuidedSetupSession): string | nul
   }
 
   if (
-    (session.step === "target" ||
-      session.step === "signature" ||
-      session.step === "dast") &&
+    (session.step === "target" || session.step === "dast") &&
     session.projectId &&
     session.systemId
   ) {

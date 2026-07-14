@@ -257,11 +257,37 @@ Abre um pull request no GitHub com correções geradas pela IA para achados **SA
 | `GITHUB_REPOSITORY_SOURCE_PREFIX` | Prefixo no repo GitHub quando o SAST escaneia só a subpasta (ex.: `shingeki-vulnerable-target`) |
 | `GITHUB_REMEDIATION_BRANCH_PREFIX` | Prefixo da branch (padrão `fix-security`) |
 
+## Historico do sistema
+
+`GET /api/projects/{project}/systems/{system}/remediation-history`
+
+Timeline unificada de eventos do sistema (ataques, remediacoes e PRs do fluxo Shingeki):
+
+| Tipo | Origem |
+|------|--------|
+| `scan_completed` / `scan_clean` | Disparos concluidos |
+| `catalog_suggestion` | Clique em **Gerar correcoes** (1 evento por acao, pagina 1) |
+| `ai_suggestion` | Clique em **Sugerir com IA** (1 evento por acao, nao por achado) |
+| `github_pr` | PRs abertos via remediacao GitHub |
+
+**Query:**
+
+| Param | Padrao | Descricao |
+|-------|--------|-----------|
+| `page` | `1` | Pagina |
+| `per_page` | `25` | Itens (max. 100). Preview no client usa 5; pagina completa usa 30 |
+| `from` | — | Data inicial (`YYYY-MM-DD`) |
+| `to` | — | Data final (`YYYY-MM-DD`) |
+| `type` | — | `catalog_suggestion` (remediacao comum), `ai_suggestion`, `attack` (`scan_completed`/`scan_clean`), `github_pr` |
+
+**Resposta:** `{ events, pagination }`.
+
 ## Client web
 
-No formulário do sistema, selecione as stacks. Na página do sistema ou do disparo:
+No formulario do sistema, selecione as stacks. Na pagina do sistema ou do disparo:
 
-- **Gerar correções** — catálogo síncrono (`POST .../remediate`).
-- **Sugerir com IA** — LLM com toggle entre visões *Shingeki remediações* e *IA*.
-- **Abrir PR no GitHub** — preview com diff (`POST .../remediate/github-pr/preview`), depois confirmação (`POST .../remediate/github-pr`) para achados SAST com sugestão IA válida.
-- **Remover** — excluir disparo individual ou todos (modais de confirmação).
+- **Gerar correcoes** — catalogo sincrono (`POST .../remediate`).
+- **Sugerir com IA** — LLM com toggle entre visoes *Shingeki remediacoes* e *IA*.
+- **Abrir PR no GitHub** — preview com diff (`POST .../remediate/github-pr/preview`), depois confirmacao (`POST .../remediate/github-pr`) para achados SAST com sugestao IA valida.
+- **Historico do sistema** — preview com 5 eventos na pagina do sistema; rota `/historico-remediacao` com paginacao (30), filtro de datas (datepicker) e filtro por tipo. Inclui scans, correcoes, IA e PRs abertos via remediacao GitHub do produto (nao o historico completo do repositorio).
+- **Remover** — excluir disparo individual ou todos (modais de confirmacao).

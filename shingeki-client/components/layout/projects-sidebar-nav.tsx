@@ -18,6 +18,17 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
   const { sidebar, isLoading } = useSidebarNavigation();
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia("(min-width: 1024px)");
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  const effectiveCollapsed = isDesktop && collapsed;
 
   const totalPages = Math.max(1, Math.ceil(sidebar.length / SIDEBAR_NAV_PAGE_SIZE));
 
@@ -54,7 +65,7 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
 
   const sectionActive = pathname.startsWith("/projetos");
 
-  if (collapsed) {
+  if (effectiveCollapsed) {
     return (
       <Link
         href="/projetos"

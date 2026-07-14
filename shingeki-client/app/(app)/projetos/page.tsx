@@ -15,6 +15,7 @@ import {
   Button,
   EmptyState,
   ErrorShow,
+  LayoutTemplateIcon,
   Loading,
   Modal,
 } from "@/components/ui";
@@ -49,7 +50,7 @@ export default function ProjetosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Projetos
@@ -58,10 +59,16 @@ export default function ProjetosPage() {
             Organize seus sistemas e testes de seguranca.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ReopenGuidedSetupButton />
-          <Button variant="outline" onClick={() => openModal(TEMPLATE_MODAL_KEY)}>
-            Usar template
+          <Button
+            variant="outline"
+            className="px-2.5"
+            onClick={() => openModal(TEMPLATE_MODAL_KEY)}
+            aria-label="Usar template"
+            title="Usar template"
+          >
+            <LayoutTemplateIcon className="h-4 w-4" />
           </Button>
           <AddActionButton
             onClick={handleOpen}

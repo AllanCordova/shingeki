@@ -15,7 +15,6 @@ use App\Http\Controllers\ManualProxyController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RemediationController;
 use App\Http\Controllers\RemediationHistoryController;
-use App\Http\Controllers\SignatureController;
 use App\Http\Controllers\StackController;
 use App\Http\Controllers\SystemController;
 use App\Http\Controllers\SystemResultController;
@@ -65,12 +64,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('projects', ProjectController::class);
     Route::get('projects/{project}/dashboard', [ProjectController::class, 'dashboard']);
     Route::apiResource('projects.systems', SystemController::class);
-
-    Route::prefix('projects/{project}/systems/{system}/signatures')->group(function () {
-        Route::post('/generate', [SignatureController::class, 'generate']);
-        Route::post('/validate', [SignatureController::class, 'validate']);
-        Route::post('/revoke', [SignatureController::class, 'revoke']);
-    });
 
     Route::prefix('projects/{project}/systems/{system}/target-session')->group(function () {
         Route::get('/', [TargetSessionController::class, 'show']);

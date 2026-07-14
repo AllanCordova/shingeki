@@ -46,7 +46,7 @@ export function ProjectTemplatePicker({
           buildSystemCreateFormData({
             name: template.system.name,
             target_url: template.system.target_url,
-            repository_url: template.system.repository_url ?? "",
+            repository_url: template.system.repository_url,
             stack_ids: stackIds,
           }),
         );

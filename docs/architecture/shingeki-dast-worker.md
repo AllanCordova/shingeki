@@ -16,7 +16,7 @@ flowchart LR
 1. **Consumer** lê mensagem batch da fila de entrada.
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
 3. **Attack** aplica injectors conforme categoria e local do vetor.
-4. **Evidence** confirma vulnerabilidade (regex, diff, timing, diálogo XSS com Rod quando habilitado).
+4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing; diff de corpo só para categorias sem validador específico).
 5. **Publisher** envia uma mensagem por achado na fila de saída.
 
 ## Pacotes `internal/`
@@ -32,7 +32,7 @@ flowchart LR
 | `discovery/bfs` | Fila de URLs/fronteira de exploração |
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
-| `evidence` | Motor de validação (regex, diff de corpo, timing) |
+| `evidence` | Motor de validação (regex, markers de path traversal, timing; diff genérico limitado) |
 | `evidence/xss` | Rod para diálogo/alerta em XSS |
 | `orchestrator` | Liga discovery → attack → evidence → publish |
 | `oast` | Cliente opcional para cenários out-of-band |
@@ -44,6 +44,8 @@ flowchart LR
 ```json
 {
   "event": "attack.dispatch.batch",
+  "scan_type": "DAST",
+  "depth": "full",
   "system_id": "uuid",
   "user_id": "uuid",
   "target_url": "https://target.example",
@@ -60,6 +62,8 @@ flowchart LR
   "dispatched_at": "2026-05-28T12:00:00Z"
 }
 ```
+
+`depth` (`quick` | `full`) ajusta discovery: **quick** usa limites menores e desliga Rod; **full** (padrão) usa `DISCOVERY_MAX_*`.
 
 ### Saída: `attacks.results` (uma mensagem por achado)
 
@@ -80,7 +84,7 @@ A API consome essa fila via `attacks:consume-results` (container **`api-consumer
 
 - **Estático**: Colly segue links e formulários em HTML tradicional.
 - **Dinâmico** (opcional): headless Chromium (Rod) para rotas renderizadas no cliente.
-- **BFS**: limita profundidade e evita explosão de URLs no lab.
+- **BFS**: limita profundidade e evita explosão de URLs no lab. O campo `depth` do batch (`quick`/`full`) sobrescreve `MaxDepth`/`MaxPages` e o uso do Rod por dispatch.
 
 ## Execução de ataques
 
@@ -90,5 +94,5 @@ A API consome essa fila via `attacks:consume-results` (container **`api-consumer
 
 ## Relação com a API e o alvo
 
-- A API publica o batch após validar assinatura no HTML do alvo ([shingeki-vulnerable-target](shingeki-vulnerable-target.md)).
-- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já validado pela API no dispatch.
+- A API publica o batch após validar o aceite de responsabilidade no dispatch ([ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md)) e a policy do sistema.
+- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já autorizado pela API no dispatch. Alvo de lab: [shingeki-vulnerable-target](shingeki-vulnerable-target.md).

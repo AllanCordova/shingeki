@@ -5,12 +5,25 @@ export { CoverLibraryPicker } from "./cover-library-picker";
 export { CoverStockPicker } from "./cover-stock-picker";
 export { StackSelect } from "./stack-select";
 export { AddActionButton } from "./add-action-button";
-export { ImageUploadIcon, PlusIcon, TrashIcon, EyeIcon, EyeOffIcon, BellIcon, BarChartIcon, StarIcon } from "./icons";
+export {
+  ImageUploadIcon,
+  PlusIcon,
+  TrashIcon,
+  EyeIcon,
+  EyeOffIcon,
+  BellIcon,
+  BarChartIcon,
+  StarIcon,
+  MapIcon,
+  LayoutTemplateIcon,
+  CheckCheckIcon,
+} from "./icons";
 export { UserAvatarLink } from "./user-avatar-link";
 export { Button } from "./button";
 export { Checkbox } from "./checkbox";
 export { Input } from "./input";
 export { Select } from "./select";
+export { DatePicker } from "./date-picker";
 export { Textarea } from "./textarea";
 export { Label } from "./label";
 export { Field } from "./field";

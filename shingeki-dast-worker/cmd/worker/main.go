@@ -39,6 +39,7 @@ func main() {
 	discoveryEngine := discovery.NewCompositeEngine(cfg, logger)
 	attackEngine := attack.NewRestyEngine(cfg.Attack, logger)
 	evidenceEngine := evidence.NewCompositeValidator(
+		evidence.NewPathTraversalValidator(),
 		evidence.NewRegexValidator(),
 		evidence.NewDiffValidator(cfg.Evidence),
 		evidence.NewTimingValidator(cfg.Evidence),

@@ -6,23 +6,23 @@ Backend Laravel 13 — API REST com prefixo `/api`, autenticação Sanctum e aut
 
 ```
 app/
-  Http/Controllers/     # Auth, Project, System, Signature, Attack, SystemResult, Remediation, AiRemediation,
+  Http/Controllers/     # Auth, Project, System, Attack, SystemResult, Remediation, AiRemediation,
                         # CoverUpload, TargetSession, Catalog* (ataques, medicações, import CSV)
   Http/Middleware/      # EnsureUserRole (ADMIN bypass)
   Http/Requests/        # Validação de entrada (Form Requests + ValidatesCoverSelection)
   Policies/             # Escopo por usuário; CatalogPolicy (ownership + papéis)
-  Models/               # User, Project, System, Signature, Attack, AttackDispatch, SystemResult,
+  Models/               # User, Project, System, Attack, AttackDispatch, AttackAcknowledgment, SystemResult,
                         # Remediation, SystemTargetSession, CatalogImport, AiRemediationSuggestion, UserCoverUpload
   Services/
     Cover/              # Upload, biblioteca por usuário, paths em storage público
-    Signature/          # Geração, validação HTML no alvo, autorização no dispatch (resolve token ativo)
     Attack/             # Catálogo para dispatch, publicação RabbitMQ, processamento de resultados
     TargetSession/      # Sessão autenticada do alvo (headers criptografados)
     CatalogImport/      # Parser CSV, validação por linha, filas RabbitMQ
     Remediation/        # Lookup de snippets por stack e achado
     Ai/                 # LLM clients (Gemini/Groq), prompts, validação de resposta
     Source/             # Contexto de código (GitHub raw, heurística DAST)
-  Enums/                # UserRole, categorias de ataque, risco, local do alvo, status de assinatura/import
+  Support/              # AttackAcknowledgmentTerms (versão e código de aceite)
+  Enums/                # UserRole, categorias de ataque, risco, local do alvo, status de import
   Console/Commands/     # attacks:consume-results, catalog:consume-imports
 ```
 
@@ -38,7 +38,7 @@ app/
 |------|------------------|
 | Projetos / sistemas | CRUD aninhado; capas via multipart (`cover` ou `cover_upload_id`) |
 | Biblioteca de capas | `UserCoverLibraryService` — limite por usuário, reuso e remoção com regras de referência |
-| Assinaturas | Token em meta tag HTML do alvo; dispatch resolve assinatura ativa (sem body) |
+| Aceite no dispatch | Body com `accepted_responsibility`, `accepted_legal_terms`, `terms_version`; auditoria em `attack_acknowledgments` |
 | Sessão do alvo | `SystemTargetSession` — headers criptografados; popup ou import manual para DAST autenticado |
 | Catálogo global | CRUD `/api/catalog/*` + import CSV assíncrono (`catalog:consume-imports`) |
 | DAST / SAST | `AttackCatalogService` monta lote (ataques de autores ADMIN/SPECIALIST); `AttackQueuePublisher` publica em RabbitMQ |
@@ -55,10 +55,10 @@ A API não executa varredura no request HTTP: o dispatch retorna `202` com o reg
 
 ## Persistência
 
-- Relacionamentos: usuário → projetos → sistemas → assinaturas, dispatches, resultados.
+- Relacionamentos: usuário → projetos → sistemas → dispatches, acknowledgments, resultados.
 - Capas: disco `public`, paths `/storage/covers/{uuid}.ext`.
 - Configuração de capas: `config/covers.php` (limite de uploads por usuário).
 
 ## Contratos com clients
 
-JSON para auth, assinaturas e dispatch; `multipart/form-data` para projetos/sistemas com capa. Detalhes de rotas: [API.md](../API.md).
+JSON para auth e dispatch (com aceite); `multipart/form-data` para projetos/sistemas com capa. Detalhes de rotas: [API.md](../API.md). Aceite: [ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md).

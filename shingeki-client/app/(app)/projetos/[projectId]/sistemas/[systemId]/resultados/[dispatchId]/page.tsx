@@ -9,7 +9,7 @@ import type { AttackDispatch } from "@/lib/contracts/attack";
 import type { PaginationMeta, SystemResult } from "@/lib/contracts/result";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
 import { formatFindingSourceLocation, isSastResult } from "@/lib/results/source-location";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDuration, cn } from "@/lib/utils";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
 import { ProbeOutcomeFilter } from "@/components/results/probe-outcome-filter";
@@ -20,7 +20,6 @@ import {
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
-import { cn } from "@/lib/utils";
 import {
   Badge,
   Button,
@@ -186,7 +185,9 @@ export default function ResultsDetailPage() {
                 ? ` · ${dispatch.findings_count} vulnerabilidade(s)`
                 : ""}
               {coverageSummary ? ` · ${coverageSummary}` : ""}
-              {dispatch?.duration_ms ? ` · ${dispatch.duration_ms} ms` : ""}
+              {dispatch?.duration_ms != null
+                ? ` · ${formatDuration(dispatch.duration_ms)}`
+                : ""}
             </p>
           </div>
 
