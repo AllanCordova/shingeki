@@ -95,6 +95,37 @@ func SameOrigin(base, candidate string) bool {
 		strings.EqualFold(baseURL.Host, candidateURL.Host)
 }
 
+func IsSkippableAsset(rawURL string) bool {
+	parsed, err := url.Parse(rawURL)
+	if err != nil {
+		return true
+	}
+	path := strings.ToLower(parsed.Path)
+	switch {
+	case strings.HasSuffix(path, ".jpg"),
+		strings.HasSuffix(path, ".jpeg"),
+		strings.HasSuffix(path, ".png"),
+		strings.HasSuffix(path, ".gif"),
+		strings.HasSuffix(path, ".webp"),
+		strings.HasSuffix(path, ".svg"),
+		strings.HasSuffix(path, ".ico"),
+		strings.HasSuffix(path, ".css"),
+		strings.HasSuffix(path, ".js"),
+		strings.HasSuffix(path, ".map"),
+		strings.HasSuffix(path, ".woff"),
+		strings.HasSuffix(path, ".woff2"),
+		strings.HasSuffix(path, ".ttf"),
+		strings.HasSuffix(path, ".eot"),
+		strings.HasSuffix(path, ".mp4"),
+		strings.HasSuffix(path, ".webm"),
+		strings.HasSuffix(path, ".pdf"),
+		strings.HasSuffix(path, ".zip"):
+		return true
+	default:
+		return false
+	}
+}
+
 func ResolveReference(baseURL, ref string) (string, bool) {
 	base, err := url.Parse(baseURL)
 	if err != nil {
@@ -108,5 +139,6 @@ func ResolveReference(baseURL, ref string) (string, bool) {
 	if resolved.Scheme == "" || resolved.Host == "" {
 		return "", false
 	}
+	resolved.Fragment = ""
 	return resolved.String(), true
 }

@@ -14,6 +14,8 @@ func TestParseDispatchBatchValid(t *testing.T) {
 		"user_id": "user-1",
 		"target_url": "https://example.com",
 		"repository_url": "https://github.com/org/repo",
+		"start_path": "/products",
+		"max_routes": 50,
 		"attacks": [{
 			"attack_id": "atk-1",
 			"category": "SQL_INJECTION",
@@ -30,6 +32,9 @@ func TestParseDispatchBatchValid(t *testing.T) {
 	}
 	if batch.SystemID != "sys-1" || len(batch.Attacks) != 1 {
 		t.Fatalf("unexpected batch: %+v", batch)
+	}
+	if batch.EffectiveStartPath() != "/products" || batch.EffectiveMaxRoutes() != 50 {
+		t.Fatalf("unexpected scope: start=%q max=%d", batch.EffectiveStartPath(), batch.EffectiveMaxRoutes())
 	}
 }
 

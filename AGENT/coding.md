@@ -88,4 +88,5 @@ Apply the spirit of SOLID without exploding the number of files.
 - [ ] Is any class/file doing too many things?
 - [ ] Any obvious 1+N or duplicated fetch?
 - [ ] Auth/ownership/validation OK?
+- [ ] User-facing copy OK per [`copy.md`](copy.md)?
 - [ ] Area tests updated and passing?

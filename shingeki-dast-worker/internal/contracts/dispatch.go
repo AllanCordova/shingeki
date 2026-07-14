@@ -19,6 +19,8 @@ type DispatchBatch struct {
 	Event         string       `json:"event"`
 	ScanType      string       `json:"scan_type"`
 	Depth         string       `json:"depth"`
+	StartPath     string       `json:"start_path,omitempty"`
+	MaxRoutes     int          `json:"max_routes,omitempty"`
 	DispatchID    string       `json:"dispatch_id"`
 	SystemID      string       `json:"system_id"`
 	UserID        string       `json:"user_id"`
@@ -43,6 +45,17 @@ func (b DispatchBatch) EffectiveDepth() string {
 	default:
 		return DepthFull
 	}
+}
+
+func (b DispatchBatch) EffectiveStartPath() string {
+	return strings.TrimSpace(b.StartPath)
+}
+
+func (b DispatchBatch) EffectiveMaxRoutes() int {
+	if b.MaxRoutes < 0 {
+		return 0
+	}
+	return b.MaxRoutes
 }
 
 type AttackItem struct {

@@ -28,6 +28,8 @@ class AttackDispatch extends Model
         'user_id',
         'scan_type',
         'depth',
+        'start_path',
+        'max_routes',
         'attacks_count',
         'dispatched_at',
         'completed_at',
@@ -46,6 +48,7 @@ class AttackDispatch extends Model
         return [
             'scan_type' => AttackScanType::class,
             'depth' => AttackDepth::class,
+            'max_routes' => 'integer',
             'dispatched_at' => 'datetime',
             'completed_at' => 'datetime',
             'duration_ms' => 'integer',

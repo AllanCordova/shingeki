@@ -51,6 +51,14 @@ class AttackQueuePublisher
             'dispatched_at' => $dispatch->dispatched_at->toIso8601String(),
         ];
 
+        if ($dispatch->start_path !== null) {
+            $payload['start_path'] = $dispatch->start_path;
+        }
+
+        if ($dispatch->max_routes !== null) {
+            $payload['max_routes'] = $dispatch->max_routes;
+        }
+
         if ($targetAuth !== null) {
             $payload['auth'] = $targetAuth;
         }

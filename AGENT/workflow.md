@@ -9,8 +9,8 @@ Standard flow for delivering a feature (or non-trivial change) in this repositor
 1. Describe the feature
 2. Plan (detailed plan)
 3. Implement
-4. Code review (AGENT/code-review.md)
-5. Git + PR (AGENT/git.md)
+4. Code review ([`code-review.md`](code-review.md)), including comments, tests, security, and **product copy** ([`copy.md`](copy.md))
+5. Git + PR ([`git.md`](git.md))
 ```
 
 Do not skip steps for changes that touch the API, auth, user data, or more than one package (`shingeki-api` / `shingeki-client`).

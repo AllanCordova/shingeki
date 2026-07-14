@@ -111,7 +111,11 @@ export default function SystemDetailPage() {
       </div>
 
       <div id="guided-target-session" className="guided-setup-section">
-        <TargetSessionPanel projectId={projectId} systemId={systemId} />
+        <TargetSessionPanel
+          projectId={projectId}
+          systemId={systemId}
+          systemName={system.name}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

@@ -60,13 +60,17 @@ O lote inclui ataques cujo autor tem papel `ADMIN` ou `SPECIALIST` no catálogo 
   "accepted_responsibility": true,
   "accepted_legal_terms": true,
   "terms_version": "2026-07-13",
-  "depth": "full"
+  "depth": "full",
+  "start_path": "/products",
+  "max_routes": 50
 }
 ```
 
 - `depth` (opcional): `quick` ou `full` (padrão `full` se omitido).
   - **quick**: discovery rasa no worker DAST (`MaxDepth=1`, `MaxPages=12`, sem Rod, até 20 vetores).
   - **full**: usa os limites padrão do worker (`DISCOVERY_MAX_DEPTH` / `DISCOVERY_MAX_PAGES`).
+- `start_path` (opcional, DAST): rota semente do crawl (ex. `/products`). Pode ser path relativo ou URL; a API normaliza para path. O worker inicia o BFS nessa rota (mesma origem do `target_url`).
+- `max_routes` (opcional, DAST): orçamento máximo de páginas visitadas no discovery (1–500). Quando `start_path` é enviado e `max_routes` é omitido, o padrão é `50`. Sobrescreve `MaxPages` do depth (incluindo quick).
 
 Código de aceite: `SHINGEKI-ATTACK-ACK-1` (`AttackAcknowledgmentTerms`). Versão atual: `2026-07-13`.
 
@@ -81,6 +85,8 @@ Código de aceite: `SHINGEKI-ATTACK-ACK-1` (`AttackAcknowledgmentTerms`). Versã
     "user_id": "uuid",
     "scan_type": "DAST",
     "depth": "full",
+    "start_path": "/products",
+    "max_routes": 50,
     "attacks_count": 12,
     "dispatched_at": "...",
     "completed_at": null,
@@ -111,7 +117,7 @@ Ao receber `202`, a API cria uma notificação `attack_dispatch` com status `pen
 
 **Resposta `422`:** aceite inválido/`terms_version` desatualizada, catálogo de ataques indisponível ou erro de configuração.
 
-No client, a profundidade é escolhida em um modal após o clique em **Ataque DAST** / **Ataque SAST** (não no formulário principal).
+No client, a profundidade (e o escopo opcional de rota no DAST) é escolhida em um modal após o clique em **Ataque DAST** / **Ataque SAST** (não no formulário principal).
 
 ## POST .../attacks/dispatch/sast (SAST)
 
@@ -119,7 +125,7 @@ No client, a profundidade é escolhida em um modal após o clique em **Ataque DA
 
 Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [shingeki-sast-worker](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
 
-**Body (JSON):** igual ao dispatch DAST (aceite obrigatório + `depth` opcional). No SAST, `depth` é persistido e enviado na fila, mas o worker não altera a análise estática.
+**Body (JSON):** igual ao dispatch DAST (aceite obrigatório + `depth` opcional). Campos `start_path` / `max_routes` podem ser persistidos, mas o worker SAST não usa escopo de crawl. No SAST, `depth` é persistido e enviado na fila, mas o worker não altera a análise estática.
 
 **Pré-requisito:** o sistema deve ter `repository_url` preenchido (repositório Git público no MVP).
 

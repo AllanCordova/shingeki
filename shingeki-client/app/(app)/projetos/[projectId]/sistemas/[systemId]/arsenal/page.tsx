@@ -45,7 +45,11 @@ export default function SystemArsenalPage() {
         subtitle="Arsenal manual"
       />
 
-      <TargetSessionPanel projectId={projectId} systemId={systemId} />
+      <TargetSessionPanel
+        projectId={projectId}
+        systemId={systemId}
+        systemName={system.name}
+      />
 
       <Card>
         <CardHeader>

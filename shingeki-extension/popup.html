@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shingeki Target Session</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --fg: #0a0a0a;
+        --muted: #71717a;
+        --border: #e4e4e7;
+        --surface: #ffffff;
+        --muted-surface: #f4f4f5;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        width: 320px;
+        font: 13px/1.4 system-ui, sans-serif;
+        color: var(--fg);
+        background: var(--surface);
+      }
+      main {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 14px;
+      }
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+      .box {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--muted-surface);
+      }
+      .status {
+        font-weight: 600;
+        color: var(--fg);
+      }
+      button {
+        appearance: none;
+        border: 1px solid var(--fg);
+        background: var(--fg);
+        color: #fafafa;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      button.secondary {
+        background: var(--surface);
+        color: var(--fg);
+      }
+      .error {
+        color: #dc2626;
+      }
+      .ok {
+        color: #16a34a;
+      }
+      code {
+        font-size: 11px;
+        word-break: break-all;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Shingeki — sessao do alvo</h1>
+      <p>
+        No Shingeki, clique <strong>Conectar ao alvo</strong>, faca login na aba
+        do site e depois capture os cookies aqui.
+      </p>
+      <div class="box">
+        <div id="status" class="status">Carregando...</div>
+        <p id="details"></p>
+      </div>
+      <button id="capture" type="button" disabled>Capturar sessao</button>
+      <button id="clear" class="secondary" type="button" disabled>Cancelar captura</button>
+      <p id="message"></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

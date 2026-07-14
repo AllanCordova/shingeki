@@ -60,12 +60,16 @@ class AttackController extends Controller
         }
 
         $depth = $request->attackDepth();
+        $startPath = $request->startPath();
+        $maxRoutes = $request->maxRoutes();
 
         $dispatch = AttackDispatch::create([
             'system_id' => $system->id,
             'user_id' => $request->user()->id,
             'scan_type' => $scanType,
             'depth' => $depth,
+            'start_path' => $startPath,
+            'max_routes' => $maxRoutes,
             'attacks_count' => $attacks->count(),
             'dispatched_at' => now(),
         ]);
@@ -117,6 +121,8 @@ class AttackController extends Controller
             'user_id' => $dispatch->user_id,
             'scan_type' => $dispatch->scan_type->value,
             'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
+            'start_path' => $dispatch->start_path,
+            'max_routes' => $dispatch->max_routes,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,

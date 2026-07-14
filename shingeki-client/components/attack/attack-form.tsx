@@ -6,6 +6,7 @@ import {
   type AttackScanType,
 } from "@/lib/hooks/use-attack";
 import { AttackDepthModal } from "@/components/attack/attack-depth-modal";
+import type { AttackDepthConfirm } from "@/components/attack/attack-depth-modal";
 import { ATTACK_ACKNOWLEDGMENT } from "@/lib/contracts/attack-acknowledgment";
 import type { AttackDepth } from "@/lib/contracts/attack";
 import { notify } from "@/lib/notify";
@@ -49,7 +50,10 @@ export function AttackForm({
 
   const canDispatch = acceptedResponsibility && acceptedLegalTerms;
 
-  const submitScan = async (scanType: AttackScanType, depth: AttackDepth) => {
+  const submitScan = async (
+    scanType: AttackScanType,
+    options: AttackDepthConfirm,
+  ) => {
     try {
       const result = await dispatchAttack(
         scanType,
@@ -57,11 +61,18 @@ export function AttackForm({
           acceptedResponsibility,
           acceptedLegalTerms,
         },
-        depth,
+        options.depth,
+        {
+          start_path: options.start_path,
+          max_routes: options.max_routes,
+        },
       );
       setDepthScanType(null);
+      const scopeHint = options.start_path
+        ? ` a partir de ${options.start_path}`
+        : "";
       notify.success(
-        `${result.attacks_count} teste(s) ${scanLabels[scanType]} (${depthLabels[depth]}) iniciado(s). Acompanhe pelo sininho.`,
+        `${result.attacks_count} teste(s) ${scanLabels[scanType]} (${depthLabels[options.depth]}${scopeHint}) iniciado(s). Acompanhe pelo sininho.`,
       );
     } catch (err) {
       notify.fromApiError(
@@ -145,9 +156,9 @@ export function AttackForm({
         scanType={depthScanType}
         isLoading={isLoading}
         onClose={() => setDepthScanType(null)}
-        onConfirm={(depth) => {
+        onConfirm={(options) => {
           if (!depthScanType) return;
-          return submitScan(depthScanType, depth);
+          return submitScan(depthScanType, options);
         }}
       />
     </Card>

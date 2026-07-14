@@ -50,6 +50,13 @@ Ensure the code is correct, readable, secure, aligned with project patterns (or 
 - Do not migrate to GraphQL for fashion; only when REST is structurally opaque or inefficient.
 - For migration debates, use [`architecture.md`](architecture.md) first.
 
+### 7. Product copy
+
+- Review user-facing strings with [`copy.md`](copy.md).
+- UI, toasts, empty states, and API messages shown to users must read as a **product**, not as notes between developers.
+- Reject copy that mentions pilot/MVP/lab shortcuts, unfinished Chrome Web Store plans, raw package filenames as primary labels, or customer-specific names when the feature is generic.
+- Keep distribution and lab details in `docs/` / READMEs, not in the logged-in product UI.
+
 ## How to report the review
 
 Short summary for the author:

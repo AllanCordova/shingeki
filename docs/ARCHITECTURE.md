@@ -28,6 +28,7 @@ flowchart TB
 |--------|-----------|
 | `shingeki-api` | [architecture/shingeki-api.md](architecture/shingeki-api.md) |
 | `shingeki-client` | [architecture/shingeki-client.md](architecture/shingeki-client.md) |
+| `shingeki-extension` | Extensao Chrome/Edge — captura de sessao do alvo ([README](../shingeki-extension/README.md), [TARGET-SESSION](api/TARGET-SESSION.md)) |
 | `shingeki-dast-worker` | [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md) |
 | `shingeki-sast-worker` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
 | `shingeki-vulnerable-target` | [architecture/shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |
