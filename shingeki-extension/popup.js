@@ -10,28 +10,39 @@ async function refresh(keepMessage = false) {
     messageEl.className = "";
   }
 
-  const state = await chrome.runtime.sendMessage({ type: "shingeki.getArmState" });
-  const armed = state?.armed;
+  try {
+    const state = await chrome.runtime.sendMessage({ type: "shingeki.getArmState" });
+    const armed = state?.armed;
 
-  if (!armed) {
-    statusEl.textContent = "Pronto";
+    if (!armed) {
+      statusEl.textContent = "Pronto";
+      detailsEl.textContent =
+        "No Shingeki: Conectar ao alvo. A extensao abre o login em uma aba normal. Depois de logar, clique Capturar aqui.";
+      captureBtn.disabled = true;
+      clearBtn.disabled = true;
+      return;
+    }
+
+    statusEl.textContent = "Aguardando login no alvo";
+    detailsEl.innerHTML = [
+      armed.systemName
+        ? `<div><strong>Sistema:</strong> ${escapeHtml(armed.systemName)}</div>`
+        : "",
+      `<div><strong>Alvo:</strong> <code>${escapeHtml(armed.targetOrigin)}</code></div>`,
+      `<div>Faca login na aba do alvo (nao precisa estar nesta janela do popup).</div>`,
+    ].join("");
+    captureBtn.disabled = false;
+    clearBtn.disabled = false;
+  } catch (error) {
+    statusEl.textContent = "Recarregue o popup";
     detailsEl.textContent =
-      "No Shingeki: Conectar ao alvo. A extensao abre o login em uma aba normal. Depois de logar, clique Capturar aqui.";
+      "Extensao foi recarregada. Feche este popup, atualize a pagina do Shingeki (F5) e clique Conectar de novo.";
+    messageEl.textContent =
+      error instanceof Error ? error.message : "Extension context invalidated";
+    messageEl.className = "error";
     captureBtn.disabled = true;
     clearBtn.disabled = true;
-    return;
   }
-
-  statusEl.textContent = "Aguardando login no alvo";
-  detailsEl.innerHTML = [
-    armed.systemName
-      ? `<div><strong>Sistema:</strong> ${escapeHtml(armed.systemName)}</div>`
-      : "",
-    `<div><strong>Alvo:</strong> <code>${escapeHtml(armed.targetOrigin)}</code></div>`,
-    `<div>Faca login na aba do alvo (nao precisa estar nesta janela do popup).</div>`,
-  ].join("");
-  captureBtn.disabled = false;
-  clearBtn.disabled = false;
 }
 
 function escapeHtml(value) {

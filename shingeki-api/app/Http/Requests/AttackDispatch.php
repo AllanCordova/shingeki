@@ -43,6 +43,7 @@ class AttackDispatch extends FormRequest
         }
 
         $path = trim($value);
+        $path = str_replace('\\', '/', $path);
 
         if (preg_match('#^https?://#i', $path) === 1) {
             $parts = parse_url($path);
@@ -53,6 +54,8 @@ class AttackDispatch extends FormRequest
         if (($hashPos = strpos($path, '#')) !== false) {
             $path = substr($path, 0, $hashPos);
         }
+
+        $path = preg_replace('#/+#', '/', $path) ?? '/';
 
         if ($path === '' || $path === false) {
             $path = '/';

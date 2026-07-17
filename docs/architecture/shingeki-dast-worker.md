@@ -28,7 +28,7 @@ flowchart LR
 | `contracts` | Tipos de dispatch, result, completion (JSON alinhado à API) |
 | `discovery` | Orquestra BFS + crawlers estático (Colly) e dinâmico (Rod/SPA) |
 | `discovery/static` | Colly — HTML estático |
-| `discovery/dynamic` | Rod — SPAs quando `DISCOVERY_ROD_ENABLED=true` |
+| `discovery/dynamic` | Rod — click/explore em SPA quando `DISCOVERY_ROD_ENABLED=true` |
 | `discovery/bfs` | Fila de URLs/fronteira de exploração |
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
@@ -87,8 +87,19 @@ A API consome essa fila via `attacks:consume-results` (container **`api-consumer
 ## Discovery
 
 - **Estático**: Colly segue links e formulários em HTML tradicional.
-- **Dinâmico** (opcional): headless Chromium (Rod) para rotas renderizadas no cliente.
-- **BFS**: limita profundidade e evita explosão de URLs no lab. O campo `depth` do batch (`quick`/`full`) sobrescreve `MaxDepth`/`MaxPages` e o uso do Rod por dispatch. `start_path` define a semente do BFS; `max_routes` sobrescreve `MaxPages` para retestes focados.
+- **Dinâmico** (Rod, quando `DISCOVERY_ROD_ENABLED=true`): após o seed, faz **click/explore** — clica botões/links da UI, observa mudança de URL e XHR same-origin, e monta vetores. Prioriza ações CRUD (criar/editar/…); ignora logout/mailto/javascript e URLs da blocklist (`/cdn-cgi/`, analytics, assets).
+- **BFS estático / budgets**: `depth` (`quick`/`full`) ajusta `MaxDepth`/`MaxPages` e desliga Rod no `quick`. `start_path` define a semente; `max_routes` sobrescreve `MaxPages`. Clique limitado por `DISCOVERY_MAX_CLICKS` (default 80); settle pós-clique em `DISCOVERY_EXPLORE_SETTLE` (default `1500ms`).
+- Com `start_path` presente, o composite dispara Rod mesmo se o Colly já tiver vetores suficientes (explore focado na feature).
+
+### Variáveis úteis (discovery)
+
+| Env | Default | Papel |
+|-----|---------|--------|
+| `DISCOVERY_ROD_ENABLED` | `false` | Liga Chromium/Rod |
+| `DISCOVERY_MAX_PAGES` | `50` | Páginas/estados no crawl |
+| `DISCOVERY_MAX_CLICKS` | `80` | Cliques no explore Rod |
+| `DISCOVERY_EXPLORE_SETTLE` | `1500ms` | Espera após navigate/click |
+| `DISCOVERY_MIN_VECTORS_FOR_ROD` | `2` | Sem `start_path`, Rod só se Colly achar poucos vetores |
 
 ## Execução de ataques
 

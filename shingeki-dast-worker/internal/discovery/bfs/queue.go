@@ -91,8 +91,26 @@ func SameOrigin(base, candidate string) bool {
 	if err != nil {
 		return false
 	}
-	return strings.EqualFold(baseURL.Scheme, candidateURL.Scheme) &&
-		strings.EqualFold(baseURL.Host, candidateURL.Host)
+	if !strings.EqualFold(baseURL.Scheme, candidateURL.Scheme) {
+		return false
+	}
+	return hostsEquivalent(baseURL.Hostname(), candidateURL.Hostname())
+}
+
+func hostsEquivalent(a, b string) bool {
+	a = strings.ToLower(strings.TrimSpace(a))
+	b = strings.ToLower(strings.TrimSpace(b))
+	if a == "" || b == "" {
+		return false
+	}
+	if a == b {
+		return true
+	}
+	return stripWWW(a) == stripWWW(b)
+}
+
+func stripWWW(host string) string {
+	return strings.TrimPrefix(host, "www.")
 }
 
 func IsSkippableAsset(rawURL string) bool {

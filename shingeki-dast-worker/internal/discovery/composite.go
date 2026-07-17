@@ -52,7 +52,7 @@ func (e *CompositeEngine) Discover(
 		return nil, err
 	}
 
-	if discCfg.RodEnabled && len(vectors) < discCfg.MinVectorsForRod {
+	if discCfg.RodEnabled && (opts.HasStartPath() || len(vectors) < discCfg.MinVectorsForRod) {
 		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, authHeaders, seedURL)
 		if rodErr != nil {
 			e.logger.Warn("dynamic discovery failed", "error", rodErr)

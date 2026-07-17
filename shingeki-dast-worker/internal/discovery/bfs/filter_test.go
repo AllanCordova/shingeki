@@ -13,6 +13,7 @@ func TestIsBlockedDiscoveryURL(t *testing.T) {
 	}{
 		{"https://www.bling.com.br/produtos.php", false},
 		{"https://www.bling.com.br/login", false},
+		{"https://www.bling.com.br/locales/front/pt-BR/main.json", true},
 		{"https://www.bling.com.br/cdn-cgi/images/cf-icon-ok.png", true},
 		{"https://www.bling.com.br/favicon.ico", true},
 		{"https://www.bling.com.br/assets/app.js", true},

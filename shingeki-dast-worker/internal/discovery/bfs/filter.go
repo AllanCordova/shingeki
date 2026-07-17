@@ -26,6 +26,7 @@ var blockedHostSuffixes = []string{
 
 var blockedPathPrefixes = []string{
 	"/cdn-cgi/",
+	"/locales/",
 	"/wp-includes/",
 	"/wp-content/uploads/",
 	"/wp-content/themes/",
