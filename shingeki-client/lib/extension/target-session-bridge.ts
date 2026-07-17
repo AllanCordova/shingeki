@@ -32,6 +32,17 @@ declare global {
 const PING_TIMEOUT_MS = 2500;
 const ARM_TIMEOUT_MS = 8000;
 
+function humanizeExtensionError(message?: string): string {
+  const text = (message ?? "").trim();
+  if (/extension context invalidated/i.test(text) || /context invalidated/i.test(text)) {
+    return "Extensao foi recarregada. Atualize esta pagina (F5) e clique Conectar de novo.";
+  }
+  if (/receiving end does not exist/i.test(text)) {
+    return "Extensao nao respondeu. Atualize esta pagina (F5) e tente novamente.";
+  }
+  return text || "Falha ao falar com a extensao.";
+}
+
 function nextRequestId(): string {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -106,14 +117,16 @@ export async function armShingekiExtension(payload: {
           if (window.chrome?.runtime?.lastError) {
             resolve({
               ok: false,
-              error: window.chrome.runtime.lastError.message,
+              error: humanizeExtensionError(window.chrome.runtime.lastError.message),
             });
             return;
           }
           resolve({
             ok: Boolean(response?.ok),
             response,
-            error: response?.error,
+            error: response?.error
+              ? humanizeExtensionError(response.error)
+              : undefined,
           });
         },
       );
@@ -121,7 +134,9 @@ export async function armShingekiExtension(payload: {
       window.clearTimeout(timer);
       resolve({
         ok: false,
-        error: error instanceof Error ? error.message : "Falha ao armar extensao.",
+        error: humanizeExtensionError(
+          error instanceof Error ? error.message : "Falha ao armar extensao.",
+        ),
       });
     }
   });
@@ -163,7 +178,11 @@ function sendViaContentBridge(
       finish({
         ok: Boolean(data.ok),
         response: data.response,
-        error: data.response?.error,
+        error: data.response?.error
+          ? humanizeExtensionError(String(data.response.error))
+          : data.ok
+            ? undefined
+            : "Extensao nao respondeu.",
       });
     }
 

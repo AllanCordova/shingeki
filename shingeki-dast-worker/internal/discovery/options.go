@@ -41,6 +41,7 @@ func ApplyDepthAndScope(base config.DiscoveryConfig, opts Options) config.Discov
 
 func ResolveSeedURL(targetURL, startPath string) (string, error) {
 	startPath = strings.TrimSpace(startPath)
+	startPath = strings.ReplaceAll(startPath, `\`, "/")
 	if startPath == "" {
 		return targetURL, nil
 	}
@@ -62,9 +63,7 @@ func ResolveSeedURL(targetURL, startPath string) (string, error) {
 		return ref.String(), nil
 	}
 
-	if !strings.HasPrefix(startPath, "/") {
-		startPath = "/" + startPath
-	}
+	startPath = "/" + strings.TrimLeft(startPath, "/")
 	ref, err := url.Parse(startPath)
 	if err != nil {
 		return "", fmt.Errorf("invalid start_path: %w", err)

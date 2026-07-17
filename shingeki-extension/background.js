@@ -181,13 +181,18 @@ async function captureTargetSession() {
   }
 
   const host = new URL(tab.url).hostname;
+  const apex = host.startsWith("www.") ? host.slice(4) : host;
   const byUrl = await chrome.cookies.getAll({ url: tab.url });
   const byHost = await chrome.cookies.getAll({ domain: host });
+  const byApex = apex !== host ? await chrome.cookies.getAll({ domain: apex }) : [];
   const merged = new Map();
-  for (const cookie of [...byHost, ...byUrl]) {
+  for (const cookie of [...byApex, ...byHost, ...byUrl]) {
     merged.set(`${cookie.name}|${cookie.domain}|${cookie.path}`, cookie);
   }
-  const cookies = [...merged.values()];
+  const cookies = [...merged.values()].filter((cookie) => {
+    const domain = String(cookie.domain || "").replace(/^\./, "").toLowerCase();
+    return domain === apex || domain.endsWith(`.${apex}`) || domain === host;
+  });
 
   if (!cookies.length) {
     return {

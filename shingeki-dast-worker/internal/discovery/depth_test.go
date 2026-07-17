@@ -74,6 +74,14 @@ func TestResolveSeedURL(t *testing.T) {
 		t.Fatalf("unexpected seed: %s", seed)
 	}
 
+	seed, err = discovery.ResolveSeedURL("https://app.example.com/", `\\produtos.php`)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if seed != "https://app.example.com/produtos.php" {
+		t.Fatalf("expected backslash normalized, got %s", seed)
+	}
+
 	seed, err = discovery.ResolveSeedURL("https://app.example.com/", "products?tab=1#panel")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

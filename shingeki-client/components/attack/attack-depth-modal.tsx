@@ -43,17 +43,18 @@ interface AttackDepthModalProps {
 }
 
 function normalizeStartPath(raw: string): string | undefined {
-  const trimmed = raw.trim();
+  const trimmed = raw.trim().replace(/\\/g, "/");
   if (!trimmed) return undefined;
   if (/^https?:\/\//i.test(trimmed)) {
     try {
       const url = new URL(trimmed);
       return `${url.pathname}${url.search}` || "/";
     } catch {
-      return trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+      const fallback = trimmed.replace(/\/+/g, "/");
+      return fallback.startsWith("/") ? fallback : `/${fallback}`;
     }
   }
-  const withoutHash = trimmed.split("#")[0] ?? trimmed;
+  const withoutHash = (trimmed.split("#")[0] ?? trimmed).replace(/\/+/g, "/");
   if (!withoutHash) return "/";
   return withoutHash.startsWith("/") ? withoutHash : `/${withoutHash}`;
 }

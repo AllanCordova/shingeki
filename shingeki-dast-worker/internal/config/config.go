@@ -31,15 +31,17 @@ type WorkerConfig struct {
 }
 
 type DiscoveryConfig struct {
-	MaxDepth              int
-	MaxPages              int
-	PageTimeout           time.Duration
-	BrowserLaunchTimeout  time.Duration
-	RodEnabled            bool
-	RodHeadless           bool
-	RodNoSandbox          bool
-	ChromePath            string
-	MinVectorsForRod      int
+	MaxDepth             int
+	MaxPages             int
+	MaxClicks            int
+	PageTimeout          time.Duration
+	BrowserLaunchTimeout time.Duration
+	ExploreSettle        time.Duration
+	RodEnabled           bool
+	RodHeadless          bool
+	RodNoSandbox         bool
+	ChromePath           string
+	MinVectorsForRod     int
 }
 
 type AttackConfig struct {
@@ -81,6 +83,11 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_MIN_VECTORS_FOR_ROD: %w", err)
 	}
 
+	maxClicks, err := strconv.Atoi(getEnv("DISCOVERY_MAX_CLICKS", "80"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid DISCOVERY_MAX_CLICKS: %w", err)
+	}
+
 	concurrency, err := strconv.Atoi(getEnv("WORKER_ATTACK_CONCURRENCY", "5"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid WORKER_ATTACK_CONCURRENCY: %w", err)
@@ -116,6 +123,11 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_BROWSER_LAUNCH_TIMEOUT: %w", err)
 	}
 
+	exploreSettle, err := time.ParseDuration(getEnv("DISCOVERY_EXPLORE_SETTLE", "1500ms"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid DISCOVERY_EXPLORE_SETTLE: %w", err)
+	}
+
 	reqTimeout, err := time.ParseDuration(getEnv("ATTACK_REQUEST_TIMEOUT", "15s"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid ATTACK_REQUEST_TIMEOUT: %w", err)
@@ -143,8 +155,10 @@ func Load() (Config, error) {
 		Discovery: DiscoveryConfig{
 			MaxDepth:             maxDepth,
 			MaxPages:             maxPages,
+			MaxClicks:            maxClicks,
 			PageTimeout:          pageTimeout,
 			BrowserLaunchTimeout: browserLaunchTimeout,
+			ExploreSettle:        exploreSettle,
 			RodEnabled:           getEnv("DISCOVERY_ROD_ENABLED", "false") == "true",
 			RodHeadless:          getEnv("DISCOVERY_ROD_HEADLESS", "true") == "true",
 			RodNoSandbox:         getEnv("DISCOVERY_ROD_NO_SANDBOX", "false") == "true",
