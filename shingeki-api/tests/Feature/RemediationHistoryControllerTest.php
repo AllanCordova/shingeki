@@ -1,15 +1,15 @@
 <?php
 
-use App\Enums\AttackScanType;
-use App\Enums\RemediationRunType;
-use App\Models\AiRemediationSuggestion;
-use App\Models\AttackDispatch;
-use App\Models\Project;
-use App\Models\RemediationRun;
-use App\Models\Stack;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\Remediation\RemediationRunType;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
+use App\Models\Remediation\AiRemediationSuggestion;
+use App\Models\Remediation\RemediationRun;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use Laravel\Sanctum\Sanctum;
 
 function remediationHistoryUrl(Project $project, System $system): string
@@ -151,6 +151,17 @@ describe('GET systems/remediation-history', function () {
         $aiResponse->assertOk();
         expect(collect($aiResponse->json('events'))->pluck('type')->all())
             ->toBe(['ai_suggestion']);
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->getJson(remediationHistoryUrl($project, $system))->assertNotFound();
     });
 });
 

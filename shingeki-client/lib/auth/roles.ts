@@ -59,6 +59,10 @@ export function canBulkImportCatalog(user: User | undefined): boolean {
   return hasCatalogCapability(user, "bulkImportCatalog");
 }
 
+export function canAccessAdmin(user: User | undefined): boolean {
+  return isAdmin(user);
+}
+
 export function canUseManualProxy(user: User | undefined): boolean {
   return hasAnyRole(user, ["ADMIN", "SPECIALIST", "USER"]);
 }

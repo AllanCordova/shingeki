@@ -14,3 +14,11 @@ export const AUTH_COOKIE = "shingeki_token";
 
 /** Duracao do cookie de sessao (em segundos). */
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 dias
+
+/** Cookie curto para destino pos-login Google (BFF, nao a API). */
+export const GOOGLE_REDIRECT_COOKIE = "shingeki_google_redirect";
+
+/** Nonce http-only do browser para amarrar o handoff Google (anti login CSRF). */
+export const GOOGLE_LOGIN_NONCE_COOKIE = "shingeki_google_login_nonce";
+
+export const GOOGLE_REDIRECT_COOKIE_MAX_AGE = 60 * 10; // 10 minutos

@@ -2,10 +2,10 @@
 
 namespace App\Services\Navigation;
 
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
-use App\Models\UserNavigationPin;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserNavigationPin;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 

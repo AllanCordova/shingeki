@@ -11,6 +11,7 @@ export function resetClientAuthCache(
 ) {
   queryClient.clear();
 
+  // Só a sessão ativa do guia (sessionStorage). O "já fechei" fica em localStorage.
   if (typeof window !== "undefined") {
     window.sessionStorage.removeItem(GUIDED_SETUP_SESSION_KEY);
   }

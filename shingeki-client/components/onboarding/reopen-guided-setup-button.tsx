@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, MapIcon } from "@/components/ui";
-import { useSidebarNavigation } from "@/lib/hooks/use-sidebar-navigation";
+import { useMe } from "@/lib/hooks/auth/use-auth";
+import { useSidebarNavigation } from "@/lib/hooks/navigation/use-sidebar-navigation";
 import {
   GUIDED_SETUP_SESSION_EVENT,
   guidedSetupResumePath,
@@ -13,6 +14,7 @@ import {
 
 export function ReopenGuidedSetupButton() {
   const router = useRouter();
+  const { user } = useMe();
   const { meta, items, isLoading } = useSidebarNavigation();
   const [isActive, setIsActive] = useState(() => readGuidedSetupSession().active);
 
@@ -33,7 +35,7 @@ export function ReopenGuidedSetupButton() {
   if (isLoading || isActive || !meta) return null;
 
   const handleReopen = () => {
-    const session = reopenGuidedSetupSession(meta, items);
+    const session = reopenGuidedSetupSession(meta, items, user?.id);
     const resumePath = guidedSetupResumePath(session);
 
     if (resumePath) {

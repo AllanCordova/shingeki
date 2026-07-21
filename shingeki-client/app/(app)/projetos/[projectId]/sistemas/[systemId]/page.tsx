@@ -7,14 +7,14 @@ import {
   useDeleteSystem,
   useSystem,
   useUpdateSystem,
-} from "@/lib/hooks/use-systems";
-import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
-import { SystemForm } from "@/components/forms/system-form";
+} from "@/lib/hooks/system/use-systems";
+import { CoverUpdateModal } from "@/components/cover/cover-update-modal";
+import { SystemForm } from "@/components/system/system-form";
 import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
 import { SystemDetailHero } from "@/components/system/system-detail-hero";
 import { AttackForm } from "@/components/attack/attack-form";
 import { canUseManualProxy } from "@/lib/auth/roles";
-import { useMe } from "@/lib/hooks/use-auth";
+import { useMe } from "@/lib/hooks/auth/use-auth";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { RemediationHistoryPanel } from "@/components/remediation/remediation-history-panel";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
@@ -159,7 +159,7 @@ export default function SystemDetailPage() {
             mode="edit"
             isLoading={updateSystem.isLoading}
             error={updateSystem.error}
-            submitLabel="Salvar alteracoes"
+            submitLabel="Salvar alterações"
             currentCoverPath={system.cover_path}
             defaultValues={{
               name: system.name,
@@ -183,7 +183,7 @@ export default function SystemDetailPage() {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         title="Excluir sistema"
-        description="Esta acao nao pode ser desfeita."
+        description="Esta ação não pode ser desfeita."
         footer={
           <>
             <Button variant="ghost" onClick={() => setDeleteOpen(false)}>

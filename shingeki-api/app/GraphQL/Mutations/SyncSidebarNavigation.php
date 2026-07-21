@@ -2,7 +2,7 @@
 
 namespace App\GraphQL\Mutations;
 
-use App\Models\User;
+use App\Models\User\User;
 use App\Services\Navigation\SidebarNavigationService;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Support\Facades\Auth;

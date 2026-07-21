@@ -2,9 +2,9 @@
 
 namespace App\Services\ManualProxy;
 
-use App\Enums\AttackTargetLocation;
-use App\Models\System;
-use App\Models\User;
+use App\Enums\Attack\AttackTargetLocation;
+use App\Models\System\System;
+use App\Models\User\User;
 use App\Services\TargetSession\TargetSessionService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -108,6 +108,7 @@ class ManualProxyService
         foreach ($auth['headers'] as $name => $value) {
             if (strtolower($name) === 'cookie' && isset($headers['Cookie'])) {
                 $headers['Cookie'] = $headers['Cookie'].'; '.$value;
+
                 continue;
             }
 

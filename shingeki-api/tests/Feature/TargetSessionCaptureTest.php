@@ -1,16 +1,18 @@
 <?php
 
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\TargetSession\SystemTargetSession;
+use App\Models\User\User;
 use App\Services\TargetSession\TargetSessionCaptureService;
 use Laravel\Sanctum\Sanctum;
 
-test('starts same-origin popup capture flow', function () {
+test('starts same-origin capture without platform auth shortcut', function () {
     $user = User::factory()->create();
     $project = Project::factory()->for($user)->create();
     $system = System::factory()->for($project)->create([
         'target_url' => 'http://localhost:3000',
+        'login_url' => 'http://localhost:3000/login',
     ]);
 
     Sanctum::actingAs($user);
@@ -23,7 +25,10 @@ test('starts same-origin popup capture flow', function () {
     $response
         ->assertOk()
         ->assertJsonPath('mode', 'same_origin')
-        ->assertJsonPath('popup_url', fn ($url) => str_contains($url, '/conectar-alvo?ticket='));
+        ->assertJsonPath('extension_supported', true)
+        ->assertJsonPath('open_url', 'http://localhost:3000/login')
+        ->assertJsonPath('popup_url', fn ($url) => $url === 'http://localhost:3000/login'
+            && ! str_contains((string) $url, '/conectar-alvo'));
 });
 
 test('starts external popup capture flow with login redirect', function () {
@@ -72,4 +77,28 @@ test('completes capture from ticket with cookie header', function () {
         ->assertOk()
         ->assertJsonPath('connected', true)
         ->assertJsonPath('auth_type', 'cookie');
+});
+
+test('rejects platform sanctum token as target capture credential', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->for($user)->create();
+    $system = System::factory()->for($project)->create();
+    $plainTextToken = $user->createToken('auth-token')->plainTextToken;
+
+    $start = app(TargetSessionCaptureService::class)->start(
+        $user,
+        $system,
+        'http://localhost:3000',
+    );
+
+    $this->postJson('/api/target-session/capture/'.$start['ticket'], [
+        'authorization' => 'Bearer '.$plainTextToken,
+    ])
+        ->assertStatus(422)
+        ->assertJsonPath(
+            'message',
+            'Platform API tokens cannot be used as target session credentials.',
+        );
+
+    expect(SystemTargetSession::query()->count())->toBe(0);
 });

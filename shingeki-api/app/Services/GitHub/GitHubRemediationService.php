@@ -2,12 +2,12 @@
 
 namespace App\Services\GitHub;
 
-use App\Enums\AttackScanType;
-use App\Models\AttackDispatch;
-use App\Models\GithubRemediationPullRequest;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Remediation\GithubRemediationPullRequest;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use App\Services\Ai\AiRemediationService;
 use App\Services\Ai\SnippetSyntaxValidator;
 use App\Services\Remediation\CodePatchApplier;

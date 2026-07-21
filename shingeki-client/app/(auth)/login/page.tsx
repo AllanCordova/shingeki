@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { LoginForm } from "@/components/forms/login-form";
+import { LoginForm } from "@/components/auth/login-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
 
 export default function LoginPage() {
@@ -15,7 +15,7 @@ export default function LoginPage() {
           <LoginForm />
         </Suspense>
         <p className="text-center text-sm text-muted-foreground">
-          Nao tem conta?{" "}
+          Não tem conta?{" "}
           <Link href="/registro" className="font-medium text-foreground underline">
             Criar conta
           </Link>

@@ -142,4 +142,4 @@ Resposta inclui:
 
 ## Client web
 
-Usuários `ADMIN` e `SPECIALIST` veem a sidebar admin (`/admin`, `/admin/ataques`, `/admin/medicacoes`) com CRUD individual, **paginação**, **filtro por autor** e painel de importação CSV.
+Usuários `ADMIN` e `SPECIALIST` veem a área **Auditoria** (`/auditoria`, `/auditoria/ataques`, `/auditoria/medicacoes`) com CRUD individual, **paginação**, **filtro por autor** e painel de importação CSV. Apenas `ADMIN` acessa `/admin` e `/admin/users/permissoes`.

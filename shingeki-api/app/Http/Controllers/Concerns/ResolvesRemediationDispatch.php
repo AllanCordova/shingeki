@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Models\AttackDispatch;
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 

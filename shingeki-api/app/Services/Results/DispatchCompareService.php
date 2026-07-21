@@ -2,8 +2,8 @@
 
 namespace App\Services\Results;
 
-use App\Models\AttackDispatch;
-use App\Models\SystemResult;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\SystemResult;
 use Illuminate\Support\Collection;
 
 class DispatchCompareService

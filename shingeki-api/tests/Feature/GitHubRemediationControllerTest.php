@@ -1,16 +1,16 @@
 <?php
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackScanType;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\GithubRemediationPullRequest;
-use App\Models\Project;
-use App\Models\Remediation;
-use App\Models\Stack;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
+use App\Models\Remediation\GithubRemediationPullRequest;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
@@ -27,6 +27,19 @@ describe('POST systems/remediate/github-pr', function () {
         $this->postJson(githubPrUrl($project, $system), [
             'finding_ids' => [fake()->uuid()],
         ])->assertUnauthorized();
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->postJson(githubPrUrl($project, $system), [
+            'finding_ids' => [fake()->uuid()],
+        ])->assertNotFound();
     });
 
     test('creates github pull request for sast findings', function () {
@@ -163,7 +176,7 @@ describe('POST systems/remediate/github-pr', function () {
                                         'risk_summary' => 'XSS risk on search results.',
                                         'suggested_fix' => [
                                             'description' => 'Pretend fix that does not remove the sink.',
-                                            'code' => "echo \$query; // sanitized",
+                                            'code' => 'echo $query; // sanitized',
                                         ],
                                         'validation' => [
                                             'why_this_fixes' => 'It does not, this is an incomplete patch.',
@@ -258,7 +271,7 @@ describe('POST systems/remediate/github-pr', function () {
             '',
         ]);
         $fixBlock = implode("\n", [
-            "\$file = basename(\$file);",
+            '$file = basename($file);',
             "\$dir = realpath('/storage');",
             "\$resolved = realpath(\$dir.'/'.\$file);",
             'if ($resolved === false || ! str_starts_with($resolved, $dir) || ! is_file($resolved)) {',

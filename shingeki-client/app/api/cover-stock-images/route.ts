@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forwardToApi } from "@/lib/api/server";
 
 const PEXELS_API = "https://api.pexels.com/v1";
 const DEFAULT_QUERY = "technology abstract";
@@ -31,12 +32,17 @@ function mapPhoto(photo: PexelsPhoto) {
 }
 
 export async function GET(request: NextRequest) {
+  const me = await forwardToApi("get", "/auth/me");
+  if (me.status !== 200) {
+    return NextResponse.json({ message: "Unauthenticated." }, { status: 401 });
+  }
+
   const apiKey = process.env.PEXELS_API_KEY?.trim();
   if (!apiKey) {
     return NextResponse.json(
       {
         message:
-          "Busca de imagens indisponivel. Configure PEXELS_API_KEY no ambiente do client.",
+          "Busca de imagens indisponível no momento. Tente mais tarde ou contate o suporte.",
       },
       { status: 503 },
     );
@@ -63,7 +69,7 @@ export async function GET(request: NextRequest) {
 
   if (!response.ok) {
     return NextResponse.json(
-      { message: "Nao foi possivel buscar imagens no momento." },
+      { message: "Não foi possível buscar imagens no momento." },
       { status: response.status === 401 ? 503 : 502 },
     );
   }

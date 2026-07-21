@@ -1,16 +1,16 @@
 <?php
 
-use App\Enums\CatalogImportStatus;
-use App\Enums\CatalogImportType;
-use App\Enums\UserNotificationStatus;
-use App\Enums\UserNotificationType;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\CatalogImport;
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
-use App\Models\UserNotification;
+use App\Enums\Catalog\CatalogImportStatus;
+use App\Enums\Catalog\CatalogImportType;
+use App\Enums\User\UserNotificationStatus;
+use App\Enums\User\UserNotificationType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Catalog\CatalogImport;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserNotification;
 use App\Services\Attack\AttackDispatchCompletionProcessor;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Services\CatalogImport\CatalogImportService;
@@ -35,7 +35,7 @@ describe('user notifications api', function () {
             'status' => UserNotificationStatus::Completed,
             'title' => 'Importacao concluida',
             'body' => '10 ok',
-            'action_url' => '/admin/ataques',
+            'action_url' => '/auditoria/ataques',
         ]);
 
         $this->getJson(NOTIFICATIONS)
@@ -215,7 +215,7 @@ describe('notification lifecycle integration', function () {
         $completed = $pending->fresh();
         expect($completed->status)->toBe(UserNotificationStatus::Completed)
             ->and($completed->read_at)->toBeNull()
-            ->and($completed->body)->toContain('2 finding');
+            ->and($completed->body)->toContain('2 achado');
     });
 
     test('catalog import completion updates notification', function () {

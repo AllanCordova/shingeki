@@ -3,14 +3,32 @@
  * Mantem o cache previsivel e facilita invalidacoes.
  */
 import type { CatalogListQueryParams, ResultsQueryParams } from "@/lib/contracts";
-import { DEFAULT_PAGE_SIZE, NOTIFICATION_BELL_PAGE_SIZE } from "@/lib/contracts/common";
+import { DEFAULT_PAGE_SIZE, NOTIFICATION_BELL_PAGE_SIZE } from "@/lib/contracts/common/common";
 
 export const queryKeys = {
   me: ["me"] as const,
 
+  adminUsersAll: ["admin", "users"] as const,
+  adminUsers: (params?: {
+    page?: number;
+    per_page?: number;
+    search?: string;
+    role?: string;
+  }) =>
+    [
+      ...queryKeys.adminUsersAll,
+      params?.page ?? 1,
+      params?.per_page ?? DEFAULT_PAGE_SIZE,
+      params?.search ?? "",
+      params?.role ?? "",
+    ] as const,
+
   coverUploads: ["cover-uploads"] as const,
   coverStockImages: (query: string) => ["cover-stock-images", query] as const,
   stacks: ["stacks"] as const,
+
+  ownedSystemsAll: ["systems", "owned"] as const,
+  ownedSystem: (systemId: string) => ["systems", "owned", systemId] as const,
 
   catalogAttacksAll: ["catalog", "attacks"] as const,
   catalogAttacks: (params?: CatalogListQueryParams) =>
@@ -53,6 +71,8 @@ export const queryKeys = {
 
   dispatches: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId, "dispatches"] as const,
+  attackAcknowledgment: (projectId: string, systemId: string) =>
+    ["projects", projectId, "systems", systemId, "attack-acknowledgment"] as const,
   results: (
     projectId: string,
     systemId: string,

@@ -2,13 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackRiskLevel;
-use App\Enums\AttackScanType;
-use App\Enums\AttackTargetLocation;
-use App\Enums\UserRole;
-use App\Models\Attack;
-use App\Models\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackRiskLevel;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\Attack\AttackTargetLocation;
+use App\Enums\User\UserRole;
+use App\Models\Attack\Attack;
+use App\Models\User\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;

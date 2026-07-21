@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeleteDispatch } from "@/lib/hooks/use-results";
+import { useDeleteDispatch } from "@/lib/hooks/results/use-results";
 import { notify } from "@/lib/notify";
 import { Button, ErrorShow, Modal } from "@/components/ui";
 
@@ -48,7 +48,7 @@ export function DeleteDispatchModal({
       open={open}
       onClose={handleClose}
       title="Excluir disparo"
-      description="Esta acao nao pode ser desfeita."
+      description="Esta ação não pode ser desfeita."
       footer={
         <>
           <Button variant="ghost" onClick={handleClose}>

@@ -2,12 +2,12 @@
 
 namespace App\Services\CatalogImport;
 
-use App\Enums\CatalogImportStatus;
-use App\Enums\CatalogImportType;
-use App\Models\Attack;
-use App\Models\CatalogImport;
-use App\Models\Remediation;
-use App\Models\User;
+use App\Enums\Catalog\CatalogImportStatus;
+use App\Enums\Catalog\CatalogImportType;
+use App\Models\Attack\Attack;
+use App\Models\Catalog\CatalogImport;
+use App\Models\Remediation\Remediation;
+use App\Models\User\User;
 use App\Services\Notification\UserNotificationService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;

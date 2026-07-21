@@ -2,7 +2,7 @@
 
 namespace App\Services\Ai;
 
-use App\Models\Stack;
+use App\Models\System\Stack;
 
 class SnippetSyntaxValidator
 {

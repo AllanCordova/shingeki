@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useDispatches } from "@/lib/hooks/use-results";
+import { useDispatches } from "@/lib/hooks/results/use-results";
 import { formatDate } from "@/lib/utils";
 import { DeleteAllDispatchesModal } from "@/components/results/delete-all-dispatches-modal";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
@@ -79,7 +79,7 @@ export function DispatchesList({
           ) : dispatches.length === 0 ? (
             <EmptyState
               title="Nenhum disparo ainda"
-              description="Dispare o catalogo de ataques para ver os resultados aqui."
+              description="Dispare o catálogo de ataques para ver os resultados aqui."
             />
           ) : (
             <ul className="flex flex-col divide-y divide-border">

@@ -23,7 +23,7 @@ import {
   REMEDIATION_HISTORY_PAGE_SIZE,
   type RemediationHistoryTypeFilter,
 } from "@/lib/contracts";
-import { useRemediationHistory } from "@/lib/hooks/use-project-insights";
+import { useRemediationHistory } from "@/lib/hooks/project/use-project-insights";
 
 export default function RemediationHistoryPage() {
   const { projectId, systemId } = useParams<{
@@ -79,11 +79,11 @@ export default function RemediationHistoryPage() {
 
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Historico do sistema
+          Histórico do sistema
         </h1>
         <p className="text-sm text-muted-foreground">
-          Timeline de ataques, correcoes do catalogo, sugestoes de IA e PRs
-          abertos pela remediacao do Shingeki.
+          Timeline de ataques, correções do catálogo, sugestões de IA e PRs
+          abertos pela remediação do Shingeki.
         </p>
       </div>
 
@@ -121,8 +121,8 @@ export default function RemediationHistoryPage() {
                 }
               >
                 <option value="">Todos</option>
-                <option value="catalog_suggestion">Remediacao comum</option>
-                <option value="ai_suggestion">Remediacao por IA</option>
+                <option value="catalog_suggestion">Remediação comum</option>
+                <option value="ai_suggestion">Remediação por IA</option>
                 <option value="attack">Ataque</option>
                 <option value="github_pr">Pull request</option>
               </Select>
@@ -145,13 +145,13 @@ export default function RemediationHistoryPage() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Loading label="Carregando historico..." />
+            <Loading label="Carregando histórico..." />
           ) : isError ? (
             <ErrorShow error={error} onRetry={() => refetch()} />
           ) : events.length === 0 ? (
             <EmptyState
               title="Nenhum evento neste periodo"
-              description="Ajuste os filtros ou gere novas correcoes no sistema."
+              description="Ajuste os filtros ou gere novas correções no sistema."
             />
           ) : (
             <div className="flex flex-col gap-4">

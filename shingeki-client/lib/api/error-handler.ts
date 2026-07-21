@@ -1,15 +1,15 @@
 import { AxiosError } from "axios";
 
 /**
- * Erro normalizado da aplicacao. Todo erro vindo da API (Laravel) ou da rede
- * e convertido para este formato, ja traduzido para portugues.
+ * Erro normalizado da aplicação. Todo erro vindo da API (Laravel) ou da rede
+ * é convertido para este formato, já traduzido para português.
  */
 export interface NormalizedError {
-  /** Codigo HTTP (0 quando nao houve resposta — erro de rede). */
+  /** Código HTTP (0 quando não houve resposta — erro de rede). */
   status: number;
-  /** Mensagem geral, pronta para exibir ao usuario. */
+  /** Mensagem geral, pronta para exibir ao usuário. */
   message: string;
-  /** Erros por campo (validacao 422), ja traduzidos. */
+  /** Erros por campo (validação 422), já traduzidos. */
   fieldErrors: Record<string, string>;
 }
 
@@ -24,75 +24,93 @@ export class ApiError extends Error {
     this.fieldErrors = fieldErrors;
   }
 
-  /** Indica se ha erros de validacao por campo. */
+  /** Indica se há erros de validação por campo. */
   get hasFieldErrors(): boolean {
     return Object.keys(this.fieldErrors).length > 0;
   }
 }
 
-/** Mensagens conhecidas da API (ingles) traduzidas para portugues. */
+/** Mensagens conhecidas da API (inglês) traduzidas para português. */
 const MESSAGE_TRANSLATIONS: Record<string, string> = {
-  "Invalid credentials.": "Credenciais invalidas.",
-  "Unauthenticated.": "Sessao expirada. Faca login novamente.",
-  "This action is unauthorized.": "Voce nao tem permissao para esta acao.",
+  "Invalid credentials.": "Credenciais inválidas.",
+  "Unauthenticated.": "Sessão expirada. Faça login novamente.",
+  "This action is unauthorized.": "Você não tem permissão para esta ação.",
   "You must accept responsibility for authorized testing.":
-    "Voce deve aceitar a responsabilidade pelos testes autorizados.",
+    "Você deve aceitar a responsabilidade pelos testes autorizados.",
   "You must accept the attack authorization terms.":
-    "Voce deve aceitar os termos de autorizacao de ataque.",
+    "Você deve aceitar os termos de autorização de ataque.",
   "Acknowledgment terms version is outdated. Refresh and try again.":
-    "A versao dos termos de aceite esta desatualizada. Atualize a pagina e tente novamente.",
+    "A versão dos termos de aceite está desatualizada. Atualize a página e tente novamente.",
+  "No AI provider is configured.":
+    "IA indisponível no momento. Tente mais tarde ou contate o suporte.",
   "No AI provider is configured. Set GEMINI_API_KEY or GROQ_API_KEY.":
-    "IA nao configurada no servidor. Defina GEMINI_API_KEY ou GROQ_API_KEY.",
+    "IA indisponível no momento. Tente mais tarde ou contate o suporte.",
   "AI remediation suggestions generated.":
-    "Sugestoes de IA geradas com sucesso.",
+    "Sugestões de IA geradas com sucesso.",
   "Target session imported successfully.":
-    "Sessao do alvo importada com sucesso.",
+    "Sessão do alvo importada com sucesso.",
   "Target session removed successfully.":
-    "Sessao do alvo removida com sucesso.",
+    "Sessão do alvo removida com sucesso.",
   "No target session found for this system.":
-    "Nenhuma sessao do alvo encontrada para este sistema.",
+    "Nenhuma sessão do alvo encontrada para este sistema.",
   "Target session captured successfully.":
-    "Sessao do alvo conectada com sucesso.",
-  "Target session capture started.":
-    "Captura de sessao iniciada.",
+    "Sessão do alvo conectada com sucesso.",
+  "Target session capture started.": "Captura de sessão iniciada.",
+  "User role updated successfully.": "Permissão atualizada com sucesso.",
+  "You cannot change your own role.":
+    "Você não pode alterar a sua própria permissão.",
+  "At least one administrator must remain on the platform.":
+    "É preciso manter pelo menos um administrador na plataforma.",
+  "Platform API tokens cannot be used as target session credentials.":
+    "Não use a sessão da plataforma Shingeki como autenticação do alvo.",
+  "Use a extensão Shingeki ou a importação manual para conectar a sessão do alvo.":
+    "Use a extensão Shingeki ou a importação manual para conectar a sessão do alvo.",
 };
 
-/** Traducao de mensagens de validacao do Laravel (heuristica por padrao). */
+/** Tradução de mensagens de validação do Laravel (heurística por padrão). */
 function translateFieldMessage(message: string): string {
+  if (MESSAGE_TRANSLATIONS[message]) {
+    return MESSAGE_TRANSLATIONS[message];
+  }
   const lower = message.toLowerCase();
   if (lower.includes("has already been taken")) {
-    return "Este valor ja esta em uso.";
+    return "Este valor já está em uso.";
   }
-  if (lower.includes("current password") || lower.includes("password is incorrect")) {
-    return "A senha atual esta incorreta.";
+  if (
+    lower.includes("current password") ||
+    lower.includes("password is incorrect")
+  ) {
+    return "A senha atual está incorreta.";
   }
   if (lower.includes("must be a valid url")) {
-    return "URL invalida.";
+    return "URL inválida.";
   }
   if (lower.includes("must be a valid email")) {
-    return "E-mail invalido.";
+    return "E-mail inválido.";
   }
   if (lower.includes("is required") || lower.includes("field is required")) {
-    return "Campo obrigatorio.";
+    return "Campo obrigatório.";
   }
   return message;
 }
 
-/** Mensagem padrao por status quando a API nao envia algo util. */
+/** Mensagem padrão por status quando a API não envia algo útil. */
 function defaultMessageForStatus(status: number): string {
   switch (status) {
     case 0:
-      return "Nao foi possivel conectar ao servidor. Verifique sua conexao.";
+      return "Não foi possível conectar ao servidor. Verifique sua conexão.";
     case 400:
-      return "Requisicao invalida.";
+      return "Requisição inválida.";
     case 401:
-      return "Sessao expirada. Faca login novamente.";
+      return "Sessão expirada. Faça login novamente.";
     case 403:
-      return "Voce nao tem permissao para esta acao.";
+      return "Você não tem permissão para esta ação.";
     case 404:
-      return "Recurso nao encontrado.";
+      return "Recurso não encontrado.";
+    case 410:
+      return "Esta ação não está mais disponível. Use a extensão ou a importação manual.";
     case 422:
-      return "Dados invalidos. Verifique os campos destacados.";
+      return "Dados inválidos. Verifique os campos destacados.";
     case 429:
       return "Muitas tentativas. Aguarde alguns instantes.";
     case 500:
@@ -110,7 +128,7 @@ interface LaravelErrorBody {
 }
 
 /**
- * Converte qualquer erro (Axios, ApiError ja normalizado, ou desconhecido)
+ * Converte qualquer erro (Axios, ApiError já normalizado, ou desconhecido)
  * em um {@link NormalizedError}.
  */
 export function normalizeError(error: unknown): NormalizedError {
@@ -136,11 +154,8 @@ export function normalizeError(error: unknown): NormalizedError {
 
     let message: string;
     if (status === 422) {
-      message = body.message
-        ? translateFieldMessage(body.message)
-        : defaultMessageForStatus(422);
-      // Para 422 preferimos uma mensagem generica de validacao.
-      message = defaultMessageForStatus(422);
+      const firstFieldError = Object.values(fieldErrors)[0];
+      message = firstFieldError ?? defaultMessageForStatus(422);
     } else if (body.message && MESSAGE_TRANSLATIONS[body.message]) {
       message = MESSAGE_TRANSLATIONS[body.message];
     } else if (body.message && status !== 500) {

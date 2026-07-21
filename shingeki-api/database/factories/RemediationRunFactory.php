@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Enums\RemediationRunType;
-use App\Models\AttackDispatch;
-use App\Models\RemediationRun;
-use App\Models\System;
-use App\Models\User;
+use App\Enums\Remediation\RemediationRunType;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Remediation\RemediationRun;
+use App\Models\System\System;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

@@ -74,7 +74,7 @@ export function ScanCoveragePanel({
           <CardTitle className={cn(useCompactEmpty && "text-base")}>Cobertura do scan</CardTitle>
           {!useCompactEmpty ? (
             <CardDescription>
-              Historico do scan: rotas verificadas e evidencias coletadas.
+              Histórico do scan: rotas verificadas e evidencias coletadas.
             </CardDescription>
           ) : null}
         </div>
@@ -177,7 +177,7 @@ function emptyDescription({
   }
 
   if (jobsPlanned === 0) {
-    return "Nenhum teste foi aplicavel a este sistema. Verifique se a URL do alvo esta correta e acessivel.";
+    return "Nenhum teste foi aplicável a este sistema. Verifique se a URL do alvo está correta e acessível.";
   }
 
   if (probesCount === 0) {

@@ -2,12 +2,12 @@
 
 namespace App\Services\Remediation;
 
-use App\Enums\RemediationRunType;
-use App\Models\AttackDispatch;
-use App\Models\GithubRemediationPullRequest;
-use App\Models\RemediationRun;
-use App\Models\System;
-use App\Models\User;
+use App\Enums\Remediation\RemediationRunType;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Remediation\GithubRemediationPullRequest;
+use App\Models\Remediation\RemediationRun;
+use App\Models\System\System;
+use App\Models\User\User;
 use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;

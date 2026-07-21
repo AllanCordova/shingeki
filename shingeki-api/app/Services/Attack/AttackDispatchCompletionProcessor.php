@@ -2,8 +2,8 @@
 
 namespace App\Services\Attack;
 
-use App\Models\AttackDispatch;
-use App\Models\System;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
 use App\Services\Notification\UserNotificationService;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;

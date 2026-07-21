@@ -2,9 +2,9 @@
 
 namespace App\Services\Attack;
 
-use App\Enums\AttackScanType;
-use App\Enums\UserRole;
-use App\Models\Attack;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\User\UserRole;
+use App\Models\Attack\Attack;
 use Illuminate\Database\Eloquent\Collection;
 use RuntimeException;
 

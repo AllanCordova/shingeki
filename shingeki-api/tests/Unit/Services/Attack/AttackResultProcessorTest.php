@@ -1,11 +1,11 @@
 <?php
 
-use App\Enums\AttackRiskLevel;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackRiskLevel;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use App\Services\Attack\AttackResultProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

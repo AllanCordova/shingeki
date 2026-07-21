@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 };
 
 /*
-  Script anti-flash: aplica a classe `dark` antes da hidratacao, lendo a
+  Script anti-flash: aplica a classe `dark` antes da hidratação, lendo a
   escolha persistida pelo Zustand (chave "shingeki-theme"). Evita o "flash"
   de tema claro ao carregar com tema escuro selecionado.
 */

@@ -1,8 +1,8 @@
 <?php
 
-use App\Enums\AttackScanType;
-use App\Models\Attack;
-use App\Models\User;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\User\User;
 use App\Services\Attack\AttackCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

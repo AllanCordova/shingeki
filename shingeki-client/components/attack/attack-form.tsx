@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
+  useAttackAcknowledgment,
   useDispatchAttack,
   type AttackScanType,
-} from "@/lib/hooks/use-attack";
+} from "@/lib/hooks/attack/use-attack";
 import { AttackDepthModal } from "@/components/attack/attack-depth-modal";
 import type { AttackDepthConfirm } from "@/components/attack/attack-depth-modal";
-import { ATTACK_ACKNOWLEDGMENT } from "@/lib/contracts/attack-acknowledgment";
-import type { AttackDepth } from "@/lib/contracts/attack";
+import type { AttackDepth } from "@/lib/contracts/attack/attack";
 import { notify } from "@/lib/notify";
 import type { ApiError } from "@/lib/api/error-handler";
 import {
@@ -21,7 +22,10 @@ import {
   CardTitle,
   Checkbox,
   ErrorShow,
+  Loading,
 } from "@/components/ui";
+
+const TERMS_HREF = "/termos/ataques";
 
 const scanLabels: Record<AttackScanType, string> = {
   dast: "DAST",
@@ -29,7 +33,7 @@ const scanLabels: Record<AttackScanType, string> = {
 };
 
 const depthLabels: Record<AttackDepth, string> = {
-  quick: "Rapido",
+  quick: "Rápido",
   full: "Completo",
 };
 
@@ -40,6 +44,14 @@ export function AttackForm({
   projectId: string;
   systemId: string;
 }) {
+  const {
+    acknowledged,
+    terms,
+    isLoading: loadingAck,
+    isError: ackError,
+    error: ackErr,
+    refetch: refetchAck,
+  } = useAttackAcknowledgment(projectId, systemId);
   const { dispatchAttack, data, isLoading, pendingScanType, error } =
     useDispatchAttack(projectId, systemId);
   const [acceptedResponsibility, setAcceptedResponsibility] = useState(false);
@@ -48,7 +60,10 @@ export function AttackForm({
     null,
   );
 
-  const canDispatch = acceptedResponsibility && acceptedLegalTerms;
+  const needsFreshAcceptance = !acknowledged;
+  const canDispatch = acknowledged
+    ? true
+    : acceptedResponsibility && acceptedLegalTerms;
 
   const submitScan = async (
     scanType: AttackScanType,
@@ -58,26 +73,19 @@ export function AttackForm({
       const result = await dispatchAttack(
         scanType,
         {
-          acceptedResponsibility,
-          acceptedLegalTerms,
+          acceptedResponsibility: acknowledged ? true : acceptedResponsibility,
+          acceptedLegalTerms: acknowledged ? true : acceptedLegalTerms,
         },
         options.depth,
-        {
-          start_path: options.start_path,
-          max_routes: options.max_routes,
-        },
       );
       setDepthScanType(null);
-      const scopeHint = options.start_path
-        ? ` a partir de ${options.start_path}`
-        : "";
       notify.success(
-        `${result.attacks_count} teste(s) ${scanLabels[scanType]} (${depthLabels[options.depth]}${scopeHint}) iniciado(s). Acompanhe pelo sininho.`,
+        `${result.attacks_count} teste(s) ${scanLabels[scanType]} (${depthLabels[options.depth]}) iniciado(s). Acompanhe pelo sininho.`,
       );
     } catch (err) {
       notify.fromApiError(
         err as ApiError,
-        `Nao foi possivel disparar o ataque ${scanLabels[scanType]}.`,
+        `Não foi possível disparar o ataque ${scanLabels[scanType]}.`,
       );
     }
   };
@@ -87,34 +95,85 @@ export function AttackForm({
       <CardHeader>
         <CardTitle>Disparar ataques</CardTitle>
         <CardDescription>
-          Confirme a autorizacao e escolha a profundidade ao disparar DAST ou
-          SAST.
+          {acknowledged
+            ? "Escolha a profundidade ao disparar DAST ou SAST."
+            : "Confirme a autorização e escolha a profundidade ao disparar DAST ou SAST."}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col gap-4">
           {error ? <ErrorShow error={error} /> : null}
+          {ackError ? (
+            <ErrorShow error={ackErr} onRetry={() => void refetchAck()} />
+          ) : null}
 
-          <div className="flex flex-col gap-3 rounded-app border border-border bg-muted/30 p-3 text-sm">
-            <p className="text-muted-foreground">
-              Codigo de aceite:{" "}
-              <span className="font-mono text-foreground">
-                {ATTACK_ACKNOWLEDGMENT.responsibilityCode}
-              </span>
-            </p>
-            <Checkbox
-              checked={acceptedResponsibility}
-              onChange={(event) =>
-                setAcceptedResponsibility(event.target.checked)
-              }
-              label="Declaro que sou responsavel pelo alvo e tenho autorizacao para testar este sistema."
-            />
-            <Checkbox
-              checked={acceptedLegalTerms}
-              onChange={(event) => setAcceptedLegalTerms(event.target.checked)}
-              label="Estou ciente de que ataques contra sistemas sem autorizacao sao de minha responsabilidade exclusiva."
-            />
-          </div>
+          {loadingAck ? (
+            <Loading label="Verificando aceite..." />
+          ) : needsFreshAcceptance ? (
+            <div className="flex flex-col gap-3 rounded-app border border-border bg-muted/30 p-3 text-sm">
+              <p className="text-muted-foreground">
+                Código de aceite:{" "}
+                <span className="font-mono text-foreground">
+                  {terms?.responsibility_code ?? "—"}
+                </span>
+              </p>
+              <p className="text-muted-foreground">
+                Leia o{" "}
+                <Link
+                  href={TERMS_HREF}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+                >
+                  código de conduta completo
+                </Link>{" "}
+                antes de aceitar.
+              </p>
+              <Checkbox
+                checked={acceptedResponsibility}
+                onChange={(event) =>
+                  setAcceptedResponsibility(event.target.checked)
+                }
+                label={
+                  terms?.checklist[0] ??
+                  "Declaro que sou responsável pelo alvo e tenho autorização para testar este sistema."
+                }
+              />
+              <Checkbox
+                checked={acceptedLegalTerms}
+                onChange={(event) =>
+                  setAcceptedLegalTerms(event.target.checked)
+                }
+                label={
+                  terms?.checklist[1] ??
+                  "Estou ciente de que ataques contra sistemas sem autorização são de minha responsabilidadé exclusiva."
+                }
+              />
+            </div>
+          ) : (
+            <div className="rounded-app border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Você já aceitou o código de conduta deste sistema
+              {terms?.version ? (
+                <>
+                  {" "}
+                  (versão{" "}
+                  <span className="font-mono text-foreground">
+                    {terms.version}
+                  </span>
+                  )
+                </>
+              ) : null}
+              .{" "}
+              <Link
+                href={TERMS_HREF}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-foreground underline underline-offset-2 hover:text-primary"
+              >
+                Ler termos
+              </Link>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap gap-2">
@@ -123,7 +182,9 @@ export function AttackForm({
                 variant="primary"
                 isLoading={isLoading && pendingScanType === "dast"}
                 disabled={
-                  !canDispatch || (isLoading && pendingScanType !== "dast")
+                  !canDispatch ||
+                  loadingAck ||
+                  (isLoading && pendingScanType !== "dast")
                 }
                 onClick={() => setDepthScanType("dast")}
               >
@@ -134,7 +195,9 @@ export function AttackForm({
                 variant="outline"
                 isLoading={isLoading && pendingScanType === "sast"}
                 disabled={
-                  !canDispatch || (isLoading && pendingScanType !== "sast")
+                  !canDispatch ||
+                  loadingAck ||
+                  (isLoading && pendingScanType !== "sast")
                 }
                 onClick={() => setDepthScanType("sast")}
               >
@@ -154,6 +217,7 @@ export function AttackForm({
       <AttackDepthModal
         open={depthScanType !== null}
         scanType={depthScanType}
+        systemId={systemId}
         isLoading={isLoading}
         onClose={() => setDepthScanType(null)}
         onConfirm={(options) => {

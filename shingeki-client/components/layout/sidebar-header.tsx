@@ -1,6 +1,6 @@
 "use client";
 
-import { useMe } from "@/lib/hooks/use-auth";
+import { useMe } from "@/lib/hooks/auth/use-auth";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { cn } from "@/lib/utils";
 import { PanelLeftCloseIcon, XIcon } from "@/components/ui/icons";

@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\UserRole;
-use App\Models\User;
+use App\Enums\User\UserRole;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 
@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Hash;
  */
 class UserFactory extends Factory
 {
+    protected $model = User::class;
+
     /**
      * The current password being used by the factory.
      */

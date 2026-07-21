@@ -1,5 +1,6 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import { RegisterForm } from "@/components/forms/register-form";
+import { RegisterForm } from "@/components/auth/register-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui";
 
 export default function RegisterPage() {
@@ -10,7 +11,9 @@ export default function RegisterPage() {
         <CardDescription>Comece a testar a seguranca dos seus sistemas.</CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <RegisterForm />
+        <Suspense fallback={null}>
+          <RegisterForm />
+        </Suspense>
         <p className="text-center text-sm text-muted-foreground">
           Ja tem conta?{" "}
           <Link href="/login" className="font-medium text-foreground underline">

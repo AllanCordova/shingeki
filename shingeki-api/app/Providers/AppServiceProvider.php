@@ -2,14 +2,17 @@
 
 namespace App\Providers;
 
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\Remediation;
-use App\Models\User;
-use App\Policies\CatalogPolicy;
-use App\Policies\SystemResultPolicy;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Remediation\Remediation;
+use App\Models\User\User;
+use App\Policies\Catalog\CatalogPolicy;
+use App\Policies\System\SystemResultPolicy;
+use App\Socialite\GoogleOidcProvider;
+use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Socialite\Contracts\Factory as SocialiteFactory;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -26,6 +29,19 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Factory::guessFactoryNamesUsing(
+            fn (string $modelName): string => 'Database\\Factories\\'.class_basename($modelName).'Factory'
+        );
+
+        $this->app->make(SocialiteFactory::class)->extend('google', function ($app) {
+            $config = $app['config']['services.google'];
+
+            return $app->make(SocialiteFactory::class)->buildProvider(
+                GoogleOidcProvider::class,
+                $config,
+            );
+        });
+
         Gate::policy(AttackDispatch::class, SystemResultPolicy::class);
 
         $catalog = new CatalogPolicy;

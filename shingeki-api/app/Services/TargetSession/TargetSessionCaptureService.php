@@ -2,11 +2,11 @@
 
 namespace App\Services\TargetSession;
 
-use App\Enums\TargetAuthType;
-use App\Models\System;
-use App\Models\SystemTargetSession;
-use App\Models\TargetSessionCaptureTicket;
-use App\Models\User;
+use App\Enums\TargetSession\TargetAuthType;
+use App\Models\System\System;
+use App\Models\TargetSession\SystemTargetSession;
+use App\Models\TargetSession\TargetSessionCaptureTicket;
+use App\Models\User\User;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -46,16 +46,15 @@ class TargetSessionCaptureService
         $captureApiBase = rtrim((string) config('app.url'), '/').'/api';
 
         if ($this->originsMatch($targetOrigin, $clientOrigin)) {
-            $popupUrl = $clientOrigin.'/conectar-alvo'
-                .'?ticket='.$ticket->id
-                .'&projectId='.$system->project_id
-                .'&systemId='.$system->id;
+            // Same-origin must never capture the Shingeki Sanctum cookie/token as
+            // target auth. Use the extension (or manual import) with target credentials.
+            $openUrl = $system->login_url ?? $system->target_url;
 
             return [
                 'ticket' => $ticket->id,
                 'mode' => 'same_origin',
-                'popup_url' => $popupUrl,
-                'open_url' => $popupUrl,
+                'popup_url' => $openUrl,
+                'open_url' => $openUrl,
                 'capture_callback_url' => null,
                 'capture_api_base' => $captureApiBase,
                 'target_origin' => $targetOrigin,

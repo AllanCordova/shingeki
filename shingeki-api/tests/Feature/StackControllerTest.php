@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Stack;
-use App\Models\User;
+use App\Models\System\Stack;
+use App\Models\User\User;
 use Laravel\Sanctum\Sanctum;
 
 test('lists available stacks for authenticated users', function () {

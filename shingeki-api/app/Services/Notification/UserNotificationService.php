@@ -2,14 +2,14 @@
 
 namespace App\Services\Notification;
 
-use App\Enums\CatalogImportStatus;
-use App\Enums\CatalogImportType;
-use App\Enums\UserNotificationStatus;
-use App\Enums\UserNotificationType;
-use App\Models\AttackDispatch;
-use App\Models\CatalogImport;
-use App\Models\System;
-use App\Models\UserNotification;
+use App\Enums\Catalog\CatalogImportStatus;
+use App\Enums\Catalog\CatalogImportType;
+use App\Enums\User\UserNotificationStatus;
+use App\Enums\User\UserNotificationType;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Catalog\CatalogImport;
+use App\Models\System\System;
+use App\Models\User\UserNotification;
 
 class UserNotificationService
 {
@@ -56,7 +56,7 @@ class UserNotificationService
             'status' => UserNotificationStatus::Completed,
             'title' => "Scan {$scanLabel} finalizado",
             'body' => sprintf(
-                '%s — %d finding(s) em %s',
+                '%s — %d achado(s) em %s',
                 $dispatch->system?->name ?? 'Sistema',
                 $findings,
                 $durationLabel,
@@ -82,7 +82,7 @@ class UserNotificationService
             'status' => UserNotificationStatus::Pending,
             'subject_type' => CatalogImport::class,
             'subject_id' => $import->id,
-            'title' => "Importacao de {$label} em andamento",
+            'title' => "Importação de {$label} em andamento",
             'body' => sprintf('%d linha(s) na fila', $import->total_rows),
             'action_url' => $this->catalogImportActionUrl($import->type),
             'payload' => [
@@ -112,8 +112,8 @@ class UserNotificationService
                 'subject_type' => CatalogImport::class,
                 'subject_id' => $import->id,
                 'title' => $failed
-                    ? "Importacao de {$label} falhou"
-                    : "Importacao de {$label} concluida",
+                    ? "Importação de {$label} falhou"
+                    : "Importação de {$label} concluída",
                 'body' => $this->catalogImportSummaryBody($import),
                 'action_url' => $this->catalogImportActionUrl($import->type),
                 'payload' => $this->catalogImportPayload($import),
@@ -123,8 +123,8 @@ class UserNotificationService
         $notification->update([
             'status' => $failed ? UserNotificationStatus::Failed : UserNotificationStatus::Completed,
             'title' => $failed
-                ? "Importacao de {$label} falhou"
-                : "Importacao de {$label} concluida",
+                ? "Importação de {$label} falhou"
+                : "Importação de {$label} concluída",
             'body' => $this->catalogImportSummaryBody($import),
             'read_at' => null,
             'payload' => $this->catalogImportPayload($import),
@@ -154,13 +154,13 @@ class UserNotificationService
     private function catalogImportActionUrl(CatalogImportType $type): string
     {
         return $type === CatalogImportType::Attacks
-            ? '/admin/ataques'
-            : '/admin/medicacoes';
+            ? '/auditoria/ataques'
+            : '/auditoria/medicacoes';
     }
 
     private function catalogImportLabel(CatalogImportType $type): string
     {
-        return $type === CatalogImportType::Attacks ? 'ataques' : 'medicacoes';
+        return $type === CatalogImportType::Attacks ? 'ataques' : 'medicações';
     }
 
     /**

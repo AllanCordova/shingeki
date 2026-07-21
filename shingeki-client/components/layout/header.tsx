@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { UserAvatarLink } from "@/components/ui/user-avatar-link";
 import { NotificationBell } from "@/components/notifications/notification-bell";
-import { useLogout, useMe } from "@/lib/hooks/use-auth";
+import { useLogout, useMe } from "@/lib/hooks/auth/use-auth";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { notify } from "@/lib/notify";
 import { MenuIcon, SettingsIcon } from "@/components/ui/icons";
@@ -22,9 +22,9 @@ export function Header({ showMenuButton = false }: { showMenuButton?: boolean })
   const handleLogout = async () => {
     try {
       await logout();
-      notify.success("Sessao encerrada.");
+      notify.success("Sessão encerrada.");
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel sair.");
+      notify.fromApiError(err, "Não foi possível sair.");
     } finally {
       router.push("/login");
       router.refresh();
@@ -47,7 +47,7 @@ export function Header({ showMenuButton = false }: { showMenuButton?: boolean })
             </button>
           ) : null}
           <Link
-            href="/"
+            href="/projetos"
             className="truncate text-lg font-semibold tracking-tight text-foreground"
           >
             shingeki
@@ -72,8 +72,8 @@ export function Header({ showMenuButton = false }: { showMenuButton?: boolean })
               <Link
                 href="/configuracoes"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-app text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Configuracoes"
-                title="Configuracoes"
+                aria-label="Configurações"
+                title="Configurações"
               >
                 <SettingsIcon className="h-4 w-4 shrink-0" />
               </Link>

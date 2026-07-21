@@ -1,15 +1,15 @@
 <?php
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackScanType;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\Project;
-use App\Models\Remediation;
-use App\Models\Stack;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use Laravel\Sanctum\Sanctum;
 
 function remediateUrl(Project $project, System $system): string
@@ -144,5 +144,16 @@ describe('POST systems/remediate', function () {
             ->assertJsonPath('findings_pagination.per_page', 1)
             ->assertJsonPath('findings_pagination.total', 3)
             ->assertJsonPath('findings_pagination.last_page', 3);
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->postJson(remediateUrl($project, $system))->assertNotFound();
     });
 });

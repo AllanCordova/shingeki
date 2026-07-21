@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\AttackDispatch;
-use App\Models\Project;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use Laravel\Sanctum\Sanctum;
 
 describe('GET projects/{project}/dashboard', function () {

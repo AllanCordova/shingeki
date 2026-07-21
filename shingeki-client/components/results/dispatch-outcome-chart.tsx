@@ -1,7 +1,7 @@
 "use client";
 
-import type { AttackDispatch } from "@/lib/contracts/attack";
-import type { ProbeOutcomeCounts } from "@/lib/contracts/result";
+import type { AttackDispatch } from "@/lib/contracts/attack/attack";
+import type { ProbeOutcomeCounts } from "@/lib/contracts/results/result";
 import { cn } from "@/lib/utils";
 
 interface ChartSegment {

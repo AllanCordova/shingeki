@@ -2,8 +2,8 @@
 
 namespace App\Services\Source;
 
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 
 class DastRouteHeuristic
 {

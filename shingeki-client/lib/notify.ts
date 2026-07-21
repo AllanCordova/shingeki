@@ -26,6 +26,13 @@ export const notify = {
 
   fromApiError(error: unknown, fallback = "Ocorreu um erro.") {
     const apiError = error as ApiError | null;
+    const fieldMessage = apiError?.fieldErrors
+      ? Object.values(apiError.fieldErrors)[0]
+      : undefined;
+    if (fieldMessage) {
+      toast.error(fieldMessage);
+      return;
+    }
     if (apiError?.message) {
       toast.error(apiError.message);
       return;

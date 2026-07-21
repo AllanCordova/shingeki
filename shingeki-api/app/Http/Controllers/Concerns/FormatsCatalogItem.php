@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Models\Attack;
-use App\Models\Remediation;
-use App\Models\User;
+use App\Models\Attack\Attack;
+use App\Models\Remediation\Remediation;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 
