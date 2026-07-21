@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
-use App\Models\UserCoverUpload;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserCoverUpload;
 use App\Services\Cover\CoverImageService;
 use App\Services\Cover\UserCoverLibraryService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -105,15 +105,18 @@ test('deleteUpload removes library entry but keeps file when path is in use', fu
     Storage::disk('public')->assertExists('covers/in-use.jpg');
 });
 
-test('isPathInUseByUser detects project and system usage', function () {
-    $user = User::factory()->create();
+test('isPathInUseByUser detects project, system and avatar usage', function () {
+    $user = User::factory()->create([
+        'avatar_path' => '/storage/covers/avatar.jpg',
+    ]);
     $project = Project::factory()->for($user)->create([
         'cover_path' => '/storage/covers/project.jpg',
     ]);
     $systemPath = '/storage/covers/system.jpg';
     System::factory()->for($project)->create(['cover_path' => $systemPath]);
 
-    expect($this->service->isPathInUseByUser($user->id, '/storage/covers/project.jpg'))->toBeTrue()
+    expect($this->service->isPathInUseByUser($user->id, '/storage/covers/avatar.jpg'))->toBeTrue()
+        ->and($this->service->isPathInUseByUser($user->id, '/storage/covers/project.jpg'))->toBeTrue()
         ->and($this->service->isPathInUseByUser($user->id, $systemPath))->toBeTrue()
         ->and($this->service->isPathInUseByUser($user->id, '/storage/covers/unused.jpg'))->toBeFalse();
 });

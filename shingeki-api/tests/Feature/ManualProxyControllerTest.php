@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\ManualRouteMap;
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
+use App\Models\Project\Project;
+use App\Models\System\ManualRouteMap;
+use App\Models\System\System;
+use App\Models\User\User;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
@@ -130,7 +130,7 @@ describe('manual proxy', function () {
             ->assertCreated();
 
         $payload = json_decode($response->getContent(), false);
-        expect($payload->route->query)->toBeInstanceOf(\stdClass::class)
-            ->and($payload->route->headers)->toBeInstanceOf(\stdClass::class);
+        expect($payload->route->query)->toBeInstanceOf(stdClass::class)
+            ->and($payload->route->headers)->toBeInstanceOf(stdClass::class);
     });
 });

@@ -2,8 +2,8 @@
 
 namespace App\Services\Signature;
 
-use App\Enums\SignatureStatus;
-use App\Models\Signature;
+use App\Enums\Signature\SignatureStatus;
+use App\Models\Signature\Signature;
 use InvalidArgumentException;
 
 class SignatureStatusService

@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\System;
-use App\Models\User;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\User\User;
 use App\Services\Attack\AttackDispatchCompletionProcessor;
 use App\Services\Attack\AttackProbeProcessor;
 use App\Services\Attack\AttackResultsMessageHandler;

@@ -6,7 +6,7 @@ import {
   useStartTargetSessionConnect,
   useStoreTargetSession,
   useTargetSession,
-} from "@/lib/hooks/use-target-session";
+} from "@/lib/hooks/target-session/use-target-session";
 import {
   armShingekiExtension,
   pingShingekiExtension,
@@ -80,7 +80,7 @@ export function TargetSessionPanel({
   const handleConnected = () => {
     stopPolling();
     void refetch();
-    notify.success("Sessao do alvo conectada.");
+    notify.success("Sessão do alvo conectada.");
   };
 
   useEffect(() => {
@@ -159,7 +159,7 @@ export function TargetSessionPanel({
         extensionReady === true || (await pingShingekiExtension());
       setExtensionReady(hasExtension);
 
-      if (hasExtension && result.mode === "external") {
+      if (hasExtension) {
         const apiBase = resolveCaptureApiBase(result.capture_api_base);
         const openUrl = result.open_url || result.popup_url;
         const expiresAt = result.expires_at
@@ -179,63 +179,66 @@ export function TargetSessionPanel({
         if (!armed.ok) {
           notify.error(
             armed.error ??
-              "Extensao detectada, mas falhou ao armar a captura.",
+              "Extensão detectada, mas falhou ao preparar a captura.",
           );
           return;
         }
 
         startCapturePolling();
         notify.success(
-          "Aba do alvo aberta. Faca login la, depois clique no icone Shingeki → Capturar sessao.",
+          "Aba do alvo aberta. Faça login lá, depois clique no ícone Shingeki → Capturar sessão.",
         );
         return;
       }
-
-      const popup = window.open(
-        result.popup_url,
-        "shingeki-target-login",
-        POPUP_FEATURES,
-      );
-
-      if (!popup) {
-        notify.error("Permita pop-ups para conectar a sessao do alvo.");
-        return;
-      }
-
-      startCapturePolling();
 
       if (result.mode === "external") {
-        notify.success(
-          hasExtension
-            ? "Faca login na janela aberta."
-            : "Lab: faca login e aguarde o capture. Para SaaS (Bling etc.), instale a extensao Shingeki.",
+        const popup = window.open(
+          result.popup_url,
+          "shingeki-target-login",
+          POPUP_FEATURES,
         );
-      } else {
-        notify.success("Faca login na janela aberta para conectar a sessao.");
+
+        if (!popup) {
+          notify.error("Permita pop-ups para conectar a sessão do alvo.");
+          return;
+        }
+
+        startCapturePolling();
+        notify.success(
+          "Faça login na janela aberta. Em sistemas externos autenticados, instale a extensão Shingeki.",
+        );
+        return;
       }
+
+      notify.error(
+        "Instale a extensão Shingeki ou use a importação manual para conectar a sessão do alvo.",
+      );
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel iniciar a conexao com o alvo.");
+      notify.fromApiError(
+        err,
+        "Não foi possível iniciar a conexão com o alvo.",
+      );
     }
   };
 
   const handleRevoke = async () => {
     try {
       await revokeSession.revokeSession();
-      notify.success("Sessao do alvo removida.");
+      notify.success("Sessão do alvo removida.");
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel remover a sessao.");
+      notify.fromApiError(err, "Não foi possível remover a sessão.");
     }
   };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sessao do alvo</CardTitle>
+        <CardTitle>Sessão do alvo</CardTitle>
         <CardDescription>
-          Conecte a sessao autenticada para o scan acessar areas protegidas do
-          alvo. Em sistemas externos, use a extensao Shingeki para Chrome ou
-          Edge. Em alvos que cooperam com a captura, o popup do navegador tambem
-          pode concluir a conexao.
+          Conecte a sessão autenticada para o scan acessar áreas protegidas do
+          alvo. Em sistemas externos, use a extensão Shingeki para Chrome ou
+          Edge. Em alvos que cooperam com a captura, o popup do navegador também
+          pode concluir a conexão.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -245,8 +248,8 @@ export function TargetSessionPanel({
         {extensionReady === false ? (
           <div className="flex flex-col gap-2 rounded-app border border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
             <p>
-              Extensao nao detectada. Baixe e instale a extensao Shingeki para
-              conectar a sessao autenticada do alvo:
+              Extensão não detectada. Baixe e instale a extensão Shingeki para
+              conectar a sessão autenticada do alvo:
             </p>
             <ol className="list-decimal space-y-1 pl-4">
               <li>
@@ -255,36 +258,34 @@ export function TargetSessionPanel({
                   className="text-primary underline hover:no-underline"
                   download
                 >
-                  Baixar a extensao Shingeki
+                  Baixar a extensão Shingeki
                 </a>
               </li>
               <li>
-                Extraia o arquivo e abra{" "}
-                <code className="font-mono text-xs">chrome://extensions</code>{" "}
-                (ou a pagina de extensoes do Edge)
+                Extraia o arquivo e abra a página de extensões do Chrome ou do
+                Edge
               </li>
               <li>
-                Ative o modo do desenvolvedor → Carregar sem compactacao →
-                selecione a pasta extraida
+                Carregue a pasta extraída como extensão descompactada
               </li>
-              <li>Volte ao Shingeki e recarregue esta pagina</li>
+              <li>Volte ao Shingeki e recarregue esta página</li>
             </ol>
             <p>
               Depois de instalada, use Conectar ao alvo e confirme a captura no
-              icone da extensao.
+              ícone da extensão.
             </p>
           </div>
         ) : null}
         {extensionReady === true ? (
           <p className="text-xs text-muted-foreground">
-            Extensao detectada. Conectar abre o login em aba normal; depois use
-            o icone Shingeki → Capturar sessao (nao precisa estar na aba do
+            Extensão detectada. Conectar abre o login em aba normal; depois use
+            o ícone Shingeki → Capturar sessão (não precisa estar na aba do
             Shingeki).
           </p>
         ) : null}
 
         {isLoading ? (
-          <Loading label="Carregando sessao..." />
+          <Loading label="Carregando sessão..." />
         ) : session?.connected ? (
           <div className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -297,7 +298,7 @@ export function TargetSessionPanel({
               ))}
             </div>
             <p className="text-sm text-muted-foreground">
-              Os proximos scans utilizarao esta sessao automaticamente.
+              Os próximos scans utilizarão esta sessão automaticamente.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -315,15 +316,15 @@ export function TargetSessionPanel({
                 isLoading={revokeSession.isLoading}
                 onClick={() => void handleRevoke()}
               >
-                Remover sessao
+                Remover sessão
               </Button>
             </div>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">
-              1) Conectar ao alvo (abre aba de login) → 2) faca login → 3) icone
-              da extensao → <strong>Capturar sessao</strong>.
+              1) Conectar ao alvo (abre aba de login) → 2) faça login → 3) ícone
+              da extensão → <strong>Capturar sessão</strong>.
             </p>
             <Button
               type="button"
@@ -342,8 +343,8 @@ export function TargetSessionPanel({
             onClick={() => setShowAdvanced((value) => !value)}
           >
             {showAdvanced
-              ? "Ocultar importacao manual"
-              : "Importar sessao manualmente"}
+              ? "Ocultar importação manual"
+              : "Importar sessão manualmente"}
           </button>
 
           {showAdvanced ? (
@@ -358,21 +359,22 @@ export function TargetSessionPanel({
                     auth_type: formData.get("auth_type") as "cookie" | "bearer",
                     credential: String(formData.get("credential") ?? ""),
                   })
-                  .then(() => notify.success("Sessao salva com sucesso."))
+                  .then(() => notify.success("Sessão salva com sucesso."))
                   .catch((err) =>
                     notify.fromApiError(
                       err,
-                      "Nao foi possivel salvar a sessao.",
+                      "Não foi possível salvar a sessão.",
                     ),
                   );
               }}
             >
               <p className="text-sm text-muted-foreground">
-                Fallback sem extensao: cole o Cookie ou Bearer do DevTools.
+                Sem a extensão: cole o cookie ou o token Bearer da sessão do
+                próprio alvo.
               </p>
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="font-medium text-foreground">
-                  Tipo de autenticacao
+                  Tipo de autenticação
                 </span>
                 <select
                   name="auth_type"
@@ -409,7 +411,7 @@ export function TargetSessionPanel({
                 variant="outline"
                 isLoading={storeSession.isLoading}
               >
-                Salvar sessao
+                Salvar sessão
               </Button>
             </form>
           ) : null}

@@ -10,7 +10,7 @@ export async function POST() {
     // segue limpando o cookie de qualquer forma
   }
 
-  const response = NextResponse.json({ message: "Sessao encerrada." });
+  const response = NextResponse.json({ message: "Sessão encerrada." });
   response.cookies.delete(AUTH_COOKIE);
   return response;
 }

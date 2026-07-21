@@ -2,9 +2,9 @@
 
 namespace App\Services\Attack;
 
-use App\Models\AttackDispatch;
-use App\Models\DispatchProbe;
-use App\Models\SystemResult;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Attack\DispatchProbe;
+use App\Models\System\SystemResult;
 
 class AttackResultsMessageHandler
 {

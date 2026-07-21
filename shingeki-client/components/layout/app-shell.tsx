@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { canManageCatalog, isCommonUser } from "@/lib/auth/roles";
-import { useMe } from "@/lib/hooks/use-auth";
+import { useMe } from "@/lib/hooks/auth/use-auth";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { Header } from "@/components/layout/header";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";

@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\ManualRouteMap;
-use App\Models\System;
-use App\Models\User;
+use App\Models\System\ManualRouteMap;
+use App\Models\System\System;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

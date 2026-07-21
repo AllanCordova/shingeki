@@ -2,10 +2,10 @@
 
 namespace App\Services\Attack;
 
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;

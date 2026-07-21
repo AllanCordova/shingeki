@@ -21,7 +21,7 @@ class LlmClientManager
             }
         }
 
-        throw new RuntimeException('No AI provider is configured. Set GEMINI_API_KEY or GROQ_API_KEY.');
+        throw new RuntimeException('No AI provider is configured.');
     }
 
     /**

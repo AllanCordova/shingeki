@@ -23,7 +23,7 @@ interface ModalProps {
   className?: string;
 }
 
-/** Modal controlado e acessivel (fecha com Esc / clique fora). */
+/** Modal controlado e acessível (fecha com Esc / clique fora). */
 export function Modal({
   open,
   onClose,

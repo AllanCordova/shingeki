@@ -6,7 +6,7 @@ import type {
   GitHubRemediationPrPreviewResponse,
   OpenGitHubRemediationPrInput,
 } from "@/lib/contracts";
-import { useGitHubRemediationPrPreview } from "@/lib/hooks/use-remediate";
+import { useGitHubRemediationPrPreview } from "@/lib/hooks/remediation/use-remediate";
 import { Badge, Button, ErrorShow, Loading, Modal } from "@/components/ui";
 
 interface GitHubPrPreviewModalProps {
@@ -55,7 +55,7 @@ export function GitHubPrPreviewModal({
       open={open}
       onClose={handleClose}
       title="Confirmar pull request"
-      description="Revise as alteracoes antes de abrir o PR no GitHub."
+      description="Revise as alterações antes de abrir o PR no GitHub."
       size="xl"
       className="max-w-5xl"
       footer={
@@ -74,7 +74,7 @@ export function GitHubPrPreviewModal({
       }
     >
       {isLoading ? (
-        <Loading label="Gerando preview das alteracoes..." />
+        <Loading label="Gerando preview das alterações..." />
       ) : error ? (
         <ErrorShow error={error} />
       ) : preview ? (
@@ -103,7 +103,7 @@ function PreviewContent({ preview }: { preview: GitHubRemediationPrPreviewRespon
         </dl>
         <div className="flex flex-wrap gap-2 pt-1">
           <Badge tone="neutral">{preview.files_ready} arquivo(s) pronto(s)</Badge>
-          <Badge tone="neutral">{preview.findings_applied} correcao(oes)</Badge>
+          <Badge tone="neutral">{preview.findings_applied} correção(ões)</Badge>
           <Badge tone="neutral">
             {preview.provider} / {preview.model}
           </Badge>
@@ -124,7 +124,7 @@ function PreviewContent({ preview }: { preview: GitHubRemediationPrPreviewRespon
 
       {readyFiles.length > 0 ? (
         <section className="flex flex-col gap-3">
-          <h3 className="text-sm font-semibold text-foreground">Alteracoes que serao enviadas</h3>
+          <h3 className="text-sm font-semibold text-foreground">Alterações que serao enviadas</h3>
           {readyFiles.map((file) => (
             <FileDiffPreview key={file.path} file={file} />
           ))}
@@ -181,7 +181,7 @@ function FileDiffPreview({ file }: { file: GitHubRemediationPrPreviewFile }) {
         <h4 className="font-mono text-sm text-foreground">{displayPath}</h4>
         <Badge tone="success">Pronto</Badge>
         <Badge tone="neutral">
-          {file.findings_count} correcao(oes)
+          {file.findings_count} correção(ões)
         </Badge>
       </div>
 
@@ -203,7 +203,7 @@ function FileDiffPreview({ file }: { file: GitHubRemediationPrPreviewFile }) {
           </summary>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <DiffBlock label="Arquivo atual" value={file.before} tone="neutral" />
-            <DiffBlock label="Arquivo apos correcao" value={file.after} tone="neutral" />
+            <DiffBlock label="Arquivo após correção" value={file.after} tone="neutral" />
           </div>
         </details>
       ) : null}

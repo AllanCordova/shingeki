@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Enums\UserRole;
-use App\Models\User;
+use App\Enums\User\UserRole;
+use App\Models\User\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -39,6 +39,7 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
+        // $this->call(UsersSeeder::class);
         $this->call(VulnerableTargetSeeder::class);
         $this->call(DemoProjectsSeeder::class);
     }

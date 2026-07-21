@@ -53,6 +53,7 @@ Use esta página como índice. Detalhes de cada módulo ficam nos guias abaixo (
 | Módulo | Guia |
 |--------|------|
 | Autenticação e papéis | [api/AUTHENTICATION.md](api/AUTHENTICATION.md) |
+| Administração de usuários (`ADMIN`) | [api/ADMIN-USERS.md](api/ADMIN-USERS.md) |
 | Projetos e sistemas | [api/PROJECTS-AND-SYSTEMS.md](api/PROJECTS-AND-SYSTEMS.md) |
 | Stacks tecnológicas | [api/STACKS.md](api/STACKS.md) |
 | Capas e biblioteca | [api/COVERS.md](api/COVERS.md) |

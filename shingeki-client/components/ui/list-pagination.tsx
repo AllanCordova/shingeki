@@ -19,7 +19,7 @@ export function ListPagination({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
       <p className="text-sm text-muted-foreground">
-        Pagina {pagination.current_page} de {pagination.last_page}
+        Página {pagination.current_page} de {pagination.last_page}
         {pagination.total > 0
           ? ` · ${pagination.from ?? 0}-${pagination.to ?? 0} de ${pagination.total}`
           : ""}

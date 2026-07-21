@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Models\Attack;
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Models\Attack\Attack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

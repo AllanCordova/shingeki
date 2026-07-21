@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useProjects, useCreateProject } from "@/lib/hooks/use-projects";
+import { useProjects, useCreateProject } from "@/lib/hooks/project/use-projects";
 import type { ProjectCreateInput } from "@/lib/contracts";
 import { useUiStore } from "@/lib/stores/ui-store";
-import { ProjectForm } from "@/components/forms/project-form";
+import { ProjectForm } from "@/components/projects/project-form";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectTemplatePicker } from "@/components/projects/project-template-picker";
 import { ReopenGuidedSetupButton } from "@/components/onboarding/reopen-guided-setup-button";
@@ -56,7 +55,7 @@ export default function ProjetosPage() {
             Projetos
           </h1>
           <p className="text-sm text-muted-foreground">
-            Organize seus sistemas e testes de seguranca.
+            Organize seus sistemas e testes de segurança.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -85,7 +84,7 @@ export default function ProjetosPage() {
       ) : projects.length === 0 ? (
         <EmptyState
           title="Nenhum projeto ainda"
-          description="Crie seu primeiro projeto para comecar a cadastrar sistemas."
+          description="Crie seu primeiro projeto para começar a cadastrar sistemas."
           action={
             <AddActionButton
               onClick={handleOpen}

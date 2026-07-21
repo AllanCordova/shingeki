@@ -2,9 +2,9 @@
 
 namespace App\Services\CatalogImport;
 
-use App\Enums\CatalogImportType;
-use App\Models\CatalogImport;
-use App\Models\User;
+use App\Enums\Catalog\CatalogImportType;
+use App\Models\Catalog\CatalogImport;
+use App\Models\User\User;
 use Illuminate\Support\Facades\Queue;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
 

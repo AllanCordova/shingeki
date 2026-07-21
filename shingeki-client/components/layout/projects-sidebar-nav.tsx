@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { SIDEBAR_NAV_PAGE_SIZE } from "@/lib/contracts/common";
-import { useSidebarNavigation } from "@/lib/hooks/use-sidebar-navigation";
+import { SIDEBAR_NAV_PAGE_SIZE } from "@/lib/contracts/common/common";
+import { useSidebarNavigation } from "@/lib/hooks/navigation/use-sidebar-navigation";
 import { cn } from "@/lib/utils";
 import { Button, Spinner } from "@/components/ui";
 import {
@@ -19,6 +19,7 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
   const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [syncedPathname, setSyncedPathname] = useState(pathname);
 
   useEffect(() => {
     const media = window.matchMedia("(min-width: 1024px)");
@@ -29,39 +30,36 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
   }, []);
 
   const effectiveCollapsed = isDesktop && collapsed;
-
   const totalPages = Math.max(1, Math.ceil(sidebar.length / SIDEBAR_NAV_PAGE_SIZE));
 
-  const pageProjects = useMemo(() => {
-    const start = (page - 1) * SIDEBAR_NAV_PAGE_SIZE;
-    return sidebar.slice(start, start + SIDEBAR_NAV_PAGE_SIZE);
-  }, [page, sidebar]);
+  if (page > totalPages) {
+    setPage(totalPages);
+  }
 
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  useEffect(() => {
+  if (pathname !== syncedPathname) {
+    setSyncedPathname(pathname);
     const match = pathname.match(/^\/projetos\/([^/]+)/);
-    if (!match || sidebar.length === 0) return;
-
-    const projectId = match[1];
-    const index = sidebar.findIndex((project) => project.id === projectId);
-    if (index < 0) return;
-
-    setExpandedProjectId(projectId);
-    setPage(Math.floor(index / SIDEBAR_NAV_PAGE_SIZE) + 1);
-  }, [pathname, sidebar]);
-
-  useEffect(() => {
-    if (!expandedProjectId) return;
-    const stillVisible = pageProjects.some((project) => project.id === expandedProjectId);
-    if (!stillVisible) {
-      setExpandedProjectId(null);
+    if (match && sidebar.length > 0) {
+      const projectId = match[1];
+      const index = sidebar.findIndex((project) => project.id === projectId);
+      if (index >= 0) {
+        setExpandedProjectId(projectId);
+        setPage(Math.floor(index / SIDEBAR_NAV_PAGE_SIZE) + 1);
+      }
     }
-  }, [expandedProjectId, pageProjects]);
+  }
+
+  const safePage = Math.min(page, totalPages);
+  const pageProjects = useMemo(() => {
+    const start = (safePage - 1) * SIDEBAR_NAV_PAGE_SIZE;
+    return sidebar.slice(start, start + SIDEBAR_NAV_PAGE_SIZE);
+  }, [safePage, sidebar]);
+
+  const visibleExpandedId =
+    expandedProjectId &&
+    pageProjects.some((project) => project.id === expandedProjectId)
+      ? expandedProjectId
+      : null;
 
   const sectionActive = pathname.startsWith("/projetos");
 
@@ -109,7 +107,7 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
         <>
           <ul className="flex flex-col gap-0.5">
             {pageProjects.map((project) => {
-              const isExpanded = expandedProjectId === project.id;
+              const isExpanded = visibleExpandedId === project.id;
               const projectHref = `/projetos/${project.id}`;
               const projectActive = pathname.startsWith(projectHref);
               const visibleSystems = project.systems.slice(0, SIDEBAR_NAV_PAGE_SIZE);
@@ -216,23 +214,25 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-xs"
-                disabled={page <= 1}
+                disabled={safePage <= 1}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
               >
                 Anterior
               </Button>
               <span className="text-xs text-muted-foreground">
-                {page}/{totalPages}
+                {safePage}/{totalPages}
               </span>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2 text-xs"
-                disabled={page >= totalPages}
-                onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                disabled={safePage >= totalPages}
+                onClick={() =>
+                  setPage((current) => Math.min(totalPages, current + 1))
+                }
               >
-                Proxima
+                Próxima
               </Button>
             </div>
           ) : null}

@@ -17,7 +17,9 @@ Does **not** replace engineering docs in `docs/` or package READMEs aimed at con
 3. **No implementation dump**: avoid names like “Rod”, queue names, “prefetch”, Git branches, Dockerfile, or raw file package names unless the user must use them (e.g. a documented install step).
 4. **No customer names as the only example** when the feature is generic (“Bling and other SaaS” → “external authenticated systems”).
 5. **Secrets never in copy**: no tokens, cookies, sample JWT fragments, or “paste your production cookie here” without a strong auth warning and scoped UI.
-6. **Consistent terms**: prefer the product glossary already used in the UI (alvo, sessao, disparo, profundidade, remediacao).
+6. **Consistent terms**: prefer the product glossary already used in the UI (alvo, sessão, disparo, profundidade, remediação).
+7. **Area names**: catalog managers use **Auditoria** (`/auditoria/*`) for the global attack/remediation catalog — not “Painel Admin” or RF codes. **Admin** (`/admin`, `/admin/users/permissoes`) is for platform administration (roles) and is ADMIN-only.
+8. **Accents in UI copy**: user-facing Portuguese must use correct accents (`Configurações`, `Permissões`, `Navegação`, `você`, `não`, `ação`). URL paths may stay without accents (`/configuracoes`).
 
 ## Good vs bad
 

@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { UserNotification, UserNotificationStatus } from "@/lib/contracts";
-import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
 import {
   useDeleteAllNotifications,
   useDeleteNotification,
   useMarkAllNotificationsRead,
   useMarkNotificationRead,
   useNotifications,
-} from "@/lib/hooks/use-notifications";
+} from "@/lib/hooks/notification/use-notifications";
 import { notify } from "@/lib/notify";
 import { cn, formatDate } from "@/lib/utils";
 import {
@@ -69,7 +69,7 @@ export function NotificationsList() {
     try {
       await markRead(notification.id);
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel marcar como lida.");
+      notify.fromApiError(err, "Não foi possível marcar como lida.");
     }
   };
 
@@ -77,9 +77,9 @@ export function NotificationsList() {
     setDeletingId(notificationId);
     try {
       await deleteNotification(notificationId);
-      notify.success("Notificacao removida.");
+      notify.success("Notificação removida.");
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel remover a notificacao.");
+      notify.fromApiError(err, "Não foi possível remover a notificação.");
     } finally {
       setDeletingId(null);
     }
@@ -87,7 +87,7 @@ export function NotificationsList() {
 
   const handleDeleteAll = async () => {
     const ok = await notify.run(() => deleteAllNotifications(), {
-      success: "Todas as notificacoes foram removidas.",
+      success: "Todas as notificações foram removidas.",
     });
     if (!ok) return;
     setDeleteAllOpen(false);
@@ -100,7 +100,7 @@ export function NotificationsList() {
         <CardHeader>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <CardTitle>Notificacoes</CardTitle>
+              <CardTitle>Notificações</CardTitle>
               <CardDescription>
                 {pendingCount > 0 ? `${pendingCount} em andamento` : "Nenhum job pendente"}
                 {unreadCount > 0 ? ` · ${unreadCount} nao lida(s)` : ""}
@@ -130,8 +130,8 @@ export function NotificationsList() {
                     variant="ghost"
                     size="sm"
                     className="px-2.5 text-danger hover:bg-danger-surface hover:text-danger"
-                    aria-label="Remover todas as notificacoes"
-                    title="Remover todas as notificacoes"
+                    aria-label="Remover todas as notificações"
+                    title="Remover todas as notificações"
                     onClick={() => setDeleteAllOpen(true)}
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -144,13 +144,13 @@ export function NotificationsList() {
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Loading label="Carregando notificacoes..." />
+            <Loading label="Carregando notificações..." />
           ) : error ? (
             <ErrorShow error={error} onRetry={() => refetch()} />
           ) : notifications.length === 0 ? (
             <EmptyState
-              title="Nenhuma notificacao"
-              description="Scans e importacoes aparecem aqui quando houver atualizacoes."
+              title="Nenhuma notificação"
+              description="Scans e importações aparecem aqui quando houver atualizações."
             />
           ) : (
             <div className="flex flex-col gap-4">
@@ -181,8 +181,8 @@ export function NotificationsList() {
       <Modal
         open={deleteAllOpen}
         onClose={() => setDeleteAllOpen(false)}
-        title="Remover todas as notificacoes"
-        description="Esta acao nao pode ser desfeita."
+        title="Remover todas as notificações"
+        description="Esta ação não pode ser desfeita."
         footer={
           <>
             <Button type="button" variant="ghost" onClick={() => setDeleteAllOpen(false)}>
@@ -257,8 +257,8 @@ function NotificationRow({
           variant="ghost"
           size="sm"
           className="px-2.5 text-danger hover:bg-danger-surface hover:text-danger"
-          aria-label="Remover notificacao"
-          title="Remover notificacao"
+          aria-label="Remover notificação"
+          title="Remover notificação"
           isLoading={isDeleting}
           onClick={(event) => {
             event.stopPropagation();

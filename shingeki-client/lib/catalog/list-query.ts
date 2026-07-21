@@ -1,6 +1,6 @@
 import { apiClient } from "@/lib/api/client";
 import type { CatalogListQueryParams } from "@/lib/contracts";
-import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
 
 export type ResolvedCatalogListQuery = Required<
   Pick<CatalogListQueryParams, "page" | "per_page">

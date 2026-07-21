@@ -20,15 +20,18 @@ The repo is already in good shape. Do not reinvent architecture on every feature
 
 ### Client (`shingeki-client`)
 
-- Data hooks in `lib/hooks`.
-- Shared contracts/types in `lib/contracts`.
-- BFF in `app/api/*` via `forwardToApi` / `forwardToGraphql` (token only on the server).
-- UI in `components/*`; thin pages in `app/`.
+- Data hooks in `lib/hooks/{Resource}` (e.g. `project/`, `system/`, `catalog/`).
+- Shared contracts/types in `lib/contracts/{Resource}` with barrel `lib/contracts/index.ts`.
+- Domain UI in `components/{Resource}`; shared primitives stay in `components/ui`.
+- Domain helpers in `lib/{Resource}` when not a hook/contract (e.g. `lib/cover`, `lib/project`).
+- BFF in `app/api/*` via `forwardToApi` / `forwardToGraphql` (token only on the server). Keep route paths stable — they are the browser contract.
+- Thin pages in `app/`.
 - REST + React Query by default; Apollo only where GraphQL is already adopted (e.g. sidebar).
 
 ### API (`shingeki-api`)
 
 - Thin controllers; business rules in `app/Services`.
+- Domain folders by resource (not a flat dump): `app/Models/{Resource}`, `app/Http/Controllers/{Resource}`, `app/Http/Requests/{Resource}`, `app/Policies/{Resource}`, `app/Enums/{Resource}` — same resource names already used under `app/Services/{Resource}` where applicable.
 - Lean Eloquent models; ownership in queries/policies.
 - GraphQL: schema in `graphql/`, resolvers in `app/GraphQL`, reused services.
 - Pest feature tests for important contracts.

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMemo, useState } from "react";
-import { useDispatches } from "@/lib/hooks/use-results";
-import { useCompareDispatches } from "@/lib/hooks/use-project-insights";
+import { useDispatches } from "@/lib/hooks/results/use-results";
+import { useCompareDispatches } from "@/lib/hooks/project/use-project-insights";
 import { formatDate } from "@/lib/utils";
 import {
   Badge,
@@ -105,7 +105,7 @@ export default function CompareDispatchesPage() {
       ) : completed.length < 2 ? (
         <EmptyState
           title="Precisa de pelo menos dois scans concluidos"
-          description="Dispare novamente o catalogo para comparar evolucao entre logs."
+          description="Dispare novamente o catálogo para comparar evolução entre logs."
         />
       ) : (
         <>

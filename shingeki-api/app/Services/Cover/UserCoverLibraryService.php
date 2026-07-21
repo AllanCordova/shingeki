@@ -2,10 +2,10 @@
 
 namespace App\Services\Cover;
 
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
-use App\Models\UserCoverUpload;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserCoverUpload;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
@@ -37,9 +37,17 @@ class UserCoverLibraryService
             ->get();
     }
 
-    public function registerUpload(User $user, UploadedFile $file): UserCoverUpload
-    {
-        $this->assertCanAdd($user);
+    /**
+     * Ponto unico para gravar imagem do usuario no disco e na biblioteca.
+     * Todo upload de capa/avatar/etc. deve passar por aqui — nao chame
+     * {@see CoverImageService::store} direto para midia do usuario.
+     */
+    public function registerUpload(
+        User $user,
+        UploadedFile $file,
+        string $errorField = 'cover',
+    ): UserCoverUpload {
+        $this->assertCanAdd($user, $errorField);
 
         $path = $this->coverImages->store($file);
 
@@ -131,6 +139,10 @@ class UserCoverLibraryService
 
     public function isPathInUseByUser(string $userId, string $path): bool
     {
+        if (User::query()->whereKey($userId)->where('avatar_path', $path)->exists()) {
+            return true;
+        }
+
         if (Project::query()->where('user_id', $userId)->where('cover_path', $path)->exists()) {
             return true;
         }
@@ -172,13 +184,13 @@ class UserCoverLibraryService
             ->all();
     }
 
-    private function assertCanAdd(User $user): void
+    private function assertCanAdd(User $user, string $errorField = 'cover'): void
     {
         $limit = $this->limit();
 
         if ($this->countForUser($user) >= $limit) {
             throw ValidationException::withMessages([
-                'cover' => [
+                $errorField => [
                     'Voce atingiu o limite de '.$limit.' imagens na biblioteca. Remova uma imagem antes de enviar outra.',
                 ],
             ]);

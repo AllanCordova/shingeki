@@ -1,8 +1,8 @@
-export { CoverImage } from "./cover-image";
-export { CoverHero } from "./cover-hero";
-export { CoverUpload } from "./cover-upload";
-export { CoverLibraryPicker } from "./cover-library-picker";
-export { CoverStockPicker } from "./cover-stock-picker";
+﻿export { CoverImage } from "@/components/cover/cover-image";
+export { CoverHero } from "@/components/cover/cover-hero";
+export { CoverUpload } from "@/components/cover/cover-upload";
+export { CoverLibraryPicker } from "@/components/cover/cover-library-picker";
+export { CoverStockPicker } from "@/components/cover/cover-stock-picker";
 export { StackSelect } from "./stack-select";
 export { AddActionButton } from "./add-action-button";
 export {
@@ -18,6 +18,7 @@ export {
   LayoutTemplateIcon,
   CheckCheckIcon,
 } from "./icons";
+export { UserAvatar } from "./user-avatar";
 export { UserAvatarLink } from "./user-avatar-link";
 export { Button } from "./button";
 export { Checkbox } from "./checkbox";
@@ -34,6 +35,8 @@ export { Badge } from "./badge";
 export { EmptyState } from "./empty-state";
 export { ListPagination } from "./list-pagination";
 export { Modal } from "./modal";
+export { ConfirmActionModal } from "./confirm-action-modal";
+export { ItemActionsMenu } from "./item-actions-menu";
 export { SidePanel } from "./side-panel";
 export {
   Card,

@@ -1,6 +1,6 @@
-import type { UpdateProfileFormInput } from "./contracts/auth";
-import type { ProjectCreateInput, ProjectUpdateInput } from "./contracts/project";
-import type { SystemCreateInput, SystemUpdateInput } from "./contracts/system";
+import type { UpdateProfileFormInput } from "./contracts/auth/auth";
+import type { ProjectCreateInput, ProjectUpdateInput } from "./contracts/project/project";
+import type { SystemCreateInput, SystemUpdateInput } from "./contracts/system/system";
 
 type CoverPayload = {
   cover?: File;

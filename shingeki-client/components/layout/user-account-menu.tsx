@@ -3,43 +3,13 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { resolveCoverSrc } from "@/lib/cover-image";
-import { useLogout, useMe } from "@/lib/hooks/use-auth";
-import { useNotificationUnreadCount } from "@/lib/hooks/use-notifications";
+import { useLogout, useMe } from "@/lib/hooks/auth/use-auth";
+import { useNotificationUnreadCount } from "@/lib/hooks/notification/use-notifications";
 import { useThemeStore } from "@/lib/stores/theme-store";
 import { notify } from "@/lib/notify";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SettingsIcon } from "@/components/ui/icons";
-
-function UserAvatarFace({
-  name,
-  avatarPath,
-  className,
-}: {
-  name: string;
-  avatarPath?: string | null;
-  className?: string;
-}) {
-  const src = resolveCoverSrc(avatarPath);
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
-
-  return (
-    <span
-      className={cn(
-        "inline-flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-muted text-sm font-semibold text-foreground",
-        className,
-      )}
-    >
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <span aria-hidden>{initial}</span>
-      )}
-    </span>
-  );
-}
+import { UserAvatar } from "@/components/ui/user-avatar";
 
 /** Compact account menu for small screens: avatar trigger + collapsed actions. */
 export function UserAccountMenu() {
@@ -78,9 +48,9 @@ export function UserAccountMenu() {
     setOpen(false);
     try {
       await logout();
-      notify.success("Sessao encerrada.");
+      notify.success("Sessão encerrada.");
     } catch (err) {
-      notify.fromApiError(err, "Nao foi possivel sair.");
+      notify.fromApiError(err, "Não foi possível sair.");
     } finally {
       router.push("/login");
       router.refresh();
@@ -96,7 +66,7 @@ export function UserAccountMenu() {
         aria-expanded={open}
         onClick={() => setOpen((current) => !current)}
       >
-        <UserAvatarFace name={user.name} avatarPath={user.avatar_path} />
+        <UserAvatar name={user.name} avatarPath={user.avatar_path} />
         {badgeCount > 0 ? (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
             {badgeCount > 9 ? "9+" : badgeCount}
@@ -123,7 +93,7 @@ export function UserAccountMenu() {
               onClick={() => setOpen(false)}
               className="flex items-center justify-between rounded-app px-3 py-2 text-sm text-foreground hover:bg-muted"
             >
-              <span>Notificacoes</span>
+              <span>Notificações</span>
               {badgeCount > 0 ? (
                 <span className="rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
                   {badgeCount > 9 ? "9+" : badgeCount}
@@ -136,7 +106,7 @@ export function UserAccountMenu() {
               className="flex items-center gap-2 rounded-app px-3 py-2 text-sm text-foreground hover:bg-muted"
             >
               <SettingsIcon className="h-4 w-4 shrink-0" />
-              Configuracoes
+              Configurações
             </Link>
             <button
               type="button"

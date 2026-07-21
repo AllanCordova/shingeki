@@ -69,7 +69,10 @@ components/
 | Resultados | Lista com exclusão individual ou em massa (modais); badge de profundidade nos dispatches |
 | Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
 | Historico do sistema | Preview na página do sistema + `/historico-remediacao` com datepicker e filtro por tipo |
-| Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações, **paginação**, **filtro por autor** e import CSV |
+| Admin / catálogo | Sidebar `/admin` (`ADMIN`): usuários em `/admin/users/permissoes`. Catálogo global fica em **Auditoria** (`/auditoria/*`) para `ADMIN` e `SPECIALIST`. |
+| Guia inicial | Abre sozinho só sem projetos e se o usuário ainda não dispensou; reabre pelo botão em `/projetos`. |
+| Auth Google | BFF `/api/auth/google*` + OIDC na API (ID Token + nonce anti CSRF). |
+| Avatar | Upload com modal de zoom/enquadramento antes de salvar. |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` — proxy HTTP, payload catalogado, mapa de rotas; link no hero do sistema |
 | Notificações | Sininho no header (`NotificationBell`); poll 20s; badge unread + pending; toasts após dispatch/import CSV |
 | Sessao do alvo | Painel no sistema/arsenal; extensao Chrome (`shingeki-extension`) para SaaS; lab via popup; import manual |

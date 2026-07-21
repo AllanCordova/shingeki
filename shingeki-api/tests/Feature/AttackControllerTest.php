@@ -1,13 +1,13 @@
 <?php
 
-use App\Enums\AttackDepth;
-use App\Enums\AttackScanType;
-use App\Models\Attack;
-use App\Models\AttackAcknowledgment;
-use App\Models\AttackDispatch;
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
+use App\Enums\Attack\AttackDepth;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackAcknowledgment;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Support\AttackAcknowledgmentTerms;
 use Illuminate\Support\Collection;
@@ -21,6 +21,11 @@ function attackDispatchUrl(Project $project, System $system): string
 function attackSastDispatchUrl(Project $project, System $system): string
 {
     return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/dispatch/sast';
+}
+
+function attackAcknowledgmentUrl(Project $project, System $system): string
+{
+    return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attack-acknowledgment';
 }
 
 function validAttackDispatchPayload(): array
@@ -158,7 +163,7 @@ describe('POST attacks/dispatch', function () {
             ->and($dispatch?->max_routes)->toBe(50);
     });
 
-    test('defaults max_routes to 50 when start_path is set without max_routes', function () {
+    test('omits max_routes when start_path is set without max_routes', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         Attack::factory()->for($admin)->create();
 
@@ -178,7 +183,7 @@ describe('POST attacks/dispatch', function () {
         ])
             ->assertAccepted()
             ->assertJsonPath('dispatch.start_path', '/products')
-            ->assertJsonPath('dispatch.max_routes', 50);
+            ->assertJsonPath('dispatch.max_routes', null);
     });
 
     test('returns unprocessable for invalid depth', function () {
@@ -297,5 +302,68 @@ describe('POST attacks/dispatch/sast', function () {
         $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertUnprocessable()
             ->assertJsonPath('message', 'System repository_url is required for SAST dispatch.');
+    });
+});
+
+describe('GET attack-acknowledgment', function () {
+    test('returns not acknowledged before first dispatch', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(attackAcknowledgmentUrl($project, $system))
+            ->assertOk()
+            ->assertJsonPath('acknowledged', false)
+            ->assertJsonPath('terms.version', AttackAcknowledgmentTerms::VERSION)
+            ->assertJsonPath('terms.responsibility_code', AttackAcknowledgmentTerms::RESPONSIBILITY_CODE);
+    });
+
+    test('returns acknowledged after dispatch with current terms', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
+            ->assertAccepted();
+
+        $this->getJson(attackAcknowledgmentUrl($project, $system))
+            ->assertOk()
+            ->assertJsonPath('acknowledged', true);
+
+        expect($this->getJson(attackAcknowledgmentUrl($project, $system))->json('acknowledged_at'))
+            ->not->toBeNull();
+    });
+
+    test('returns not acknowledged when only outdated terms exist', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+        AttackAcknowledgment::query()->create([
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'system_id' => $system->id,
+            'attack_dispatch_id' => $dispatch->id,
+            'accepted_responsibility' => true,
+            'accepted_legal_terms' => true,
+            'terms_version' => '2000-01-01',
+            'ip_address' => '127.0.0.1',
+            'user_agent' => 'pest',
+            'acknowledged_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(attackAcknowledgmentUrl($project, $system))
+            ->assertOk()
+            ->assertJsonPath('acknowledged', false);
     });
 });

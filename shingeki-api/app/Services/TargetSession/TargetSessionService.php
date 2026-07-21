@@ -2,10 +2,12 @@
 
 namespace App\Services\TargetSession;
 
-use App\Enums\TargetAuthType;
-use App\Models\System;
-use App\Models\SystemTargetSession;
-use App\Models\User;
+use App\Enums\TargetSession\TargetAuthType;
+use App\Models\System\System;
+use App\Models\TargetSession\SystemTargetSession;
+use App\Models\User\User;
+use Laravel\Sanctum\PersonalAccessToken;
+use RuntimeException;
 
 class TargetSessionService
 {
@@ -47,6 +49,8 @@ class TargetSessionService
         string $credential,
         ?\DateTimeInterface $expiresAt = null,
     ): SystemTargetSession {
+        $this->assertNotPlatformApiToken($authType, $credential);
+
         $headers = $this->buildHeaders($authType, $credential);
 
         return SystemTargetSession::query()->updateOrCreate(
@@ -90,5 +94,27 @@ class TargetSessionService
         }
 
         return 'Bearer '.$value;
+    }
+
+    private function assertNotPlatformApiToken(TargetAuthType $authType, string $credential): void
+    {
+        if ($authType !== TargetAuthType::Bearer) {
+            return;
+        }
+
+        $token = trim($credential);
+        if (str_starts_with(strtolower($token), 'bearer ')) {
+            $token = trim(substr($token, 7));
+        }
+
+        if ($token === '') {
+            return;
+        }
+
+        if (PersonalAccessToken::findToken($token) !== null) {
+            throw new RuntimeException(
+                'Platform API tokens cannot be used as target session credentials.',
+            );
+        }
     }
 }

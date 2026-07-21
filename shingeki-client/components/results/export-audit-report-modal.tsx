@@ -53,7 +53,7 @@ export function ExportAuditReportModal({
 
       if (!response.ok) {
         const body = await response.json().catch(() => null);
-        throw body ?? { message: "Nao foi possivel exportar o relatorio." };
+        throw body ?? { message: "Não foi possível exportar o relatório." };
       }
 
       const blob = await response.blob();
@@ -69,7 +69,7 @@ export function ExportAuditReportModal({
       anchor.click();
       URL.revokeObjectURL(url);
 
-      notify.success("Relatorio exportado.");
+      notify.success("Relatório exportado.");
       handleClose();
     } catch (err) {
       setError(err);
@@ -82,7 +82,7 @@ export function ExportAuditReportModal({
     <Modal
       open={open}
       onClose={handleClose}
-      title="Exportar relatorio de auditoria"
+      title="Exportar relatório de auditoria"
       description="O PDF pode conter dados sensiveis do seu sistema."
       footer={
         <>
@@ -100,7 +100,7 @@ export function ExportAuditReportModal({
       ) : (
         <div className="flex flex-col gap-3 text-sm text-muted-foreground">
           <p>
-            Este relatorio do disparo de{" "}
+            Este relatório do disparo de{" "}
             <strong className="text-foreground">{dispatchLabel}</strong> pode
             incluir URLs, payloads, trechos de codigo e requisicoes HTTP.
           </p>

@@ -2,11 +2,11 @@
 
 namespace App\Services\Attack;
 
-use App\Enums\DispatchProbeOutcome;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\DispatchProbe;
-use App\Models\System;
+use App\Enums\Attack\DispatchProbeOutcome;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Attack\DispatchProbe;
+use App\Models\System\System;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use InvalidArgumentException;
 

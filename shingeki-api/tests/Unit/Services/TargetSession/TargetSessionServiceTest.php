@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\TargetAuthType;
+use App\Enums\TargetSession\TargetAuthType;
 use App\Services\TargetSession\TargetSessionService;
 
 test('buildHeaders normalizes bearer token', function () {

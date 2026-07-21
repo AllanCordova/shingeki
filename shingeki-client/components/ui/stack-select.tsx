@@ -1,6 +1,6 @@
 "use client";
 
-import type { Stack } from "@/lib/contracts/stack";
+import type { Stack } from "@/lib/contracts/system/stack";
 import { cn } from "@/lib/utils";
 import { Badge } from "./badge";
 

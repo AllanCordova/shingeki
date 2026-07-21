@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Enums\UserNotificationStatus;
-use App\Models\User;
-use App\Models\UserNotification;
+use App\Enums\User\UserNotificationStatus;
+use App\Models\User\User;
+use App\Models\User\UserNotification;
 
 trait ResolvesNotificationCounts
 {

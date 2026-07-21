@@ -39,14 +39,14 @@ export const LANDING_SECTIONS: LandingSection[] = [
       "Detecção automatizada de vulnerabilidades e remediação interativa — do scan ao patch, em uma única plataforma.",
     features: [
       {
-        title: "Monorepo completo",
+        title: "Do scan à correção",
         description:
-          "API Laravel, workers Go, client Next.js e alvo de laboratório no mesmo monorepo.",
+          "Dispare testes, acompanhe achados e aplique remediações no mesmo fluxo.",
       },
       {
-        title: "Pipeline assíncrono",
+        title: "Resultados em tempo real",
         description:
-          "Disparos via RabbitMQ com processamento em background e resultados em tempo real.",
+          "Acompanhe o progresso dos disparos e veja evidências assim que estiverem prontas.",
       },
       {
         title: "Feito para equipes",
@@ -63,10 +63,10 @@ export const LANDING_SECTIONS: LandingSection[] = [
   {
     id: "dast",
     label: "DAST",
-    eyebrow: "Dynamic testing",
+    eyebrow: "Teste dinâmico",
     title: "Varredura dinâmica no alvo real",
     subtitle:
-      "O worker Go descobre superfícies, executa payloads do catálogo de ataques e coleta evidências diretamente na aplicação em produção ou staging.",
+      "Descubra superfícies, execute payloads do catálogo de ataques e colete evidências diretamente na aplicação em produção ou staging.",
     features: [
       {
         title: "Discovery automático",
@@ -93,20 +93,20 @@ export const LANDING_SECTIONS: LandingSection[] = [
   {
     id: "sast",
     label: "SAST",
-    eyebrow: "Static analysis",
-    title: "Análise estática com Semgrep",
+    eyebrow: "Análise estática",
+    title: "Análise estática no código-fonte",
     subtitle:
       "Dispare scans SAST no repositório do sistema e receba achados com regra, arquivo e linha — sem depender de um ambiente exposto.",
     features: [
       {
-        title: "Regras Semgrep",
+        title: "Regras por achado",
         description:
-          "Cada achado referencia o check_id para lookup preciso na remediação.",
+          "Cada vulnerabilidade referencia a regra correspondente para remediação precisa.",
       },
       {
         title: "Mesmo fluxo de resultados",
         description:
-          "Dispatches, polling e visualização unificados com o DAST.",
+          "Disparos, acompanhamento e visualização unificados com o DAST.",
       },
       {
         title: "Stacks por sistema",
@@ -136,12 +136,12 @@ export const LANDING_SECTIONS: LandingSection[] = [
       {
         title: "Validação no alvo",
         description:
-          "A API confirma a presença da meta tag na URL configurada.",
+          "A plataforma confirma a presença da meta tag na URL configurada.",
       },
       {
-        title: "Policy por projeto",
+        title: "Acesso por projeto",
         description:
-          "Acesso restrito ao usuário dono via policies Laravel.",
+          "Somente o dono do projeto gerencia sistemas, disparos e sessões.",
       },
     ],
     background:
@@ -164,9 +164,9 @@ export const LANDING_SECTIONS: LandingSection[] = [
           "Snippets filtrados por framework, linguagem e categoria de ataque.",
       },
       {
-        title: "Fallback SAST",
+        title: "Sugestões contextuais",
         description:
-          "Match por semgrep_rule_id ou categoria + extensão do arquivo.",
+          "Match por regra estática ou categoria do achado e extensão do arquivo.",
       },
       {
         title: "Painel interativo",
@@ -189,19 +189,19 @@ export const LANDING_SECTIONS: LandingSection[] = [
       "Estruture seus alvos em projetos, configure URLs, stacks e capas visuais — com biblioteca de imagens reutilizável por usuário.",
     features: [
       {
-        title: "CRUD aninhado",
+        title: "Hierarquia clara",
         description:
           "Projetos contêm sistemas; cada sistema tem assinatura, ataques e resultados.",
       },
       {
         title: "Upload de capas",
         description:
-          "Arquivo novo ou item da biblioteca, via BFF multipart.",
+          "Envie um arquivo novo ou reutilize uma imagem da sua biblioteca.",
       },
       {
-        title: "Mobile em paridade",
+        title: "Fluxo unificado",
         description:
-          "Mesmos fluxos no app Expo com token em secure store.",
+          "Os mesmos passos de configuração e disparo em qualquer dispositivo.",
       },
     ],
     background:
@@ -214,24 +214,24 @@ export const LANDING_SECTIONS: LandingSection[] = [
     id: "arquitetura",
     label: "Arquitetura",
     eyebrow: "Pipeline",
-    title: "API, filas e worker distribuído",
+    title: "Disparos assíncronos e resultados contínuos",
     subtitle:
-      "Laravel publica lotes em RabbitMQ; o worker Go consome, ataca o alvo e devolve achados. O comando consume-results fecha o ciclo na API.",
+      "Cada disparo roda em segundo plano: a plataforma ataca o alvo, coleta evidências e devolve os achados para o painel.",
     features: [
       {
-        title: "202 Accepted",
+        title: "Resposta imediata",
         description:
-          "O dispatch retorna imediatamente; o scan roda em background.",
+          "O disparo é aceito na hora; o scan continua enquanto você acompanha o status.",
       },
       {
-        title: "Polling inteligente",
+        title: "Acompanhamento automático",
         description:
-          "React Query com staleTime zero enquanto o dispatch está pendente.",
+          "O painel atualiza sozinho enquanto o disparo estiver em andamento.",
       },
       {
-        title: "Alvo de laboratório",
+        title: "Alvos cooperativos",
         description:
-          "PHP vulnerável incluso para validar o pipeline end-to-end.",
+          "Conecte a sessão do alvo quando a rota exigir autenticação.",
       },
     ],
     background:
@@ -251,17 +251,17 @@ export const LANDING_SECTIONS: LandingSection[] = [
       {
         title: "Conta gratuita",
         description:
-          "Registre-se e comece a testar com o alvo de laboratório incluso.",
+          "Registre-se e comece a testar os seus sistemas autorizados.",
       },
       {
-        title: "Documentação completa",
+        title: "Guias no produto",
         description:
-          "Arquitetura, API REST e guia de desenvolvimento do client web.",
+          "Onboarding e ajuda contextual para configurar projetos, sessões e disparos.",
       },
       {
         title: "Open source",
         description:
-          "Monorepo MIT — audite, contribua e adapte à sua stack.",
+          "Código aberto — audite, contribua e adapte à sua stack.",
       },
     ],
     background:

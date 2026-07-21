@@ -12,7 +12,7 @@ import {
   CardTitle,
   Loading,
 } from "@/components/ui";
-import { useRemediationHistory } from "@/lib/hooks/use-project-insights";
+import { useRemediationHistory } from "@/lib/hooks/project/use-project-insights";
 
 function eventTone(
   type: RemediationHistoryEvent["type"],
@@ -74,7 +74,7 @@ export function RemediationHistoryPanel({
     <Card>
       <CardHeader>
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="text-base">Historico do sistema</CardTitle>
+          <CardTitle className="text-base">Histórico do sistema</CardTitle>
           {total > 0 ? (
             <Link
               href={historyHref}
@@ -87,11 +87,11 @@ export function RemediationHistoryPanel({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <Loading label="Carregando historico..." />
+          <Loading label="Carregando histórico..." />
         ) : events.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Nenhum evento registrado ainda. Dispare scans ou gere sugestoes de
-            correcao.
+            Nenhum evento registrado ainda. Dispare scans ou gere sugestões de
+            correção.
           </p>
         ) : (
           <div className="flex flex-col gap-4">
@@ -107,7 +107,7 @@ export function RemediationHistoryPanel({
               <p className="text-xs text-muted-foreground">
                 Mostrando {events.length} de {total}.{" "}
                 <Link href={historyHref} className="text-primary hover:underline">
-                  Abrir historico completo
+                  Abrir histórico completo
                 </Link>
               </p>
             ) : null}

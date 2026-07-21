@@ -2,11 +2,12 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ProjectForm } from "@/components/forms/project-form";
-import { SystemForm } from "@/components/forms/system-form";
-import { useCreateProject, useProject } from "@/lib/hooks/use-projects";
-import { useCreateSystem, useSystem } from "@/lib/hooks/use-systems";
-import { useSidebarNavigation } from "@/lib/hooks/use-sidebar-navigation";
+import { ProjectForm } from "@/components/projects/project-form";
+import { SystemForm } from "@/components/system/system-form";
+import { useCreateProject, useProject } from "@/lib/hooks/project/use-projects";
+import { useCreateSystem, useSystem } from "@/lib/hooks/system/use-systems";
+import { useSidebarNavigation } from "@/lib/hooks/navigation/use-sidebar-navigation";
+import { useMe } from "@/lib/hooks/auth/use-auth";
 import type {
   ProjectCreateInput,
   ProjectUpdateInput,
@@ -23,6 +24,7 @@ import {
   getAdjacentGuidedSetupStep,
   guidedSetupPathForStep,
   guidedSetupStepIndex,
+  isGuidedSetupDismissed,
   readGuidedSetupSession,
   shouldOfferGuidedSetup,
   startGuidedSetupSession,
@@ -120,7 +122,7 @@ function GuidedSetupHeader({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Configuracao inicial
+            Configuração inicial
           </p>
           <h2 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             {step.title}
@@ -181,7 +183,7 @@ function GuidedSetupMinimizedBar({
             Passo {currentStepNumber}: {stepTitle}
           </p>
           <p className="truncate text-xs text-muted-foreground">
-            Guia minimizado — conclua a acao na pagina
+            Guia minimizado — conclua a ação na página
           </p>
         </div>
         <Button
@@ -246,6 +248,7 @@ function GuidedSetupFooter({
 export function GuidedSetupFlow() {
   const router = useRouter();
   const pathname = usePathname();
+  const { user } = useMe();
   const { meta, isLoading } = useSidebarNavigation();
   const [session, setSession] = useState(readGuidedSetupSession());
   const [pageGuideMinimized, setPageGuideMinimized] = useState(false);
@@ -284,13 +287,22 @@ export function GuidedSetupFlow() {
     [pathname, router],
   );
 
-  useEffect(() => {
-    if (isLoading || !meta || session.completed) return;
-
-    if (shouldOfferGuidedSetup(meta) && !session.active && !session.completed) {
+  const [bootstrappedMeta, setBootstrappedMeta] = useState(false);
+  if (!isLoading && meta && user && !bootstrappedMeta) {
+    setBootstrappedMeta(true);
+    if (shouldOfferGuidedSetup(meta, user.id) && !session.active) {
       setSession(startGuidedSetupSession());
+    } else if (
+      session.active &&
+      meta.projects_count > 0 &&
+      isGuidedSetupDismissed(user.id)
+    ) {
+      // Sessão ativa residual após login: usuário já dispensou e tem projetos.
+      setSession(
+        writeGuidedSetupSession({ active: false, completed: true }),
+      );
     }
-  }, [isLoading, meta, session.active, session.completed]);
+  }
 
   useEffect(() => {
     const sync = (event: Event) => {
@@ -306,27 +318,30 @@ export function GuidedSetupFlow() {
     return () => window.removeEventListener(GUIDED_SETUP_SESSION_EVENT, sync);
   }, []);
 
-  useEffect(() => {
-    if (!session.active || session.completed) return;
-
+  const [syncedPathname, setSyncedPathname] = useState(pathname);
+  if (
+    session.active &&
+    !session.completed &&
+    pathname !== syncedPathname
+  ) {
+    setSyncedPathname(pathname);
     const projectMatch = pathname.match(/^\/projetos\/([^/]+)/);
-    const systemMatch = pathname.match(/^\/projetos\/([^/]+)\/sistemas\/([^/]+)/);
+    const systemMatch = pathname.match(
+      /^\/projetos\/([^/]+)\/sistemas\/([^/]+)/,
+    );
 
     if (systemMatch) {
       const [, projectId, systemId] = systemMatch;
       if (session.projectId !== projectId || session.systemId !== systemId) {
         setSession(writeGuidedSetupSession({ projectId, systemId }));
       }
-      return;
-    }
-
-    if (projectMatch) {
+    } else if (projectMatch) {
       const [, projectId] = projectMatch;
       if (session.projectId !== projectId) {
         setSession(writeGuidedSetupSession({ projectId }));
       }
     }
-  }, [pathname, session.active, session.completed, session.projectId, session.systemId]);
+  }
 
   useEffect(() => {
     if (!session.active || session.completed || !isPageStep) return;
@@ -363,8 +378,9 @@ export function GuidedSetupFlow() {
     };
   }, [session.active, session.completed, isFormStep]);
 
-  if (isLoading || session.completed) return null;
-  if (!session.active && !shouldOfferGuidedSetup(meta)) return null;
+  if (isLoading || !user) return null;
+  if (!session.active && !shouldOfferGuidedSetup(meta, user.id)) return null;
+  if (!session.active && session.completed) return null;
 
   const step = GUIDED_SETUP_STEPS[session.step];
   const currentStepNumber = guidedSetupStepIndex(session.step) + 1;
@@ -381,7 +397,7 @@ export function GuidedSetupFlow() {
 
     if (session.step === "dast") {
       clearGuidedSectionHighlights();
-      setSession(completeGuidedSetupSession());
+      setSession(completeGuidedSetupSession(user.id));
       return;
     }
 
@@ -392,7 +408,7 @@ export function GuidedSetupFlow() {
 
   const handleDismiss = () => {
     clearGuidedSectionHighlights();
-    setSession(completeGuidedSetupSession());
+    setSession(completeGuidedSetupSession(user.id));
   };
 
   const handleHighlightSection = () => {
@@ -480,7 +496,7 @@ export function GuidedSetupFlow() {
         className="fixed inset-0 z-50 flex flex-col bg-background"
         role="dialog"
         aria-modal="true"
-        aria-label="Configuracao inicial"
+        aria-label="Configuração inicial"
       >
         <GuidedSetupHeader {...headerProps} />
 
@@ -565,7 +581,7 @@ export function GuidedSetupFlow() {
       <div
         className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-surface/95 shadow-2xl backdrop-blur"
         role="dialog"
-        aria-label="Configuracao inicial"
+        aria-label="Configuração inicial"
       >
         <div className="mx-auto w-full max-w-5xl">
           <GuidedSetupHeader
@@ -574,8 +590,8 @@ export function GuidedSetupFlow() {
           />
           <div className="px-4 pb-6 pt-2 sm:px-8">
             <p className="mb-4 text-sm text-muted-foreground sm:text-base">
-              A secao correspondente foi destacada na pagina. Minimize o guia para ver a
-              tela inteira, conclua a acao e avance quando estiver pronto.
+              A secao correspondente foi destacada na página. Minimize o guia para ver a
+              tela inteira, conclua a ação e avance quando estiver pronto.
             </p>
             {pageStepContent}
           </div>

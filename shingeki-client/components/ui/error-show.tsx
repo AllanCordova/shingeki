@@ -19,7 +19,7 @@ interface ErrorShowProps {
   className?: string;
 }
 
-/** Bloco de erro reutilizavel (mensagem ja traduzida + acao opcional). */
+/** Bloco de erro reutilizavel (mensagem ja traduzida + ação opcional). */
 export function ErrorShow({ error, onRetry, className }: ErrorShowProps) {
   return (
     <div

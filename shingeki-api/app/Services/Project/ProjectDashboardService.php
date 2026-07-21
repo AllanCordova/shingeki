@@ -2,8 +2,8 @@
 
 namespace App\Services\Project;
 
-use App\Models\AttackDispatch;
-use App\Models\Project;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
 use Illuminate\Support\Collection;
 
 class ProjectDashboardService
