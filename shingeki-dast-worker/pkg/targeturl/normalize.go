@@ -1,13 +1,12 @@
 package targeturl
 
 import (
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
 )
 
-// Normalize rewrites localhost targets so a worker running in Docker can reach
-// apps served on the developer machine (e.g. Next.js on localhost:3000).
 func Normalize(raw string) string {
 	rewriteHost := strings.TrimSpace(os.Getenv("TARGET_LOCALHOST_REWRITE"))
 	if rewriteHost == "" {
@@ -32,4 +31,21 @@ func Normalize(raw string) string {
 	}
 
 	return parsed.String()
+}
+
+func AssertHTTP(raw string) error {
+	parsed, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil {
+		return fmt.Errorf("invalid target url")
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		return fmt.Errorf("target url scheme must be http or https")
+	}
+	if parsed.Host == "" {
+		return fmt.Errorf("target url host is required")
+	}
+	if parsed.User != nil {
+		return fmt.Errorf("target url must not include credentials")
+	}
+	return nil
 }

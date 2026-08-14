@@ -124,7 +124,12 @@ func buildCookie(job types.Job, inject bool) (RequestSpec, error) {
 		if name == "" {
 			name = "session"
 		}
-		headers["Cookie"] = name + "=" + job.Payload.Value
+		pair := name + "=" + job.Payload.Value
+		if existing := strings.TrimSpace(headers["Cookie"]); existing != "" {
+			headers["Cookie"] = existing + "; " + pair
+		} else {
+			headers["Cookie"] = pair
+		}
 	}
 	return RequestSpec{
 		Method:  firstNonEmpty(job.Vector.Method, http.MethodGet),

@@ -7,7 +7,6 @@ import (
 	"github.com/shingeki/dast-worker/internal/evidence"
 )
 
-// RodDialogValidator is a placeholder for phase-2 XSS confirmation via browser dialogs.
 type RodDialogValidator struct{}
 
 func NewRodDialogValidator() *RodDialogValidator {

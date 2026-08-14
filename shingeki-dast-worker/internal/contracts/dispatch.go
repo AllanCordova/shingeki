@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
 const (
@@ -13,16 +15,16 @@ const (
 )
 
 type DispatchBatch struct {
-	Event          string       `json:"event"`
-	ScanType       string       `json:"scan_type"`
-	DispatchID     string       `json:"dispatch_id"`
-	SystemID       string       `json:"system_id"`
-	UserID         string       `json:"user_id"`
-	TargetURL      string       `json:"target_url"`
-	RepositoryURL  string       `json:"repository_url"`
-	Attacks        []AttackItem `json:"attacks"`
-	DispatchedAt   string       `json:"dispatched_at"`
-	Auth           *TargetAuth  `json:"auth,omitempty"`
+	Event         string       `json:"event"`
+	ScanType      string       `json:"scan_type"`
+	DispatchID    string       `json:"dispatch_id"`
+	SystemID      string       `json:"system_id"`
+	UserID        string       `json:"user_id"`
+	TargetURL     string       `json:"target_url"`
+	RepositoryURL string       `json:"repository_url"`
+	Attacks       []AttackItem `json:"attacks"`
+	DispatchedAt  string       `json:"dispatched_at"`
+	Auth          *TargetAuth  `json:"auth,omitempty"`
 }
 
 func (b DispatchBatch) EffectiveScanType() string {
@@ -73,6 +75,9 @@ func (b DispatchBatch) Validate() error {
 	}
 	if b.TargetURL == "" {
 		return fmt.Errorf("target_url is required")
+	}
+	if err := targeturl.AssertHTTP(b.TargetURL); err != nil {
+		return fmt.Errorf("target_url: %w", err)
 	}
 	if len(b.Attacks) == 0 {
 		return fmt.Errorf("attacks must not be empty")

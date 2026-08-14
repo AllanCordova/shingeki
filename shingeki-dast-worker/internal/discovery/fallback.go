@@ -7,9 +7,6 @@ import (
 	"github.com/shingeki/dast-worker/internal/contracts"
 )
 
-// fallbackVectors retorna rotas minimas quando o crawl nao descobriu nada.
-// Inclui rotas do shingeki-vulnerable-target (PHP) e do shingeki-client (Next.js)
-// para que FORM / QUERY_PARAMETER / URL_PATH gerem jobs mesmo sem discovery.
 func fallbackVectors(targetURL string) []contracts.AttackVector {
 	base := strings.TrimRight(strings.TrimSpace(targetURL), "/")
 	if base == "" {

@@ -29,7 +29,8 @@ func NewRestyEngine(cfg config.AttackConfig, logger *slog.Logger) *RestyEngine {
 	}
 	client := resty.New().
 		SetTimeout(cfg.RequestTimeout).
-		SetHeader("User-Agent", cfg.UserAgent)
+		SetHeader("User-Agent", cfg.UserAgent).
+		SetRedirectPolicy(resty.RedirectPolicyFunc(httputil.CheckSameOriginRedirect))
 
 	limit := rate.NewLimiter(rate.Limit(cfg.RateLimitRPS), int(cfg.RateLimitRPS)+1)
 	if cfg.RateLimitRPS <= 0 {
@@ -53,15 +54,26 @@ func (e *RestyEngine) ExecutePool(ctx context.Context, jobs []types.Job) []types
 		return nil
 	}
 
+	concurrency := e.cfg.Concurrency
+	if concurrency < 1 {
+		concurrency = 1
+	}
+
 	results := make([]types.Response, len(jobs))
-	sem := make(chan struct{}, e.cfg.Concurrency)
+	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 
 	for i, job := range jobs {
+		select {
+		case <-ctx.Done():
+			results[i] = types.Response{Job: job, PayloadUsed: job.Payload.Value, Error: ctx.Err()}
+			continue
+		case sem <- struct{}{}:
+		}
+
 		wg.Add(1)
 		go func(idx int, j types.Job) {
 			defer wg.Done()
-			sem <- struct{}{}
 			defer func() { <-sem }()
 			results[idx] = e.executeJob(ctx, j)
 		}(i, job)
@@ -100,7 +112,7 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job) types.Respo
 		return resp
 	}
 	resp.AttackStatus = attackStatus
-	resp.AttackBody = truncate(attackBody, e.cfg.MaxBodyBytes)
+	resp.AttackBody = httputil.Truncate(attackBody, e.cfg.MaxBodyBytes)
 	resp.AttackMs = attackMs
 	resp.RawRequest = httputil.DumpRequest(attackSpec.Method, attackSpec.URL, attackSpec.Headers, attackSpec.Body)
 
@@ -128,12 +140,5 @@ func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int
 	}
 
 	body := string(httpResp.Body())
-	return httpResp.StatusCode(), truncate(body, e.cfg.MaxBodyBytes), elapsed, nil
-}
-
-func truncate(body string, max int) string {
-	if max <= 0 || len(body) <= max {
-		return body
-	}
-	return body[:max]
+	return httpResp.StatusCode(), httputil.Truncate(body, e.cfg.MaxBodyBytes), elapsed, nil
 }

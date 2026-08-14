@@ -15,6 +15,8 @@ import (
 
 	"github.com/shingeki/dast-worker/internal/config"
 	"github.com/shingeki/dast-worker/internal/contracts"
+	"github.com/shingeki/dast-worker/internal/discovery/bfs"
+	"github.com/shingeki/dast-worker/pkg/httputil"
 )
 
 type RodCrawler struct {
@@ -55,31 +57,40 @@ func (r *RodCrawler) Discover(ctx context.Context, targetURL string, authHeaders
 
 	vectors := make(map[string]contracts.AttackVector)
 
+	hijackClient := &http.Client{
+		Timeout:       r.cfg.PageTimeout,
+		CheckRedirect: httputil.CheckSameOriginRedirect,
+	}
+
 	router := page.HijackRequests()
-	router.MustAdd("*", func(hctx *rod.Hijack) {
+	if err := router.Add("*", "", func(hctx *rod.Hijack) {
 		req := hctx.Request
 		method := strings.ToUpper(req.Method())
 		route := req.URL().String()
 
-		vector := contracts.NewAttackVector(route, method, classifyTargetLocation(method, req.Header("Content-Type")))
-		if body := req.Body(); body != "" {
-			vector.Body = body
-			mergeJSONParams(vector, body)
-		}
-		for key, values := range req.URL().Query() {
-			if len(values) > 0 {
-				vector.Params[key] = values[0]
+		if bfs.SameOrigin(targetURL, route) {
+			vector := contracts.NewAttackVector(route, method, classifyTargetLocation(method, req.Header("Content-Type")))
+			if body := req.Body(); body != "" {
+				vector.Body = body
+				mergeJSONParams(vector, body)
 			}
+			for key, values := range req.URL().Query() {
+				if len(values) > 0 {
+					vector.Params[key] = values[0]
+				}
+			}
+
+			key := method + " " + route
+			vectors[key] = vector
 		}
 
-		key := method + " " + route
-		vectors[key] = vector
-
-		if err := hctx.LoadResponse(http.DefaultClient, true); err != nil {
+		if err := hctx.LoadResponse(hijackClient, true); err != nil {
 			r.logger.Warn("hijack load response failed", "url", route, "error", err)
 			hctx.Response.Fail(proto.NetworkErrorReasonConnectionFailed)
 		}
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("hijack requests: %w", err)
+	}
 
 	go router.Run()
 	defer router.Stop()
@@ -137,6 +148,7 @@ func (r *RodCrawler) launchBrowser(ctx context.Context) (*rod.Browser, func(), e
 
 	cleanup := func() {
 		_ = browser.Close()
+		l.Cleanup()
 	}
 	return browser, cleanup, nil
 }

@@ -57,3 +57,24 @@ func TestBuildJSONInjection(t *testing.T) {
 		t.Fatalf("expected json content type")
 	}
 }
+
+func TestBuildCookieMergesExistingHeader(t *testing.T) {
+	job := types.Job{
+		Attack: contracts.AttackItem{TargetLocation: "COOKIE"},
+		Vector: contracts.AttackVector{
+			Route:          "https://example.com/app",
+			Method:         "GET",
+			TargetLocation: "COOKIE",
+			Headers:        map[string]string{"Cookie": "session=abc"},
+		},
+		Payload: types.PayloadSpec{Field: "inject", Value: "1' OR '1'='1"},
+	}
+
+	spec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if spec.Headers["Cookie"] != "session=abc; inject=1' OR '1'='1" {
+		t.Fatalf("expected merged cookie header, got %q", spec.Headers["Cookie"])
+	}
+}

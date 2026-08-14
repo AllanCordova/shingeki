@@ -33,6 +33,27 @@ func TestParseDispatchBatchValid(t *testing.T) {
 	}
 }
 
+func TestParseDispatchBatchRejectsFileTargetURL(t *testing.T) {
+	raw := []byte(`{
+		"event": "attack.dispatch.batch",
+		"dispatch_id": "dispatch-1",
+		"system_id": "sys-1",
+		"user_id": "user-1",
+		"target_url": "file:///etc/passwd",
+		"attacks": [{
+			"attack_id": "atk-1",
+			"category": "SQL_INJECTION",
+			"target_location": "FORM",
+			"risk_level": "HIGH",
+			"payload": {"field":"email","value":"' OR 1=1 --"}
+		}]
+	}`)
+
+	if _, err := contracts.ParseDispatchBatch(raw); err == nil {
+		t.Fatal("expected validation error for file target url")
+	}
+}
+
 func TestParseDispatchBatchRejectsSast(t *testing.T) {
 	raw := []byte(`{
 		"event": "attack.dispatch.batch",

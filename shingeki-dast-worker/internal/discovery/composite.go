@@ -44,9 +44,6 @@ func (e *CompositeEngine) Discover(ctx context.Context, targetURL string, authHe
 		}
 	}
 
-	// Quando o crawl falha (alvo offline, timeout do Rod, etc.), o fallback antigo
-	// gerava apenas GET na raiz com API_ENDPOINT — incompativel com o catalogo
-	// (FORM, QUERY_PARAMETER, URL_PATH) e resultava em jobs=0.
 	if len(vectors) == 0 {
 		vectors = fallbackVectors(targetURL)
 		e.logger.Warn(
