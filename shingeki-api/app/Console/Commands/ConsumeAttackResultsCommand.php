@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use App\Models\AttackDispatch;
-use App\Models\DispatchProbe;
-use App\Models\SystemResult;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Attack\DispatchProbe;
+use App\Models\System\SystemResult;
 use App\Services\Attack\AttackResultsMessageHandler;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;

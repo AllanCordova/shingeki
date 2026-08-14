@@ -73,14 +73,14 @@ export function AiRemediationFindingCard({
         <Detail label="Risco" value={suggestion.risk_summary} />
 
         <Detail
-          label={`Codigo fonte (${finding.source_context.origin})`}
+          label={`Código fonte (${finding.source_context.origin})`}
           value={finding.source_context.excerpt}
           mono
         />
 
         <div className="flex flex-col gap-2 rounded-app border border-border p-3">
           <span className="font-medium text-foreground">
-            Correcao sugerida
+            Correção sugerida
           </span>
           <p className="text-muted-foreground">
             {suggestion.suggested_fix.description}

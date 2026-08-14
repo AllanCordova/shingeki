@@ -13,7 +13,9 @@
         "barryvdh/laravel-dompdf": "^3.1",
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.29",
         "laravel/tinker": "^3.0",
+        "nuwave/lighthouse": "^6.68",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^15.0"
     },
     "require-dev": {

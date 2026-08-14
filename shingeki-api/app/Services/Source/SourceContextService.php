@@ -2,9 +2,9 @@
 
 namespace App\Services\Source;
 
-use App\Enums\AttackScanType;
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Enums\Attack\AttackScanType;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 

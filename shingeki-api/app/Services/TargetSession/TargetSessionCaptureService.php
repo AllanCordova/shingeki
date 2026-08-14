@@ -2,11 +2,11 @@
 
 namespace App\Services\TargetSession;
 
-use App\Enums\TargetAuthType;
-use App\Models\System;
-use App\Models\SystemTargetSession;
-use App\Models\TargetSessionCaptureTicket;
-use App\Models\User;
+use App\Enums\TargetSession\TargetAuthType;
+use App\Models\System\System;
+use App\Models\TargetSession\SystemTargetSession;
+use App\Models\TargetSession\TargetSessionCaptureTicket;
+use App\Models\User\User;
 use Illuminate\Support\Str;
 use RuntimeException;
 
@@ -21,41 +21,50 @@ class TargetSessionCaptureService
      *   ticket: string,
      *   mode: string,
      *   popup_url: string,
+     *   open_url: string,
      *   capture_callback_url: string|null,
+     *   capture_api_base: string,
      *   target_origin: string,
      *   client_origin: string,
+     *   extension_supported: bool,
+     *   expires_at: string,
      * }
      */
     public function start(User $user, System $system, string $clientOrigin): array
     {
+        $expiresAt = now()->addMinutes(15);
+
         $ticket = TargetSessionCaptureTicket::query()->create([
             'user_id' => $user->id,
             'system_id' => $system->id,
             'client_origin' => rtrim($clientOrigin, '/'),
-            'expires_at' => now()->addMinutes(15),
+            'expires_at' => $expiresAt,
         ]);
 
         $clientOrigin = rtrim($clientOrigin, '/');
         $targetOrigin = $this->originFromUrl($system->target_url);
+        $captureApiBase = rtrim((string) config('app.url'), '/').'/api';
 
         if ($this->originsMatch($targetOrigin, $clientOrigin)) {
-            $popupUrl = $clientOrigin.'/conectar-alvo'
-                .'?ticket='.$ticket->id
-                .'&projectId='.$system->project_id
-                .'&systemId='.$system->id;
+            // Same-origin must never capture the Shingeki Sanctum cookie/token as
+            // target auth. Use the extension (or manual import) with target credentials.
+            $openUrl = $system->login_url ?? $system->target_url;
 
             return [
                 'ticket' => $ticket->id,
                 'mode' => 'same_origin',
-                'popup_url' => $popupUrl,
+                'popup_url' => $openUrl,
+                'open_url' => $openUrl,
                 'capture_callback_url' => null,
+                'capture_api_base' => $captureApiBase,
                 'target_origin' => $targetOrigin,
                 'client_origin' => $clientOrigin,
+                'extension_supported' => true,
+                'expires_at' => $expiresAt->toIso8601String(),
             ];
         }
 
         $loginUrl = $system->login_url ?? rtrim($system->target_url, '/').'/login.php';
-        $captureApiBase = rtrim((string) config('app.url'), '/').'/api';
         $capturePath = '/shingeki-capture.php?ticket='.$ticket->id
             .'&client_origin='.rawurlencode($clientOrigin)
             .'&api_base='.rawurlencode($captureApiBase);
@@ -65,9 +74,13 @@ class TargetSessionCaptureService
             'ticket' => $ticket->id,
             'mode' => 'external',
             'popup_url' => $popupUrl,
+            'open_url' => $loginUrl,
             'capture_callback_url' => rtrim($system->target_url, '/').$capturePath,
+            'capture_api_base' => $captureApiBase,
             'target_origin' => $targetOrigin,
             'client_origin' => $clientOrigin,
+            'extension_supported' => true,
+            'expires_at' => $expiresAt->toIso8601String(),
         ];
     }
 

@@ -2,7 +2,7 @@
 
 namespace App\Services\ManualProxy;
 
-use App\Models\System;
+use App\Models\System\System;
 use App\Services\Attack\WorkerTargetUrlResolver;
 use InvalidArgumentException;
 

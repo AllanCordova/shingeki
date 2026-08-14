@@ -9,6 +9,7 @@ import (
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
 	"github.com/shingeki/dast-worker/internal/contracts"
+	"github.com/shingeki/dast-worker/internal/discovery"
 	"github.com/shingeki/dast-worker/internal/evidence"
 )
 
@@ -17,7 +18,12 @@ type stubDiscovery struct {
 	err     error
 }
 
-func (s stubDiscovery) Discover(_ context.Context, _ string, _ map[string]string) ([]contracts.AttackVector, error) {
+func (s stubDiscovery) Discover(
+	_ context.Context,
+	_ string,
+	_ map[string]string,
+	_ discovery.Options,
+) ([]contracts.AttackVector, error) {
 	return s.vectors, s.err
 }
 

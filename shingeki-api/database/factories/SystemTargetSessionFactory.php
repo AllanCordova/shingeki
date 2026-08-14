@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Enums\TargetAuthType;
-use App\Models\System;
-use App\Models\SystemTargetSession;
-use App\Models\User;
+use App\Enums\TargetSession\TargetAuthType;
+use App\Models\System\System;
+use App\Models\TargetSession\SystemTargetSession;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

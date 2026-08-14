@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { PROJECT_TEMPLATES, type ProjectTemplate } from "@/lib/project-templates";
-import { useCreateProject } from "@/lib/hooks/use-projects";
-import { useStacks } from "@/lib/hooks/use-stacks";
+import { PROJECT_TEMPLATES, type ProjectTemplate } from "@/lib/project/project-templates";
+import { useCreateProject } from "@/lib/hooks/project/use-projects";
+import { useStacks } from "@/lib/hooks/system/use-stacks";
 import { apiClient } from "@/lib/api/client";
 import { buildSystemCreateFormData } from "@/lib/multipart";
 import { notify } from "@/lib/notify";
@@ -46,7 +46,7 @@ export function ProjectTemplatePicker({
           buildSystemCreateFormData({
             name: template.system.name,
             target_url: template.system.target_url,
-            repository_url: template.system.repository_url ?? "",
+            repository_url: template.system.repository_url,
             stack_ids: stackIds,
           }),
         );

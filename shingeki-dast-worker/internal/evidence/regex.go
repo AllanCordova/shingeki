@@ -40,12 +40,6 @@ func (v *RegexValidator) Analyze(_ context.Context, response types.Response) *Fi
 		}
 	}
 
-	if strings.Contains(strings.ToUpper(category), "PATH") {
-		if strings.Contains(body, "root:") || strings.Contains(body, "[extensions]") {
-			return newFinding(response, "path traversal indicator found in response body")
-		}
-	}
-
 	return nil
 }
 

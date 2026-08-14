@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { resolveCoverSrc } from "@/lib/cover-image";
-import { MAX_COVER_UPLOADS } from "@/lib/cover-library";
-import type { CoverUpload } from "@/lib/contracts/cover-upload";
+import { resolveCoverSrc } from "@/lib/cover/cover-image";
+import { MAX_COVER_UPLOADS } from "@/lib/cover/cover-library";
+import type { CoverUpload } from "@/lib/contracts/cover/cover-upload";
 import type { ApiError } from "@/lib/api/error-handler";
-import { Button } from "./button";
-import { ErrorShow } from "./error-show";
-import { TrashIcon } from "./icons";
-import { Modal } from "./modal";
-import { Spinner } from "./spinner";
+import { Button } from "@/components/ui/button";
+import { ErrorShow } from "@/components/ui/error-show";
+import { TrashIcon } from "@/components/ui/icons";
+import { Modal } from "@/components/ui/modal";
+import { Spinner } from "@/components/ui/spinner";
 
 interface CoverLibraryPickerProps {
   /** Oculta titulo e textos longos quando usado dentro do CoverUpload (abas). */
@@ -99,7 +99,7 @@ export function CoverLibraryPicker({
             Nenhuma imagem na biblioteca ainda. Envie a primeira capa abaixo.
           </p>
         ) : (
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-2">
             {uploads.map((upload) => {
               const src = resolveCoverSrc(upload.path);
               const isSelected = selectedId === upload.id;
@@ -121,6 +121,7 @@ export function CoverLibraryPicker({
                     className="block aspect-square w-full bg-muted"
                   >
                     {src ? (
+                      // Library cover URLs are dynamic; next/image needs a fixed remote allowlist.
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={src}
@@ -161,7 +162,7 @@ export function CoverLibraryPicker({
         open={uploadToRemove !== null}
         onClose={closeRemoveModal}
         title="Remover imagem da biblioteca"
-        description="Esta acao nao pode ser desfeita."
+        description="Esta ação não pode ser desfeita."
         footer={
           <>
             <Button
@@ -187,7 +188,7 @@ export function CoverLibraryPicker({
           <ErrorShow error={removeError} />
         ) : (
           <p className="text-sm text-muted-foreground">
-            Tem certeza que deseja remover esta imagem do seu historico? Projetos e
+            Tem certeza que deseja remover esta imagem do seu histórico? Projetos e
             sistemas que ainda a utilizam nao serao afetados.
           </p>
         )}

@@ -2,13 +2,13 @@
 
 namespace App\Services\Audit;
 
-use App\Enums\AttackScanType;
-use App\Enums\DispatchProbeOutcome;
-use App\Models\AttackDispatch;
-use App\Models\DispatchProbe;
-use App\Models\Project;
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\Attack\DispatchProbeOutcome;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Attack\DispatchProbe;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Support\Collection;
 

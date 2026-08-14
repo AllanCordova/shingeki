@@ -11,7 +11,7 @@ import type {
   ManualRouteMapsResponse,
 } from "@/lib/contracts";
 import { queryKeys } from "@/lib/query-keys";
-import { buildRouteMapPayload } from "@/lib/contracts/manual-proxy";
+import { buildRouteMapPayload } from "@/lib/contracts/manual-proxy/manual-proxy";
 
 export function useManualRouteMaps(projectId: string, systemId: string, enabled = true) {
   return useQuery({

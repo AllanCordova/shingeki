@@ -1,16 +1,16 @@
 <?php
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackScanType;
-use App\Models\AiRemediationSuggestion;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\Project;
-use App\Models\Remediation;
-use App\Models\Stack;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
+use App\Models\Remediation\AiRemediationSuggestion;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 
@@ -26,6 +26,17 @@ describe('POST systems/remediate/ai', function () {
 
         $this->postJson(remediateAiUrl($project, $system))
             ->assertUnauthorized();
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->postJson(remediateAiUrl($project, $system))->assertNotFound();
     });
 
     test('generates ai suggestions for sast findings', function () {

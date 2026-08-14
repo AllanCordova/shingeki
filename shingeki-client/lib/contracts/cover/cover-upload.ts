@@ -1,4 +1,4 @@
-import type { Timestamps } from "./common";
+import type { Timestamps } from "../common/common";
 
 export interface CoverUpload extends Timestamps {
   id: string;

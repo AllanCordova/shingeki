@@ -4,8 +4,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
 import type { ResultsQueryParams, ResultsResponse } from "@/lib/contracts";
-import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
 import { queryKeys } from "@/lib/query-keys";
+
+const EMPTY_DISPATCHES: ResultsResponse["dispatch"][] = [];
+const EMPTY_RESULTS: NonNullable<ResultsResponse["results"]> = [];
+const EMPTY_PROBES: NonNullable<ResultsResponse["probes"]> = [];
 
 const DEFAULT_RESULTS_QUERY: Required<ResultsQueryParams> = {
   page: 1,
@@ -52,7 +56,7 @@ export function useDispatches(projectId: string, systemId: string) {
   });
 
   return {
-    dispatches: query.data ?? [],
+    dispatches: query.data ?? EMPTY_DISPATCHES,
     isLoading: query.isLoading,
     isFetching: query.isFetching,
     isError: query.isError,
@@ -100,9 +104,9 @@ export function useResults(
 
   return {
     dispatch: query.data?.dispatch,
-    results: query.data?.results ?? [],
+    results: query.data?.results ?? EMPTY_RESULTS,
     resultsPagination: query.data?.results_pagination,
-    probes: query.data?.probes ?? [],
+    probes: query.data?.probes ?? EMPTY_PROBES,
     probesPagination: query.data?.probes_pagination,
     probeCounts: query.data?.probe_counts,
     filter: query.data?.filter ?? queryParams.filter,

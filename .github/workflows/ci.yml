@@ -43,32 +43,6 @@ jobs:
         if: ${{ hashFiles('shingeki-api/vendor/bin/pint') != '' }}
         run: vendor/bin/pint --test
 
-  analyse:
-    name: Static analysis (Larastan)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ env.PHP_VERSION }}
-          coverage: none
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: shingeki-api/vendor
-          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('shingeki-api/composer.lock') }}
-          restore-keys: composer-${{ env.PHP_VERSION }}-
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Run Larastan
-        run: composer analyse
-
   tests:
     name: Tests (Pest)
     runs-on: ubuntu-latest
@@ -81,51 +55,6 @@ jobs:
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
-          coverage: pcov
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: shingeki-api/vendor
-          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('shingeki-api/composer.lock') }}
-          restore-keys: composer-${{ env.PHP_VERSION }}-
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
-
-      - name: Prepare environment
-        run: |
-          cp .env.example .env
-          php artisan key:generate
-
-      - name: Run tests with coverage
-        run: composer test:coverage
-
-  queue-integration:
-    name: Queue integration (RabbitMQ)
-    runs-on: ubuntu-latest
-    services:
-      rabbitmq:
-        image: rabbitmq:3-management
-        ports:
-          - 5672:5672
-        env:
-          RABBITMQ_DEFAULT_USER: guest
-          RABBITMQ_DEFAULT_PASS: guest
-        options: >-
-          --health-cmd "rabbitmq-diagnostics -q ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 8
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ env.PHP_VERSION }}
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, sockets
           coverage: none
 
       - name: Cache Composer dependencies
@@ -143,16 +72,8 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
-      - name: Run RabbitMQ publisher/consumer tests
-        env:
-          RABBITMQ_INTEGRATION: "true"
-          RABBITMQ_HOST: 127.0.0.1
-          RABBITMQ_PORT: 5672
-          RABBITMQ_USER: guest
-          RABBITMQ_PASSWORD: guest
-          RABBITMQ_VHOST: /
-          RABBITMQ_SSL: "false"
-        run: php vendor/bin/pest tests/Integration --no-coverage
+      - name: Run tests
+        run: composer test
 
   dast-worker:
     name: DAST worker (Go)

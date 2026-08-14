@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { LandingSection, NavTheme } from "./landing-sections";
+import type { NavTheme } from "./landing-sections";
 
 interface LandingHeaderProps {
   navTheme: NavTheme;

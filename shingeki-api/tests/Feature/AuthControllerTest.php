@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\User;
+use App\Models\User\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -311,7 +311,12 @@ describe('PUT /api/auth/me', function () {
 
         $avatarPath = $user->fresh()->avatar_path;
 
-        expect($avatarPath)->toMatch('#^/storage/avatars/[a-f0-9\-]+\.jpg$#');
+        expect($avatarPath)->toMatch('#^/storage/covers/[a-f0-9\-]+\.jpg$#');
+        $this->assertDatabaseHas('user_cover_uploads', [
+            'user_id' => $user->id,
+            'path' => $avatarPath,
+        ]);
+        Storage::disk('public')->assertExists(str_replace('/storage/', '', $avatarPath));
     });
 
     test('requires authentication', function () {

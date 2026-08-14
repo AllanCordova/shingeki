@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { resolveCoverSrc } from "@/lib/cover-image";
+import { resolveCoverSrc } from "@/lib/cover/cover-image";
 import { cn } from "@/lib/utils";
 
 interface CoverHeroProps {
@@ -13,8 +13,7 @@ interface CoverHeroProps {
 }
 
 /**
- * Hero de capa para paginas de detalhe.
- * Mobile: largura total da viewport. Desktop: alinhado ao container (max-w-5xl).
+ * Hero de capa para páginas de detalhe (full-bleed no mobile).
  */
 export function CoverHero({
   coverPath,
@@ -43,6 +42,8 @@ export function CoverHero({
       >
         {hasImage ? (
           <>
+            {/* Dynamic cover URL; next/image needs a fixed remote allowlist. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src!}
               alt={alt}

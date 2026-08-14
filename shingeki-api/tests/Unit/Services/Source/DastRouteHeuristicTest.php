@@ -1,12 +1,12 @@
 <?php
 
-use App\Enums\AttackScanType;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\Stack;
-use App\Models\System;
-use App\Models\SystemResult;
-use App\Models\User;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
 use App\Services\Source\DastRouteHeuristic;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 

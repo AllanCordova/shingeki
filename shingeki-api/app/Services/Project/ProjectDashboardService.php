@@ -2,8 +2,8 @@
 
 namespace App\Services\Project;
 
-use App\Models\AttackDispatch;
-use App\Models\Project;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Project\Project;
 use Illuminate\Support\Collection;
 
 class ProjectDashboardService
@@ -16,8 +16,13 @@ class ProjectDashboardService
         $systems = $project->systems()->get(['id', 'name']);
         $systemIds = $systems->pluck('id');
 
-        $latestBySystem = $this->latestCompletedDispatchesBySystem($systemIds);
-        $previousBySystem = $this->previousCompletedDispatchesBySystem($systemIds, $latestBySystem);
+        $completedBySystem = $this->completedDispatchesGroupedBySystem($systemIds);
+        $latestBySystem = $completedBySystem->map(
+            fn (Collection $group) => $group->first(),
+        )->filter();
+        $previousBySystem = $completedBySystem->map(
+            fn (Collection $group) => $group->get(1),
+        );
 
         $totalFindings = $latestBySystem->sum(fn (AttackDispatch $dispatch) => $dispatch->findings_count ?? 0);
         $previousTotalFindings = $previousBySystem->sum(fn (?AttackDispatch $dispatch) => $dispatch?->findings_count ?? 0);
@@ -58,53 +63,20 @@ class ProjectDashboardService
 
     /**
      * @param  Collection<int, string>  $systemIds
-     * @return Collection<string, AttackDispatch>
+     * @return Collection<string, Collection<int, AttackDispatch>>
      */
-    private function latestCompletedDispatchesBySystem(Collection $systemIds): Collection
+    private function completedDispatchesGroupedBySystem(Collection $systemIds): Collection
     {
         if ($systemIds->isEmpty()) {
             return collect();
         }
 
-        $dispatches = AttackDispatch::query()
-            ->whereIn('system_id', $systemIds)
-            ->whereNotNull('completed_at')
-            ->orderByDesc('dispatched_at')
-            ->get();
-
-        return $dispatches
-            ->groupBy('system_id')
-            ->map(fn (Collection $group) => $group->first());
-    }
-
-    /**
-     * @param  Collection<int, string>  $systemIds
-     * @param  Collection<string, AttackDispatch>  $latestBySystem
-     * @return Collection<string, AttackDispatch|null>
-     */
-    private function previousCompletedDispatchesBySystem(
-        Collection $systemIds,
-        Collection $latestBySystem,
-    ): Collection {
-        if ($systemIds->isEmpty()) {
-            return collect();
-        }
-
-        $dispatches = AttackDispatch::query()
+        return AttackDispatch::query()
             ->whereIn('system_id', $systemIds)
             ->whereNotNull('completed_at')
             ->orderByDesc('dispatched_at')
             ->get()
             ->groupBy('system_id');
-
-        return $systemIds->mapWithKeys(function (string $systemId) use ($dispatches, $latestBySystem) {
-            $group = $dispatches->get($systemId, collect());
-            $latestId = $latestBySystem->get($systemId)?->id;
-
-            $previous = $group->first(fn (AttackDispatch $dispatch) => $dispatch->id !== $latestId);
-
-            return [$systemId => $previous];
-        });
     }
 
     /**

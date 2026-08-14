@@ -22,7 +22,7 @@ Envie **apenas um** dos campos de capa por requisição (quando quiser definir c
 
 Regras: `prohibits` impede enviar `cover` e `cover_upload_id` juntos. Upload de capa apenas no **client web**.
 
-Ao enviar arquivo novo, a API registra entrada na biblioteca (`user_cover_uploads`).
+Ao enviar arquivo novo (capa de projeto/sistema **ou** foto de perfil), a API registra entrada na biblioteca (`user_cover_uploads`) via `UserCoverLibraryService::registerUpload` — unico ponto de entrada para midia do usuario.
 
 ## Biblioteca por usuário
 
@@ -49,9 +49,9 @@ Limite configurável em `COVER_MAX_UPLOADS_PER_USER` (padrão **20**). Ver `conf
 
 ### DELETE /api/cover-uploads/{coverUpload}
 
-Remove a entrada da biblioteca do usuario. Se a imagem **nao** estiver referenciada em projeto ou sistema, o arquivo tambem e apagado do disco.
+Remove a entrada da biblioteca do usuario. Se a imagem **nao** estiver referenciada em projeto, sistema ou avatar do usuario, o arquivo tambem e apagado do disco.
 
-Se a imagem **estiver em uso**, apenas a entrada da biblioteca e removida — o projeto ou sistema continua exibindo a capa ate voce trocar ou excluir a entidade.
+Se a imagem **estiver em uso**, apenas a entrada da biblioteca e removida — o projeto, sistema ou avatar continua exibindo a imagem ate voce trocar ou excluir a referencia.
 
 **Resposta `200`:**
 

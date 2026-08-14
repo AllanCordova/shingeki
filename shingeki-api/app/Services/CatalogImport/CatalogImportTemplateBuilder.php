@@ -2,11 +2,11 @@
 
 namespace App\Services\CatalogImport;
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackRiskLevel;
-use App\Enums\AttackScanType;
-use App\Enums\AttackTargetLocation;
-use App\Enums\CatalogImportType;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackRiskLevel;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\Attack\AttackTargetLocation;
+use App\Enums\Catalog\CatalogImportType;
 
 class CatalogImportTemplateBuilder
 {

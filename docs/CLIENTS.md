@@ -19,7 +19,7 @@ O [client web](architecture/shingeki-client.md) consome a [API REST](API.md) via
 | Assinaturas e dispatch DAST/SAST | Sim |
 | Resultados e remediação | Sim |
 | Preview e abertura de PR no GitHub (SAST) | Sim |
-| Admin / catálogo (`ADMIN`, `SPECIALIST`) | Sim (sidebar `/admin`) |
+| Admin / catálogo (`ADMIN`, `SPECIALIST`) | Auditoria no client; `ADMIN` também em `/admin/users/permissoes` |
 | Notificações | Sim |
 | Arsenal manual | Sim |
 

@@ -2,7 +2,7 @@
 
 namespace App\Services\ManualProxy;
 
-use App\Enums\AttackTargetLocation;
+use App\Enums\Attack\AttackTargetLocation;
 use InvalidArgumentException;
 
 class ManualProxyPayloadInjector

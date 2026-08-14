@@ -6,8 +6,8 @@ import { ManualProxyPanel } from "@/components/manual-proxy/manual-proxy-panel";
 import { SystemDetailHero } from "@/components/system/system-detail-hero";
 import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
 import { canUseManualProxy } from "@/lib/auth/roles";
-import { useMe } from "@/lib/hooks/use-auth";
-import { useSystem } from "@/lib/hooks/use-systems";
+import { useMe } from "@/lib/hooks/auth/use-auth";
+import { useSystem } from "@/lib/hooks/system/use-systems";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, ErrorShow, Loading } from "@/components/ui";
 
 export default function SystemArsenalPage() {
@@ -45,7 +45,11 @@ export default function SystemArsenalPage() {
         subtitle="Arsenal manual"
       />
 
-      <TargetSessionPanel projectId={projectId} systemId={systemId} />
+      <TargetSessionPanel
+        projectId={projectId}
+        systemId={systemId}
+        systemName={system.name}
+      />
 
       <Card>
         <CardHeader>

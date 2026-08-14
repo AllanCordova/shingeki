@@ -2,14 +2,18 @@
 
 namespace App\Services\Remediation;
 
-use App\Enums\AttackScanType;
-use App\Models\Remediation;
-use App\Models\Stack;
-use App\Models\SystemResult;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\System\SystemResult;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 class RemediationResolver
 {
+    /** @var array<string, SupportCollection<int, Remediation>> */
+    private array $catalogByStackId = [];
+
     /**
      * @param  Collection<int, Stack>  $stacks
      * @return list<array<string, mixed>>
@@ -17,6 +21,7 @@ class RemediationResolver
     public function resolveForResult(SystemResult $result, Collection $stacks): array
     {
         $result->loadMissing(['attack', 'attackDispatch']);
+        $this->warmCatalog($stacks);
 
         $resolved = [];
 
@@ -33,16 +38,43 @@ class RemediationResolver
         return $resolved;
     }
 
+    /**
+     * @param  Collection<int, Stack>  $stacks
+     */
+    private function warmCatalog(Collection $stacks): void
+    {
+        $missingIds = $stacks
+            ->pluck('id')
+            ->filter(fn (string $id): bool => ! array_key_exists($id, $this->catalogByStackId))
+            ->values()
+            ->all();
+
+        if ($missingIds === []) {
+            return;
+        }
+
+        foreach ($missingIds as $stackId) {
+            $this->catalogByStackId[$stackId] = collect();
+        }
+
+        Remediation::query()
+            ->whereIn('stack_id', $missingIds)
+            ->get()
+            ->each(function (Remediation $remediation): void {
+                $this->catalogByStackId[$remediation->stack_id]->push($remediation);
+            });
+    }
+
     private function findRemediation(SystemResult $result, Stack $stack): ?Remediation
     {
+        $catalog = $this->catalogByStackId[$stack->id] ?? collect();
         $scanType = $result->attackDispatch?->scan_type;
         $category = $result->attack?->category;
 
         if ($scanType === AttackScanType::Sast && filled($result->payload_used)) {
-            $byRule = Remediation::query()
-                ->where('stack_id', $stack->id)
-                ->where('semgrep_rule_id', $result->payload_used)
-                ->first();
+            $byRule = $catalog->first(
+                fn (Remediation $remediation): bool => $remediation->semgrep_rule_id === $result->payload_used,
+            );
 
             if ($byRule !== null) {
                 return $byRule;
@@ -63,17 +95,21 @@ class RemediationResolver
             }
         }
 
-        return Remediation::query()
-            ->where('stack_id', $stack->id)
-            ->where('attack_category', $category)
-            ->whereNull('semgrep_rule_id')
-            ->when(
-                $scanType !== null,
-                fn ($query) => $query->where(fn ($inner) => $inner
-                    ->whereNull('scan_type')
-                    ->orWhere('scan_type', $scanType)),
-            )
-            ->first();
+        return $catalog->first(function (Remediation $remediation) use ($category, $scanType): bool {
+            if ($remediation->attack_category !== $category) {
+                return false;
+            }
+
+            if ($remediation->semgrep_rule_id !== null) {
+                return false;
+            }
+
+            if ($scanType === null) {
+                return true;
+            }
+
+            return $remediation->scan_type === null || $remediation->scan_type === $scanType;
+        });
     }
 
     private function inferLanguageFromRoute(?string $route): ?string

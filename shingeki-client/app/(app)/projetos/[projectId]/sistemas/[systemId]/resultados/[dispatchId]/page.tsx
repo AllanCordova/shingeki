@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { useResults } from "@/lib/hooks/use-results";
+import { useResults } from "@/lib/hooks/results/use-results";
 import type { DispatchProbeListFilter } from "@/lib/contracts";
-import type { AttackDispatch } from "@/lib/contracts/attack";
-import type { PaginationMeta, SystemResult } from "@/lib/contracts/result";
-import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common";
+import type { AttackDispatch } from "@/lib/contracts/attack/attack";
+import type { PaginationMeta, SystemResult } from "@/lib/contracts/results/result";
+import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
 import { formatFindingSourceLocation, isSastResult } from "@/lib/results/source-location";
-import { formatDate } from "@/lib/utils";
+import { formatDate, formatDuration, cn } from "@/lib/utils";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
 import { ProbeOutcomeFilter } from "@/components/results/probe-outcome-filter";
@@ -20,7 +20,6 @@ import {
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
 import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
-import { cn } from "@/lib/utils";
 import {
   Badge,
   Button,
@@ -147,7 +146,7 @@ export default function ResultsDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             {dispatch.status === "completed" ? (
               <Button variant="outline" onClick={() => setExportOpen(true)}>
-                Exportar relatorio
+                Exportar relatório
               </Button>
             ) : null}
             <Button variant="danger" onClick={() => setDeleteOpen(true)}>
@@ -186,7 +185,9 @@ export default function ResultsDetailPage() {
                 ? ` · ${dispatch.findings_count} vulnerabilidade(s)`
                 : ""}
               {coverageSummary ? ` · ${coverageSummary}` : ""}
-              {dispatch?.duration_ms ? ` · ${dispatch.duration_ms} ms` : ""}
+              {dispatch?.duration_ms != null
+                ? ` · ${formatDuration(dispatch.duration_ms)}`
+                : ""}
             </p>
           </div>
 
@@ -360,7 +361,7 @@ function VulnerabilitiesSection({
                     <CardContent className="flex flex-col gap-3 text-sm">
                       {sourceLocation ? (
                         <Detail
-                          label={sast ? "Arquivo e linha(s)" : "Localizacao"}
+                          label={sast ? "Arquivo e linha(s)" : "Localização"}
                           value={sourceLocation}
                           mono
                         />
@@ -373,7 +374,7 @@ function VulnerabilitiesSection({
                       ) : null}
                       {result.payload_used ? (
                         <Detail
-                          label={sast ? "Regra Semgrep" : "Payload"}
+                          label={sast ? "Regra SAST" : "Payload"}
                           value={result.payload_used}
                           mono
                         />

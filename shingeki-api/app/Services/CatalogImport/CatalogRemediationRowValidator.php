@@ -2,9 +2,9 @@
 
 namespace App\Services\CatalogImport;
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackScanType;
-use App\Models\Stack;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackScanType;
+use App\Models\System\Stack;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 

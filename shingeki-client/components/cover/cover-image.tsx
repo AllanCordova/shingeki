@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { resolveCoverSrc } from "@/lib/cover-image";
+import { resolveCoverSrc } from "@/lib/cover/cover-image";
 import { cn } from "@/lib/utils";
 
 interface CoverImageProps {
@@ -33,6 +33,7 @@ export function CoverImage({
         className,
       )}
     >
+      {/* User/library cover URLs are dynamic; next/image needs a fixed remote allowlist. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src}

@@ -8,6 +8,11 @@ use Illuminate\Support\Str;
 
 class CoverImageService
 {
+    /**
+     * Grava arquivo no disco public. Para midia do usuario (capa, avatar),
+     * use {@see UserCoverLibraryService::registerUpload} — este metodo
+     * nao registra na biblioteca.
+     */
     public function store(UploadedFile $file, string $directory = 'covers'): string
     {
         $filename = Str::uuid().'.'.$file->guessExtension();

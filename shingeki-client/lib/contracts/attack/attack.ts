@@ -1,6 +1,15 @@
-import type { Timestamps } from "./common";
+import type { Timestamps } from "../common/common";
 
-export type AttackDispatchInput = Record<string, never>;
+export type AttackDepth = "quick" | "full";
+
+export type AttackDiscoveryScope = {
+  start_path?: string;
+  max_routes?: number;
+};
+
+export type AttackDispatchInput = {
+  depth?: AttackDepth;
+} & AttackDiscoveryScope;
 
 export type AttackCategory =
   | "SQL_INJECTION"
@@ -29,6 +38,9 @@ export interface AttackDispatch extends Timestamps {
   system_id: string;
   user_id: string;
   scan_type?: AttackScanTypeValue;
+  depth?: AttackDepth;
+  start_path?: string | null;
+  max_routes?: number | null;
   attacks_count: number;
   dispatched_at: string | null;
   completed_at: string | null;

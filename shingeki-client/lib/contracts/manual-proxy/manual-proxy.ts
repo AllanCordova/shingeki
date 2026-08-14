@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { Timestamps } from "./common";
-import { ATTACK_TARGET_LOCATIONS } from "./catalog-attack";
-import { zJsonObjectString } from "./zod-helpers";
+import type { Timestamps } from "../common/common";
+import { ATTACK_TARGET_LOCATIONS } from "../catalog/catalog-attack";
+import { zJsonObjectString } from "../common/zod-helpers";
 
 export const manualProxyMethods = [
   "GET",

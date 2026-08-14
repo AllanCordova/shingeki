@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\User;
-use App\Models\UserCoverUpload;
+use App\Models\User\User;
+use App\Models\User\UserCoverUpload;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

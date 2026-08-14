@@ -2,11 +2,11 @@
 
 namespace App\Services\Ai;
 
-use App\Models\AiRemediationSuggestion;
-use App\Models\AttackDispatch;
-use App\Models\Stack;
-use App\Models\System;
-use App\Models\SystemResult;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Remediation\AiRemediationSuggestion;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
 use App\Services\Remediation\RemediationResolver;
 use App\Services\Source\SourceContext;
 use App\Services\Source\SourceContextService;

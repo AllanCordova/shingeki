@@ -1,8 +1,8 @@
 import { z } from "zod";
-import type { Attack } from "./attack";
-import type { Timestamps } from "./common";
+import type { Attack } from "../attack/attack";
+import type { Timestamps } from "../common/common";
 import type { CatalogAuthor, CatalogListResponseMeta } from "./catalog-list";
-import { zJsonObjectString } from "./zod-helpers";
+import { zJsonObjectString } from "../common/zod-helpers";
 
 export const catalogAttackCreateSchema = z.object({
   scan_type: z.enum(["DAST", "SAST"]),

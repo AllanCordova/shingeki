@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api/client";
-import type { CoverStockImage } from "@/lib/contracts/cover-stock-image";
+import type { CoverStockImage } from "@/lib/contracts/cover/cover-stock-image";
 
 export async function coverStockImageToFile(image: CoverStockImage): Promise<File> {
   const { data } = await apiClient.post<Blob>(

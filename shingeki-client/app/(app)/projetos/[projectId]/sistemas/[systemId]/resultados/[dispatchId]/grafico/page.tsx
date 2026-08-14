@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DispatchOutcomeChart } from "@/components/results/dispatch-outcome-chart";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
-import { useDispatches } from "@/lib/hooks/use-results";
+import { useDispatches } from "@/lib/hooks/results/use-results";
 import { formatDate } from "@/lib/utils";
 import {
   Badge,

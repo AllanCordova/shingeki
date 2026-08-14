@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Enums\AttackCategory;
-use App\Enums\AttackScanType;
-use App\Models\Remediation;
-use App\Models\Stack;
-use App\Models\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\User\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 

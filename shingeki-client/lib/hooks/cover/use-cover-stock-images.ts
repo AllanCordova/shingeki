@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
-import type { CoverStockImagesResponse } from "@/lib/contracts/cover-stock-image";
+import type { CoverStockImagesResponse } from "@/lib/contracts/cover/cover-stock-image";
 import { queryKeys } from "@/lib/query-keys";
 
 const DEFAULT_QUERY = "technology abstract";
+const EMPTY_STOCK_IMAGES: CoverStockImagesResponse["images"] = [];
 
 type UseCoverStockImagesOptions = {
   query?: string;
@@ -29,7 +30,7 @@ export function useCoverStockImages(options: UseCoverStockImagesOptions = {}) {
   });
 
   return {
-    images: query.data?.images ?? [],
+    images: query.data?.images ?? EMPTY_STOCK_IMAGES,
     searchQuery: query.data?.query ?? searchQuery,
     isLoading: query.isLoading,
     isError: query.isError,

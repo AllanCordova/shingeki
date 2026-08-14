@@ -1,7 +1,7 @@
 import { z } from "zod";
-import type { AttackScanTypeValue } from "./attack";
-import type { Stack } from "./stack";
-import type { Timestamps } from "./common";
+import type { AttackScanTypeValue } from "../attack/attack";
+import type { Stack } from "../system/stack";
+import type { Timestamps } from "../common/common";
 import type { CatalogAuthor, CatalogListResponseMeta } from "./catalog-list";
 
 export const catalogRemediationCreateSchema = z.object({

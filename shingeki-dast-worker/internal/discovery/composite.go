@@ -11,10 +11,8 @@ import (
 )
 
 type CompositeEngine struct {
-	static  *static.CollyCrawler
-	dynamic *dynamic.RodCrawler
-	cfg     config.DiscoveryConfig
-	logger  *slog.Logger
+	cfg    config.Config
+	logger *slog.Logger
 }
 
 func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine {
@@ -22,21 +20,40 @@ func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine
 		logger = slog.Default()
 	}
 	return &CompositeEngine{
-		static:  static.NewCollyCrawler(cfg.Discovery, cfg.Attack, logger),
-		dynamic: dynamic.NewRodCrawler(cfg.Discovery, cfg.Attack, logger),
-		cfg:     cfg.Discovery,
-		logger:  logger,
+		cfg:    cfg,
+		logger: logger,
 	}
 }
 
-func (e *CompositeEngine) Discover(ctx context.Context, targetURL string, authHeaders map[string]string) ([]contracts.AttackVector, error) {
-	vectors, err := e.static.Discover(ctx, targetURL, authHeaders)
+func (e *CompositeEngine) Discover(
+	ctx context.Context,
+	targetURL string,
+	authHeaders map[string]string,
+	opts Options,
+) ([]contracts.AttackVector, error) {
+	discCfg := ApplyDepthAndScope(e.cfg.Discovery, opts)
+	seedURL, err := ResolveSeedURL(targetURL, opts.StartPath)
+	if err != nil {
+		return nil, err
+	}
+	if seedURL != targetURL {
+		e.logger.Info("scoped discovery seed",
+			"target", targetURL,
+			"seed", seedURL,
+			"max_routes", discCfg.MaxPages,
+		)
+	}
+
+	staticEngine := static.NewCollyCrawler(discCfg, e.cfg.Attack, e.logger)
+	dynamicEngine := dynamic.NewRodCrawler(discCfg, e.cfg.Attack, e.logger)
+
+	vectors, err := staticEngine.Discover(ctx, targetURL, authHeaders, seedURL)
 	if err != nil {
 		return nil, err
 	}
 
-	if e.cfg.RodEnabled && len(vectors) < e.cfg.MinVectorsForRod {
-		dynamicVectors, rodErr := e.dynamic.Discover(ctx, targetURL, authHeaders)
+	if discCfg.RodEnabled && (opts.HasStartPath() || len(vectors) < discCfg.MinVectorsForRod) {
+		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, authHeaders, seedURL)
 		if rodErr != nil {
 			e.logger.Warn("dynamic discovery failed", "error", rodErr)
 		} else {
@@ -45,11 +62,30 @@ func (e *CompositeEngine) Discover(ctx context.Context, targetURL string, authHe
 	}
 
 	if len(vectors) == 0 {
-		vectors = fallbackVectors(targetURL)
+		vectors = fallbackVectors(seedURL)
 		e.logger.Warn(
 			"discovery produced no vectors; using built-in fallback routes",
-			"target", targetURL,
+			"target", seedURL,
 			"fallback_count", len(vectors),
+		)
+	}
+
+	beforeFilter := len(vectors)
+	vectors = FilterAttackable(targetURL, vectors)
+	if len(vectors) < beforeFilter {
+		e.logger.Info("filtered blocked discovery vectors",
+			"before", beforeFilter,
+			"after", len(vectors),
+		)
+	}
+
+	beforeCap := len(vectors)
+	vectors = CapVectors(vectors, opts)
+	if len(vectors) < beforeCap {
+		e.logger.Info("capped discovery vectors for quick depth",
+			"before", beforeCap,
+			"after", len(vectors),
+			"depth", opts.Depth,
 		)
 	}
 

@@ -1,52 +1,42 @@
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui";
+import { UsersIcon } from "@/components/ui/icons";
 
 export default function AdminPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-          Painel Admin
+          Administração
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Mantenha o catalogo global de ataques e medicacoes atualizado para toda
-          a plataforma.
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          Gerencie acesso e permissões da plataforma.
         </p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Ataques (RF07)</CardTitle>
+            <div className="flex items-center gap-2">
+              <UsersIcon className="h-4 w-4 text-primary" />
+              <CardTitle>Permissões</CardTitle>
+            </div>
             <CardDescription>
-              Mapeie vulnerabilidades recorrentes e adicione novos vetores ao
-              motor de testes.
+              Defina quem é usuário, especialista ou administrador.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Link
-              href="/admin/ataques"
-              className="text-sm font-medium text-primary hover:underline"
+              href="/admin/users/permissoes"
+              className="inline-flex h-8 items-center rounded-app border border-border bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-muted"
             >
-              Gerenciar catalogo de ataques
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Medicacoes (RF08)</CardTitle>
-            <CardDescription>
-              Cadastre scripts e solucoes de mitigacao globais para cruzar com
-              findings dos usuarios.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link
-              href="/admin/medicacoes"
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Gerenciar catalogo de medicacoes
+              Gerenciar permissões
             </Link>
           </CardContent>
         </Card>

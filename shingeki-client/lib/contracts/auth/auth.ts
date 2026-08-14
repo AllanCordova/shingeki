@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Timestamps } from "./common";
+import type { Timestamps } from "../common/common";
 
 /* ----------------------------- Schemas (Zod) ----------------------------- */
 

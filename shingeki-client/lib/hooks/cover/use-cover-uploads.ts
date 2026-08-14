@@ -3,9 +3,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 import type { ApiError } from "@/lib/api/error-handler";
-import { MAX_COVER_UPLOADS } from "@/lib/cover-library";
-import type { CoverUpload, CoverUploadsResponse } from "@/lib/contracts/cover-upload";
+import { MAX_COVER_UPLOADS } from "@/lib/cover/cover-library";
+import type { CoverUpload, CoverUploadsResponse } from "@/lib/contracts/cover/cover-upload";
 import { queryKeys } from "@/lib/query-keys";
+
+const EMPTY_COVER_UPLOADS: CoverUpload[] = [];
 
 export function useCoverUploads() {
   const query = useQuery({
@@ -16,7 +18,7 @@ export function useCoverUploads() {
     },
   });
 
-  const uploads = query.data?.cover_uploads ?? [];
+  const uploads = query.data?.cover_uploads ?? EMPTY_COVER_UPLOADS;
   const count = query.data?.count ?? uploads.length;
   const limit = query.data?.limit ?? MAX_COVER_UPLOADS;
   const atLimit = count >= limit;

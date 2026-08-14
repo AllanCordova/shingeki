@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Concerns;
 
-use App\Http\Requests\ListSystemResultShow;
-use App\Models\DispatchProbe;
-use App\Models\SystemResult;
+use App\Http\Requests\System\ListSystemResultShow;
+use App\Models\Attack\DispatchProbe;
+use App\Models\System\SystemResult;
 use Illuminate\Database\Eloquent\Builder;
 
 trait AppliesLogSearchFilters

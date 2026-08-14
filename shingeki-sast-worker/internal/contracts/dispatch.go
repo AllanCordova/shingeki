@@ -15,6 +15,7 @@ const (
 type DispatchBatch struct {
 	Event         string       `json:"event"`
 	ScanType      string       `json:"scan_type"`
+	Depth         string       `json:"depth"`
 	DispatchID    string       `json:"dispatch_id"`
 	SystemID      string       `json:"system_id"`
 	UserID        string       `json:"user_id"`

@@ -118,6 +118,7 @@ export function useUpdateProfile() {
     },
     onSuccess: (user) => {
       queryClient.setQueryData(queryKeys.me, user);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.coverUploads });
     },
   });
 

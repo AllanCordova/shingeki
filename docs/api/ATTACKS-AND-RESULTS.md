@@ -35,17 +35,15 @@ O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 
 | Contexto | URL do alvo |
 |----------|-------------|
-| Navegador, popup de login, assinatura | `http://127.0.0.1:8090` ou `http://localhost:8090` |
+| Navegador, popup de login | `http://127.0.0.1:8090` ou `http://localhost:8090` |
 | Worker DAST (Docker) | resolvido automaticamente para `http://vulnerable-target` |
 | API — manual proxy | `WorkerTargetUrlResolver::forManualProxy()` — URL do browser/lab (ver [MANUAL-PROXY.md](MANUAL-PROXY.md)) |
 
 **Importante:** nao cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames so existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila. Registros legados com `http://vulnerable-target` funcionam no manual proxy via reescrita automatica.
 
-### Assinatura do sistema
+### Aceite de responsabilidade
 
-Antes de disparar ataques, gere e valide a assinatura do sistema (meta tag no HTML do alvo). A API resolve automaticamente o token ativo e permitido — **não é necessário enviar `signature_token` no body do dispatch**.
-
-No alvo de laboratório, o valor da meta tag vem de `VULNERABLE_TARGET_SIGNATURE_TOKEN` (raiz, `shingeki-api` e container do alvo). Fluxo completo: [SIGNATURES.md](SIGNATURES.md).
+Antes de disparar ataques, o client deve enviar no body o aceite de responsabilidade e termos legais (`accepted_responsibility`, `accepted_legal_terms`, `terms_version`). A API valida e grava auditoria em `attack_acknowledgments`. Fluxo completo: [ATTACK-ACKNOWLEDGMENT.md](ATTACK-ACKNOWLEDGMENT.md).
 
 ## POST .../attacks/dispatch (DAST)
 
@@ -55,9 +53,26 @@ Enfileira o catálogo **DAST** (`scan_type: DAST`) para o sistema. Publica na fi
 
 O lote inclui ataques cujo autor tem papel `ADMIN` ou `SPECIALIST` no catálogo global ([CATALOG.md](CATALOG.md)).
 
-**Body (JSON):** vazio (`{}`) ou omitido.
+**Body (JSON):**
 
-A API busca a assinatura ativa do usuário para o sistema, verifica expiração e status **permitido** (validado no HTML do alvo).
+```json
+{
+  "accepted_responsibility": true,
+  "accepted_legal_terms": true,
+  "terms_version": "2026-07-13",
+  "depth": "full",
+  "start_path": "/products",
+  "max_routes": 50
+}
+```
+
+- `depth` (opcional): `quick` ou `full` (padrão `full` se omitido).
+  - **quick**: discovery rasa no worker DAST (`MaxDepth=1`, `MaxPages=12`, sem Rod, até 20 vetores).
+  - **full**: usa os limites padrão do worker (`DISCOVERY_MAX_DEPTH` / `DISCOVERY_MAX_PAGES`).
+- `start_path` (opcional, DAST): rota semente do crawl (ex. `/products`). Pode ser path relativo ou URL; a API normaliza para path. O worker inicia o BFS nessa rota (mesma origem do `target_url`).
+- `max_routes` (opcional, DAST): orçamento máximo de páginas visitadas no discovery (1–500). Quando `start_path` é enviado e `max_routes` é omitido, o padrão é `50`. Sobrescreve `MaxPages` do depth (incluindo quick).
+
+Código de aceite: `SHINGEKI-ATTACK-ACK-1` (`AttackAcknowledgmentTerms`). Versão atual: `2026-07-13`.
 
 **Resposta `202`:**
 
@@ -69,6 +84,9 @@ A API busca a assinatura ativa do usuário para o sistema, verifica expiração 
     "system_id": "uuid",
     "user_id": "uuid",
     "scan_type": "DAST",
+    "depth": "full",
+    "start_path": "/products",
+    "max_routes": 50,
     "attacks_count": 12,
     "dispatched_at": "...",
     "completed_at": null,
@@ -95,11 +113,11 @@ A API busca a assinatura ativa do usuário para o sistema, verifica expiração 
 }
 ```
 
-**Resposta `403`:** assinatura ausente, expirada ou ainda não permitida para ataques.
-
 Ao receber `202`, a API cria uma notificação `attack_dispatch` com status `pending`. Quando o consumer finaliza o batch, a notificação passa para `completed` ou `failed` e o sininho no client exibe o resultado. Ver [NOTIFICATIONS.md](NOTIFICATIONS.md).
 
-**Resposta `422`:** catálogo de ataques indisponível ou erro de configuração.
+**Resposta `422`:** aceite inválido/`terms_version` desatualizada, catálogo de ataques indisponível ou erro de configuração.
+
+No client, a profundidade (e o escopo opcional de rota no DAST) é escolhida em um modal após o clique em **Ataque DAST** / **Ataque SAST** (não no formulário principal).
 
 ## POST .../attacks/dispatch/sast (SAST)
 
@@ -107,13 +125,13 @@ Ao receber `202`, a API cria uma notificação `attack_dispatch` com status `pen
 
 Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [shingeki-sast-worker](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
 
-**Body (JSON):** vazio, igual ao dispatch DAST.
+**Body (JSON):** igual ao dispatch DAST (aceite obrigatório + `depth` opcional). Campos `start_path` / `max_routes` podem ser persistidos, mas o worker SAST não usa escopo de crawl. No SAST, `depth` é persistido e enviado na fila, mas o worker não altera a análise estática.
 
 **Pré-requisito:** o sistema deve ter `repository_url` preenchido (repositório Git público no MVP).
 
 **Resposta `202`:** igual ao DAST, com `scan_type: SAST` e mensagem `SAST attack catalog dispatched to processing queue.`
 
-**Resposta `422`:** `repository_url` ausente, catálogo SAST vazio ou erro de configuração.
+**Resposta `422`:** aceite inválido, `repository_url` ausente, catálogo SAST vazio ou erro de configuração.
 
 ## GET .../system-results
 
@@ -212,7 +230,8 @@ Remove **todos** os dispatches e achados do sistema.
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/projects/{projectId}/systems/{systemId}/attacks/dispatch" \
   -H "Authorization: Bearer {token}" \
-  -H "Content-Type: application/json"
+  -H "Content-Type: application/json" \
+  -d "{\"accepted_responsibility\":true,\"accepted_legal_terms\":true,\"terms_version\":\"2026-07-13\"}"
 ```
 
 Substitua IDs após `GET /api/projects` (seed cria **Pentest Lab** / **Vulnerable PHP Target**).

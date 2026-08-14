@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { CoverStockImage } from "@/lib/contracts/cover-stock-image";
-import { useCoverStockImages } from "@/lib/hooks/use-cover-stock-images";
-import { Button } from "./button";
-import { ErrorShow } from "./error-show";
-import { Input } from "./input";
-import { Spinner } from "./spinner";
+import type { CoverStockImage } from "@/lib/contracts/cover/cover-stock-image";
+import { useCoverStockImages } from "@/lib/hooks/cover/use-cover-stock-images";
+import { Button } from "@/components/ui/button";
+import { ErrorShow } from "@/components/ui/error-show";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 interface CoverStockPickerProps {
   embedded?: boolean;
@@ -127,6 +127,7 @@ export function CoverStockPicker({
                   className="relative block aspect-video w-full bg-muted"
                   title={image.alt}
                 >
+                  {/* Pexels CDN URLs; next/image needs a fixed remote allowlist. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={image.previewUrl}

@@ -44,6 +44,10 @@ export function hasCatalogCapability(
     return true;
   }
 
+  if (!isSpecialist(user)) {
+    return false;
+  }
+
   return SPECIALIST_CAPABILITIES.includes(capability);
 }
 
@@ -55,7 +59,11 @@ export function canBulkImportCatalog(user: User | undefined): boolean {
   return hasCatalogCapability(user, "bulkImportCatalog");
 }
 
+export function canAccessAdmin(user: User | undefined): boolean {
+  return isAdmin(user);
+}
+
 export function canUseManualProxy(user: User | undefined): boolean {
-  return hasAnyRole(user, ["ADMIN", "SPECIALIST"]);
+  return hasAnyRole(user, ["ADMIN", "SPECIALIST", "USER"]);
 }
 

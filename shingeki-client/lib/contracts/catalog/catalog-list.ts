@@ -1,4 +1,4 @@
-import type { PaginationMeta } from "./common";
+import type { PaginationMeta } from "../common/common";
 
 /** Author of a catalog item (attack or remediation). */
 export interface CatalogAuthor {

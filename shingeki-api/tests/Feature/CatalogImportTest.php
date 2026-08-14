@@ -1,15 +1,16 @@
 <?php
 
-use App\Enums\CatalogImportStatus;
-use App\Enums\CatalogImportType;
-use App\Models\Attack;
-use App\Models\CatalogImport;
-use App\Models\Remediation;
-use App\Models\Stack;
-use App\Models\User;
+use App\Enums\Catalog\CatalogImportStatus;
+use App\Enums\Catalog\CatalogImportType;
+use App\Models\Attack\Attack;
+use App\Models\Catalog\CatalogImport;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\User\User;
 use App\Services\CatalogImport\AttackSpreadsheetParser;
 use App\Services\CatalogImport\CatalogImportQueuePublisher;
 use App\Services\CatalogImport\CatalogImportService;
+use App\Services\CatalogImport\CatalogRemediationRowValidator;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 
@@ -215,7 +216,7 @@ describe('POST /api/catalog/remediations/import', function () {
     });
 
     test('remediation import normalizes escaped newlines in code snippets', function () {
-        $validator = app(\App\Services\CatalogImport\CatalogRemediationRowValidator::class);
+        $validator = app(CatalogRemediationRowValidator::class);
         Stack::factory()->create(['slug' => 'vanilla_php']);
 
         $result = $validator->validate([

@@ -73,7 +73,7 @@ URLs relativas ao client Next.js:
 | Tipo | Destino típico |
 |------|----------------|
 | `attack_dispatch` | Página de resultados do dispatch |
-| `catalog_import` | `/admin/ataques` ou `/admin/medicacoes` |
+| `catalog_import` | `/auditoria/ataques` ou `/auditoria/medicacoes` |
 
 ## Client web
 

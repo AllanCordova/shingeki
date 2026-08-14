@@ -2,18 +2,23 @@
 
 namespace App\Services\Navigation;
 
-use App\Models\Project;
-use App\Models\System;
-use App\Models\User;
-use App\Models\UserNavigationPin;
-use Illuminate\Support\Collection;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserNavigationPin;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class SidebarNavigationService
 {
     /**
-     * @return array{meta: array{projects_count: int, systems_count: int}, items: list<array<string, mixed>>}
+     * @return array{
+     *   meta: array{projectsCount: int, systemsCount: int},
+     *   items: list<array<string, mixed>>,
+     *   tree: list<array<string, mixed>>
+     * }
      */
-    public function configForUser(User $user): array
+    public function forUser(User $user): array
     {
         $projects = Project::query()
             ->where('user_id', $user->id)
@@ -38,12 +43,12 @@ class SidebarNavigationService
 
             $items[] = [
                 'id' => $projectPref?->id,
-                'type' => 'project',
-                'project_id' => $project->id,
-                'system_id' => null,
+                'type' => 'PROJECT',
+                'projectId' => $project->id,
+                'systemId' => null,
                 'name' => $project->name,
                 'visible' => $projectPref?->visible ?? true,
-                'sort_order' => $projectPref?->sort_order ?? $fallbackOrder,
+                'sortOrder' => $projectPref?->sort_order ?? $fallbackOrder,
             ];
             $fallbackOrder++;
 
@@ -54,70 +59,32 @@ class SidebarNavigationService
 
                 $items[] = [
                     'id' => $systemPref?->id,
-                    'type' => 'system',
-                    'project_id' => $project->id,
-                    'project_name' => $project->name,
-                    'system_id' => $system->id,
+                    'type' => 'SYSTEM',
+                    'projectId' => $project->id,
+                    'projectName' => $project->name,
+                    'systemId' => $system->id,
                     'name' => $system->name,
                     'visible' => $systemPref?->visible ?? true,
-                    'sort_order' => $systemPref?->sort_order ?? $fallbackOrder,
+                    'sortOrder' => $systemPref?->sort_order ?? $fallbackOrder,
                 ];
                 $fallbackOrder++;
             }
         }
 
-        usort($items, fn (array $left, array $right) => $left['sort_order'] <=> $right['sort_order']);
+        usort($items, fn (array $left, array $right) => $left['sortOrder'] <=> $right['sortOrder']);
 
         return [
             'meta' => [
-                'projects_count' => $projects->count(),
-                'systems_count' => $systemsCount,
+                'projectsCount' => $projects->count(),
+                'systemsCount' => $systemsCount,
             ],
             'items' => $items,
+            'tree' => $this->buildTree($items),
         ];
     }
 
     /**
-     * @return list<array{project: array<string, mixed>, systems: list<array<string, mixed>>}>
-     */
-    public function sidebarTreeForUser(User $user): array
-    {
-        $config = $this->configForUser($user);
-        $visibleItems = collect($config['items'])->filter(fn (array $item) => $item['visible']);
-
-        $projects = $visibleItems
-            ->where('type', 'project')
-            ->sortBy('sort_order')
-            ->values();
-
-        $systems = $visibleItems
-            ->where('type', 'system')
-            ->groupBy('project_id');
-
-        return $projects
-            ->map(function (array $project) use ($systems) {
-                $projectSystems = collect($systems->get($project['project_id'], collect()))
-                    ->sortBy('sort_order')
-                    ->values()
-                    ->map(fn (array $system) => [
-                        'id' => $system['system_id'],
-                        'name' => $system['name'],
-                        'sort_order' => $system['sort_order'],
-                    ])
-                    ->all();
-
-                return [
-                    'id' => $project['project_id'],
-                    'name' => $project['name'],
-                    'sort_order' => $project['sort_order'],
-                    'systems' => $projectSystems,
-                ];
-            })
-            ->all();
-    }
-
-    /**
-     * @param  list<array{project_id: string, system_id?: string|null, visible: bool, sort_order: int}>  $items
+     * @param  list<array{projectId: string, systemId?: string|null, visible: bool, sortOrder: int}>  $items
      */
     public function syncForUser(User $user, array $items): void
     {
@@ -130,16 +97,25 @@ class SidebarNavigationService
             ->get(['id', 'project_id'])
             ->groupBy('project_id');
 
+        $existing = UserNavigationPin::query()
+            ->where('user_id', $user->id)
+            ->get()
+            ->keyBy(fn (UserNavigationPin $pin) => $this->itemKey($pin->project_id, $pin->system_id));
+
+        $now = Carbon::now();
+        $inserts = [];
+        $upserts = [];
+
         foreach ($items as $item) {
-            if (! $projectIds->contains($item['project_id'])) {
+            if (! $projectIds->contains($item['projectId'])) {
                 continue;
             }
 
-            $systemId = $item['system_id'] ?? null;
+            $systemId = $item['systemId'] ?? null;
 
             if ($systemId !== null) {
                 $allowed = $systemIdsByProject
-                    ->get($item['project_id'], collect())
+                    ->get($item['projectId'], collect())
                     ->contains('id', $systemId);
 
                 if (! $allowed) {
@@ -147,18 +123,85 @@ class SidebarNavigationService
                 }
             }
 
-            UserNavigationPin::query()->updateOrCreate(
-                [
+            $key = $this->itemKey($item['projectId'], $systemId);
+            /** @var UserNavigationPin|null $existingPin */
+            $existingPin = $existing->get($key);
+
+            if ($existingPin) {
+                $upserts[] = [
+                    'id' => $existingPin->id,
                     'user_id' => $user->id,
-                    'project_id' => $item['project_id'],
+                    'project_id' => $item['projectId'],
                     'system_id' => $systemId,
-                ],
-                [
                     'visible' => (bool) $item['visible'],
-                    'sort_order' => (int) $item['sort_order'],
-                ],
+                    'sort_order' => (int) $item['sortOrder'],
+                    'created_at' => $existingPin->created_at,
+                    'updated_at' => $now,
+                ];
+            } else {
+                $inserts[] = [
+                    'id' => (string) Str::uuid(),
+                    'user_id' => $user->id,
+                    'project_id' => $item['projectId'],
+                    'system_id' => $systemId,
+                    'visible' => (bool) $item['visible'],
+                    'sort_order' => (int) $item['sortOrder'],
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+            }
+        }
+
+        if ($inserts !== []) {
+            UserNavigationPin::query()->insert($inserts);
+        }
+
+        if ($upserts !== []) {
+            UserNavigationPin::query()->upsert(
+                $upserts,
+                ['id'],
+                ['visible', 'sort_order', 'updated_at'],
             );
         }
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $items
+     * @return list<array{id: string, name: string, sortOrder: int, systems: list<array{id: string, name: string, sortOrder: int}>}>
+     */
+    private function buildTree(array $items): array
+    {
+        $visibleItems = collect($items)->filter(fn (array $item) => $item['visible']);
+
+        $projects = $visibleItems
+            ->where('type', 'PROJECT')
+            ->sortBy('sortOrder')
+            ->values();
+
+        $systems = $visibleItems
+            ->where('type', 'SYSTEM')
+            ->groupBy('projectId');
+
+        return $projects
+            ->map(function (array $project) use ($systems) {
+                $projectSystems = collect($systems->get($project['projectId'], collect()))
+                    ->sortBy('sortOrder')
+                    ->values()
+                    ->map(fn (array $system) => [
+                        'id' => $system['systemId'],
+                        'name' => $system['name'],
+                        'sortOrder' => $system['sortOrder'],
+                    ])
+                    ->all();
+
+                return [
+                    'id' => $project['projectId'],
+                    'name' => $project['name'],
+                    'sortOrder' => $project['sortOrder'],
+                    'systems' => $projectSystems,
+                ];
+            })
+            ->all();
     }
 
     private function itemKey(string $projectId, ?string $systemId): string

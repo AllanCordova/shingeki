@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { canManageCatalog, isAdmin, type UserRole } from "@/lib/auth/roles";
-import { useMe } from "@/lib/hooks/use-auth";
+import { useMe } from "@/lib/hooks/auth/use-auth";
 import { EmptyState, Loading } from "@/components/ui";
 
 interface RequireRoleProps {
@@ -37,7 +37,7 @@ export function RequireRole({
   if (isError || !user) {
     return (
       <EmptyState
-        title="Sessao necessaria"
+        title="Sessão necessária"
         description="Faca login para acessar esta area."
       />
     );
@@ -47,7 +47,11 @@ export function RequireRole({
     return (
       <EmptyState
         title="Acesso restrito"
-        description="Esta area e exclusiva para administradores do catalogo."
+        description={
+          roles
+            ? "Esta área é exclusiva para administradores."
+            : "Esta área é exclusiva para quem gerencia o catálogo de auditoria."
+        }
       />
     );
   }

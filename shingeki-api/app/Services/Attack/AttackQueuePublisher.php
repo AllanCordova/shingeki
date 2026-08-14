@@ -2,11 +2,12 @@
 
 namespace App\Services\Attack;
 
-use App\Enums\AttackScanType;
-use App\Models\Attack;
-use App\Models\AttackDispatch;
-use App\Models\System;
-use App\Models\User;
+use App\Enums\Attack\AttackDepth;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Queue;
 use VladimirYuldashev\LaravelQueueRabbitMQ\Queue\RabbitMQQueue;
@@ -37,6 +38,7 @@ class AttackQueuePublisher
         $payload = [
             'event' => 'attack.dispatch.batch',
             'scan_type' => $scanType->value,
+            'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
             'dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'user_id' => $requestedBy->id,
@@ -48,6 +50,14 @@ class AttackQueuePublisher
                 ->all(),
             'dispatched_at' => $dispatch->dispatched_at->toIso8601String(),
         ];
+
+        if ($dispatch->start_path !== null) {
+            $payload['start_path'] = $dispatch->start_path;
+        }
+
+        if ($dispatch->max_routes !== null) {
+            $payload['max_routes'] = $dispatch->max_routes;
+        }
 
         if ($targetAuth !== null) {
             $payload['auth'] = $targetAuth;

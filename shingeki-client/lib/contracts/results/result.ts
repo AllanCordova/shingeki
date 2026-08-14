@@ -1,11 +1,11 @@
-import type { Timestamps, PaginationMeta } from "./common";
-import type { AttackDispatch, AttackScanTypeValue } from "./attack";
+import type { Timestamps, PaginationMeta } from "../common/common";
+import type { AttackDispatch, AttackScanTypeValue } from "../attack/attack";
 
 export type DispatchProbeOutcome = "clean" | "error" | "vulnerable";
 
 export type DispatchProbeListFilter = "all" | "vulnerable" | "clean";
 
-export type { PaginationMeta } from "./common";
+export type { PaginationMeta } from "../common/common";
 export interface ProbeOutcomeCounts {
   all: number;
   vulnerable: number;
