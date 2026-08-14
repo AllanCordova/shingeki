@@ -1,11 +1,11 @@
 <?php
 
-use App\Models\Attack\Attack;
-use App\Models\Attack\AttackDispatch;
-use App\Models\Project\Project;
-use App\Models\System\System;
-use App\Models\System\SystemResult;
-use App\Models\User\User;
+use App\Models\Catalog\Attack;
+use App\Models\Identity\User;
+use App\Models\Scanning\AttackDispatch;
+use App\Models\Scanning\SystemResult;
+use App\Models\Workspace\Project;
+use App\Models\Workspace\System;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Route;

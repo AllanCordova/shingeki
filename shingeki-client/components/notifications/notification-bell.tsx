@@ -9,7 +9,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
   useNotificationUnreadCount,
-} from "@/lib/hooks/notification/use-notifications";
+} from "@/lib/hooks/notifications/use-notifications";
 import { cn } from "@/lib/utils";
 import { Badge, Button, EmptyState, Loading, Spinner } from "@/components/ui";
 import { BellIcon } from "@/components/ui/icons";
@@ -31,7 +31,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const { badgeCount: closedBadgeCount } = useNotificationUnreadCount(enabled && !open);
+  const { badgeCount } = useNotificationUnreadCount(enabled);
   const {
     notifications,
     isLoading,
@@ -42,8 +42,6 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
   } = useNotifications(1, enabled && open);
   const { markRead } = useMarkNotificationRead();
   const { markAllRead, isLoading: isMarkingAll } = useMarkAllNotificationsRead();
-
-  const badgeCount = open ? unreadCount + pendingCount : closedBadgeCount;
 
   useEffect(() => {
     if (!open) return;
@@ -96,8 +94,8 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
         variant="outline"
         size="sm"
         className="relative px-2.5"
-        aria-label="Notificações"
-        title="Notificações"
+        aria-label="Notificacoes"
+        title="Notificacoes"
         onClick={handleOpen}
       >
         <BellIcon className="h-4 w-4" />
@@ -112,7 +110,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
         <div className="absolute right-0 top-full z-50 mt-2 w-[min(calc(100vw-2rem),24rem)] overflow-hidden rounded-app border border-border bg-surface shadow-xl">
           <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
             <div>
-              <p className="text-sm font-semibold text-foreground">Notificações</p>
+              <p className="text-sm font-semibold text-foreground">Notificacoes</p>
               <p className="text-xs text-muted-foreground">
                 {pendingCount > 0 ? `${pendingCount} em andamento` : "Nenhum job pendente"}
                 {unreadCount > 0 ? ` · ${unreadCount} nao lida(s)` : ""}
@@ -129,8 +127,8 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
             ) : notifications.length === 0 ? (
               <div className="p-4">
                 <EmptyState
-                  title="Nenhuma notificação"
-                  description="Scans e importações aparecem aqui quando houver atualizações."
+                  title="Nenhuma notificacao"
+                  description="Scans e importacoes aparecem aqui quando houver atualizacoes."
                 />
               </div>
             ) : (
@@ -164,7 +162,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
                 onClick={() => setOpen(false)}
                 className="inline-flex h-8 w-full items-center justify-center rounded-app border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
               >
-                Ver todas as notificações
+                Ver todas as notificacoes
               </Link>
             </div>
           ) : (
@@ -174,7 +172,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
                 onClick={() => setOpen(false)}
                 className="inline-flex h-8 w-full items-center justify-center rounded-app border border-border bg-surface px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface-muted"
               >
-                Ver todas as notificações
+                Ver todas as notificacoes
               </Link>
             </div>
           )}

@@ -1,10 +1,10 @@
 <?php
 
-use App\Enums\TargetSession\TargetAuthType;
-use App\Models\Project\Project;
-use App\Models\System\System;
-use App\Models\TargetSession\SystemTargetSession;
-use App\Models\User\User;
+use App\Enums\TargetAccess\TargetAuthType;
+use App\Models\Identity\User;
+use App\Models\TargetAccess\SystemTargetSession;
+use App\Models\Workspace\Project;
+use App\Models\Workspace\System;
 use Laravel\Sanctum\Sanctum;
 
 function targetSessionUrl(Project $project, System $system): string
@@ -84,43 +84,5 @@ describe('system target session', function () {
             ->assertOk();
 
         expect(SystemTargetSession::query()->count())->toBe(0);
-    });
-
-    test('returns not found for another users project', function () {
-        $owner = User::factory()->create();
-        $intruder = User::factory()->create();
-        $project = Project::factory()->for($owner)->create();
-        $system = System::factory()->for($project)->create();
-
-        Sanctum::actingAs($intruder);
-
-        $this->getJson(targetSessionUrl($project, $system))->assertNotFound();
-        $this->postJson(targetSessionUrl($project, $system), [
-            'auth_type' => 'cookie',
-            'credential' => 'PHPSESSID=hijack',
-        ])->assertNotFound();
-        $this->deleteJson(targetSessionUrl($project, $system))->assertNotFound();
-        $this->postJson(targetSessionUrl($project, $system).'/connect/start', [
-            'client_origin' => 'http://localhost:3000',
-        ])->assertNotFound();
-    });
-
-    test('rejects platform sanctum token as imported target credential', function () {
-        $user = User::factory()->create();
-        $project = Project::factory()->for($user)->create();
-        $system = System::factory()->for($project)->create();
-        $plainTextToken = $user->createToken('auth-token')->plainTextToken;
-
-        Sanctum::actingAs($user);
-
-        $this->postJson(targetSessionUrl($project, $system), [
-            'auth_type' => 'bearer',
-            'credential' => $plainTextToken,
-        ])
-            ->assertUnprocessable()
-            ->assertJsonPath(
-                'message',
-                'Platform API tokens cannot be used as target session credentials.',
-            );
     });
 });

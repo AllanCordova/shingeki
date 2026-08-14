@@ -1,10 +1,10 @@
 <?php
 
-use App\Models\Attack\AttackDispatch;
-use App\Models\Project\Project;
-use App\Models\System\System;
-use App\Models\System\SystemResult;
-use App\Models\User\User;
+use App\Models\Identity\User;
+use App\Models\Scanning\AttackDispatch;
+use App\Models\Scanning\SystemResult;
+use App\Models\Workspace\Project;
+use App\Models\Workspace\System;
 use Laravel\Sanctum\Sanctum;
 
 describe('GET projects/{project}/dashboard', function () {
@@ -92,86 +92,33 @@ describe('sidebar navigation', function () {
 
         Sanctum::actingAs($user);
 
-        $this->graphQL(/** @lang GraphQL */ '
-            query {
-                sidebarNavigation {
-                    meta {
-                        projectsCount
-                        systemsCount
-                    }
-                    items {
-                        type
-                        projectId
-                        systemId
-                        name
-                        visible
-                        sortOrder
-                    }
-                    tree {
-                        id
-                        name
-                        systems {
-                            id
-                            name
-                        }
-                    }
-                }
-            }
-        ')
-            ->assertGraphQLErrorFree()
-            ->assertJsonPath('data.sidebarNavigation.meta.projectsCount', 1)
-            ->assertJsonPath('data.sidebarNavigation.meta.systemsCount', 1)
-            ->assertJsonCount(2, 'data.sidebarNavigation.items');
+        $this->getJson('/api/navigation/sidebar')
+            ->assertOk()
+            ->assertJsonPath('meta.projects_count', 1)
+            ->assertJsonPath('meta.systems_count', 1)
+            ->assertJsonCount(2, 'items');
 
-        $this->graphQL(/** @lang GraphQL */ '
-            mutation ($items: [SidebarNavItemInput!]!) {
-                syncSidebarNavigation(items: $items) {
-                    items {
-                        type
-                        systemId
-                        visible
-                    }
-                    tree {
-                        id
-                        systems {
-                            id
-                        }
-                    }
-                }
-            }
-        ', [
+        $this->putJson('/api/navigation/sidebar', [
             'items' => [
                 [
-                    'projectId' => $project->id,
-                    'systemId' => null,
+                    'project_id' => $project->id,
+                    'system_id' => null,
                     'visible' => true,
-                    'sortOrder' => 0,
+                    'sort_order' => 0,
                 ],
                 [
-                    'projectId' => $project->id,
-                    'systemId' => $system->id,
+                    'project_id' => $project->id,
+                    'system_id' => $system->id,
                     'visible' => false,
-                    'sortOrder' => 1,
+                    'sort_order' => 1,
                 ],
             ],
-        ])
-            ->assertGraphQLErrorFree()
-            ->assertJsonPath('data.syncSidebarNavigation.items.1.visible', false);
+        ])->assertOk()
+            ->assertJsonPath('items.1.visible', false);
 
-        $this->graphQL(/** @lang GraphQL */ '
-            query {
-                sidebarNavigation {
-                    tree {
-                        id
-                        systems {
-                            id
-                        }
-                    }
-                }
-            }
-        ')
-            ->assertGraphQLErrorFree()
-            ->assertJsonCount(1, 'data.sidebarNavigation.tree')
-            ->assertJsonPath('data.sidebarNavigation.tree.0.systems', []);
+        $this->getJson('/api/navigation/sidebar')
+            ->assertOk()
+            ->assertJsonCount(1, 'sidebar')
+            ->assertJsonPath('sidebar.0.systems', []);
     });
 });

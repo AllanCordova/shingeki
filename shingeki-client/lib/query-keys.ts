@@ -8,27 +8,9 @@ import { DEFAULT_PAGE_SIZE, NOTIFICATION_BELL_PAGE_SIZE } from "@/lib/contracts/
 export const queryKeys = {
   me: ["me"] as const,
 
-  adminUsersAll: ["admin", "users"] as const,
-  adminUsers: (params?: {
-    page?: number;
-    per_page?: number;
-    search?: string;
-    role?: string;
-  }) =>
-    [
-      ...queryKeys.adminUsersAll,
-      params?.page ?? 1,
-      params?.per_page ?? DEFAULT_PAGE_SIZE,
-      params?.search ?? "",
-      params?.role ?? "",
-    ] as const,
-
   coverUploads: ["cover-uploads"] as const,
   coverStockImages: (query: string) => ["cover-stock-images", query] as const,
   stacks: ["stacks"] as const,
-
-  ownedSystemsAll: ["systems", "owned"] as const,
-  ownedSystem: (systemId: string) => ["systems", "owned", systemId] as const,
 
   catalogAttacksAll: ["catalog", "attacks"] as const,
   catalogAttacks: (params?: CatalogListQueryParams) =>
@@ -57,7 +39,7 @@ export const queryKeys = {
     ] as const,
   notificationUnreadCount: ["notifications", "unread-count"] as const,
 
-  projects: (userId: string) => ["projects", userId] as const,
+  projects: (userId: string) => ["projects", "list", userId] as const,
   project: (projectId: string) => ["projects", projectId] as const,
   projectDashboard: (projectId: string) => ["projects", projectId, "dashboard"] as const,
 
@@ -71,8 +53,11 @@ export const queryKeys = {
 
   dispatches: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId, "dispatches"] as const,
-  attackAcknowledgment: (projectId: string, systemId: string) =>
-    ["projects", projectId, "systems", systemId, "attack-acknowledgment"] as const,
+  dispatch: (projectId: string, systemId: string, dispatchId: string) =>
+    [
+      ...queryKeys.dispatches(projectId, systemId),
+      dispatchId,
+    ] as const,
   results: (
     projectId: string,
     systemId: string,
@@ -80,12 +65,7 @@ export const queryKeys = {
     params?: ResultsQueryParams,
   ) =>
     [
-      "projects",
-      projectId,
-      "systems",
-      systemId,
-      "dispatches",
-      dispatchId,
+      ...queryKeys.dispatch(projectId, systemId, dispatchId),
       params?.page ?? 1,
       params?.per_page ?? DEFAULT_PAGE_SIZE,
       params?.results_page ?? 1,
@@ -113,28 +93,9 @@ export const queryKeys = {
       targetId ?? "",
     ] as const,
 
-  remediationHistory: (
-    projectId: string,
-    systemId: string,
-    filters: {
-      page?: number;
-      per_page?: number;
-      from?: string;
-      to?: string;
-      type?: string;
-    } = {},
-  ) =>
-    [
-      "projects",
-      projectId,
-      "systems",
-      systemId,
-      "remediation-history",
-      filters.page ?? 1,
-      filters.per_page ?? 25,
-      filters.from ?? "",
-      filters.to ?? "",
-      filters.type ?? "",
-    ] as const,
+  remediationHistory: (projectId: string, systemId: string) =>
+    ["projects", projectId, "systems", systemId, "remediation-history"] as const,
+
+  sidebarNavigation: (userId: string) => ["navigation", "sidebar", userId] as const,
 };
 

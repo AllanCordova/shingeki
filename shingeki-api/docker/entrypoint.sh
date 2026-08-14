@@ -22,7 +22,7 @@ done
 php artisan package:discover --ansi
 php artisan migrate --force
 
-if [ "${RUN_DB_SEED:-true}" = "true" ]; then
+if [ "${RUN_DB_SEED:-false}" = "true" ]; then
   php artisan db:seed --force
 fi
 

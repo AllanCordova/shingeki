@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Models\Attack\AttackDispatch;
+use App\Models\Identity\User;
 use App\Models\Remediation\GithubRemediationPullRequest;
-use App\Models\System\System;
-use App\Models\User\User;
+use App\Models\Scanning\AttackDispatch;
+use App\Models\Workspace\System;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

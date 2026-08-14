@@ -2,10 +2,10 @@
 
 namespace Database\Factories;
 
-use App\Enums\Signature\SignatureStatus;
-use App\Models\Signature\Signature;
-use App\Models\System\System;
-use App\Models\User\User;
+use App\Enums\TargetAccess\SignatureStatus;
+use App\Models\Identity\User;
+use App\Models\TargetAccess\Signature;
+use App\Models\Workspace\System;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 

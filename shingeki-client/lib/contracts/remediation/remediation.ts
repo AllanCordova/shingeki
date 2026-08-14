@@ -1,6 +1,6 @@
 import type { AttackScanTypeValue } from "../attack/attack";
 import type { PaginationMeta } from "../common/common";
-import type { Stack } from "../system/stack";
+import type { Stack } from "../stacks/stack";
 import type { SystemResult } from "../results/result";
 export interface RemediationSnippet {
   stack: Pick<Stack, "id" | "slug" | "name">;

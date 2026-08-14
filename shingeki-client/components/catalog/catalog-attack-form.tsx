@@ -9,7 +9,7 @@ import {
   parseCatalogAttackPayload,
   type CatalogAttackCreateInput,
 } from "@/lib/contracts";
-import { applyApiFieldErrors } from "@/lib/forms";
+import { applyApiFieldErrors } from "@/lib/forms/apply-api-field-errors";
 import type { ApiError } from "@/lib/api/error-handler";
 import { Button, ErrorShow, Field, Select, Textarea } from "@/components/ui";
 

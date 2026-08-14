@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Cover\CoverImageService;
+use App\Services\Identity\CoverImageService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 

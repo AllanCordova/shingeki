@@ -10,7 +10,7 @@ import {
   useDeleteCatalogAttack,
 } from "@/lib/hooks/catalog/use-catalog-attacks";
 import { useUiStore } from "@/lib/stores/ui-store";
-import { notify } from "@/lib/notify";
+import { notify } from "@/lib/ui/notify";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
