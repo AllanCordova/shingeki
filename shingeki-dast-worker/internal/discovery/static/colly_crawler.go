@@ -121,7 +121,7 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 			action = pageURL
 		}
 		resolved, ok := bfs.ResolveReference(pageURL, action)
-		if !ok {
+		if !ok || !bfs.SameOrigin(pageURL, resolved) {
 			return
 		}
 

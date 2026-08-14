@@ -31,4 +31,7 @@ func TestSameOrigin(t *testing.T) {
 	if !bfs.SameOrigin("https://bling.com.br/", "https://www.bling.com.br/inicio") {
 		t.Fatal("expected apex and www to match")
 	}
+	if bfs.SameOrigin("https://a.com", "http://a.com") {
+		t.Fatal("expected different scheme to be different origin")
+	}
 }

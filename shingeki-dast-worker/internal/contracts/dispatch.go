@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
 const (
@@ -99,6 +101,9 @@ func (b DispatchBatch) Validate() error {
 	}
 	if b.TargetURL == "" {
 		return fmt.Errorf("target_url is required")
+	}
+	if err := targeturl.AssertHTTP(b.TargetURL); err != nil {
+		return fmt.Errorf("target_url: %w", err)
 	}
 	if len(b.Attacks) == 0 {
 		return fmt.Errorf("attacks must not be empty")

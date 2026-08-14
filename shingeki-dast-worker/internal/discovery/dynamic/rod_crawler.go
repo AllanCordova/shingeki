@@ -453,6 +453,7 @@ func (r *RodCrawler) launchBrowser(ctx context.Context) (*rod.Browser, func(), e
 
 	cleanup := func() {
 		_ = browser.Close()
+		l.Cleanup()
 	}
 	return browser, cleanup, nil
 }

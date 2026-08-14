@@ -2,28 +2,30 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Config struct {
-	RabbitMQ RabbitMQConfig
-	Worker   WorkerConfig
+	RabbitMQ  RabbitMQConfig
+	Worker    WorkerConfig
 	Discovery DiscoveryConfig
-	Attack   AttackConfig
-	Evidence EvidenceConfig
+	Attack    AttackConfig
+	Evidence  EvidenceConfig
 }
 
 type RabbitMQConfig struct {
-	Host            string
-	Port            int
-	User            string
-	Password        string
-	VHost           string
-	DispatchQueue   string
-	ResultsQueue    string
-	PrefetchCount   int
+	Host          string
+	Port          int
+	User          string
+	Password      string
+	VHost         string
+	DispatchQueue string
+	ResultsQueue  string
+	PrefetchCount int
 }
 
 type WorkerConfig struct {
@@ -181,18 +183,56 @@ func Load() (Config, error) {
 	if cfg.RabbitMQ.Host == "" {
 		return Config{}, fmt.Errorf("RABBITMQ_HOST is required")
 	}
+	if cfg.RabbitMQ.Port <= 0 || cfg.RabbitMQ.Port > 65535 {
+		return Config{}, fmt.Errorf("RABBITMQ_PORT must be between 1 and 65535")
+	}
+	if cfg.RabbitMQ.PrefetchCount < 1 {
+		return Config{}, fmt.Errorf("RABBITMQ_PREFETCH must be >= 1")
+	}
+	if cfg.Worker.JobTimeout <= 0 {
+		return Config{}, fmt.Errorf("WORKER_JOB_TIMEOUT must be > 0")
+	}
+	if cfg.Discovery.MaxDepth < 0 {
+		return Config{}, fmt.Errorf("DISCOVERY_MAX_DEPTH must be >= 0")
+	}
+	if cfg.Discovery.MaxPages < 1 {
+		return Config{}, fmt.Errorf("DISCOVERY_MAX_PAGES must be >= 1")
+	}
+	if cfg.Discovery.MinVectorsForRod < 0 {
+		return Config{}, fmt.Errorf("DISCOVERY_MIN_VECTORS_FOR_ROD must be >= 0")
+	}
+	if cfg.Attack.Concurrency < 1 {
+		return Config{}, fmt.Errorf("WORKER_ATTACK_CONCURRENCY must be >= 1")
+	}
+	if cfg.Attack.RateLimitRPS < 0 {
+		return Config{}, fmt.Errorf("ATTACK_RATE_LIMIT_RPS must be >= 0")
+	}
+	if cfg.Attack.MaxBodyBytes < 0 {
+		return Config{}, fmt.Errorf("ATTACK_MAX_BODY_BYTES must be >= 0")
+	}
+	if cfg.Evidence.BodyDiffThreshold < 0 {
+		return Config{}, fmt.Errorf("EVIDENCE_BODY_DIFF_THRESHOLD must be >= 0")
+	}
 
 	return cfg, nil
 }
 
 func (c Config) RabbitMQURL() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%d%s",
-		c.RabbitMQ.User,
-		c.RabbitMQ.Password,
-		c.RabbitMQ.Host,
-		c.RabbitMQ.Port,
-		c.RabbitMQ.VHost,
-	)
+	vhost := c.RabbitMQ.VHost
+	if vhost == "" {
+		vhost = "/"
+	}
+	if !strings.HasPrefix(vhost, "/") {
+		vhost = "/" + vhost
+	}
+
+	u := url.URL{
+		Scheme: "amqp",
+		User:   url.UserPassword(c.RabbitMQ.User, c.RabbitMQ.Password),
+		Host:   fmt.Sprintf("%s:%d", c.RabbitMQ.Host, c.RabbitMQ.Port),
+		Path:   vhost,
+	}
+	return u.String()
 }
 
 func getEnv(key, fallback string) string {

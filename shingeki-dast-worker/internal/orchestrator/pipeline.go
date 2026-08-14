@@ -10,15 +10,20 @@ import (
 	"github.com/shingeki/dast-worker/internal/contracts"
 	"github.com/shingeki/dast-worker/internal/discovery"
 	"github.com/shingeki/dast-worker/internal/evidence"
-	"github.com/shingeki/dast-worker/internal/queue"
 	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
+
+type resultPublisher interface {
+	PublishProbe(ctx context.Context, probe contracts.ProbeMessage) error
+	PublishResult(ctx context.Context, result contracts.ResultMessage) error
+	PublishCompletion(ctx context.Context, completion contracts.DispatchCompletionMessage) error
+}
 
 type Pipeline struct {
 	discovery discovery.Engine
 	attack    attack.Engine
 	evidence  evidence.Validator
-	publisher *queue.Publisher
+	publisher resultPublisher
 	logger    *slog.Logger
 }
 
@@ -26,7 +31,7 @@ func NewPipeline(
 	discoveryEngine discovery.Engine,
 	attackEngine attack.Engine,
 	evidenceEngine evidence.Validator,
-	publisher *queue.Publisher,
+	publisher resultPublisher,
 	logger *slog.Logger,
 ) *Pipeline {
 	if logger == nil {
@@ -60,7 +65,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 			JobsPlanned:       jobsPlanned,
 		}
 
-		if err := p.publisher.PublishCompletion(context.Background(), completion); err != nil {
+		completeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if err := p.publisher.PublishCompletion(completeCtx, completion); err != nil {
 			p.logger.Error("failed to publish dispatch completion", "error", err, "dispatch_id", batch.DispatchID)
 		}
 	}()
@@ -74,6 +81,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	)
 
 	targetURL := targeturl.Normalize(batch.TargetURL)
+	if err := targeturl.AssertHTTP(targetURL); err != nil {
+		return fmt.Errorf("target url: %w", err)
+	}
 	if targetURL != batch.TargetURL {
 		p.logger.Info("normalized target url for worker reachability", "from", batch.TargetURL, "to", targetURL)
 	}

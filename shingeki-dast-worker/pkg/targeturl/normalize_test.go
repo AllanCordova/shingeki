@@ -34,3 +34,17 @@ func TestNormalizeNoopWithoutEnv(t *testing.T) {
 		t.Fatalf("unexpected rewrite: %s", got)
 	}
 }
+
+func TestAssertHTTP(t *testing.T) {
+	t.Parallel()
+
+	if err := targeturl.AssertHTTP("https://example.com/login"); err != nil {
+		t.Fatalf("expected https url to be allowed: %v", err)
+	}
+	if err := targeturl.AssertHTTP("file:///etc/passwd"); err == nil {
+		t.Fatal("expected file url to be rejected")
+	}
+	if err := targeturl.AssertHTTP("https://user:pass@example.com"); err == nil {
+		t.Fatal("expected credentialed url to be rejected")
+	}
+}

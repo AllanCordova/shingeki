@@ -74,3 +74,25 @@ jobs:
 
       - name: Run tests
         run: composer test
+
+  dast-worker:
+    name: DAST worker (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: shingeki-dast-worker
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: shingeki-dast-worker/go.mod
+          cache-dependency-path: shingeki-dast-worker/go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race ./...

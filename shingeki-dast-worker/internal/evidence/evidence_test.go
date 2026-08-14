@@ -32,6 +32,47 @@ func TestRegexValidatorSQL(t *testing.T) {
 	}
 }
 
+func TestRegexValidatorXSSRequiresPayloadReflection(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "XSS",
+			},
+			Vector: contracts.AttackVector{Route: "/search"},
+		},
+		PayloadUsed: "<script>alert(1)</script>",
+		AttackBody:  "<html><script src=\"/app.js\"></script></html>",
+		RawRequest:  "GET /search",
+	}
+
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("did not expect finding for unrelated script tag: %+v", finding)
+	}
+}
+
+func TestRegexValidatorXSSDetectsReflectedPayload(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "<script>alert(1)</script>"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "XSS",
+			},
+			Vector: contracts.AttackVector{Route: "/search"},
+		},
+		PayloadUsed: payload,
+		AttackBody:  "<html><p>" + payload + "</p></html>",
+		RawRequest:  "GET /search",
+	}
+
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected finding when payload is reflected")
+	}
+}
+
 func TestDiffValidatorSkipsPathTraversal(t *testing.T) {
 	validator := evidence.NewDiffValidator(config.EvidenceConfig{BodyDiffThreshold: 100})
 	resp := types.Response{

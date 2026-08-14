@@ -17,8 +17,6 @@ var sqlErrorPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)Unclosed quotation mark`),
 }
 
-var xssReflectionPattern = regexp.MustCompile(`(?i)<script[^>]*>`)
-
 type RegexValidator struct{}
 
 func NewRegexValidator() *RegexValidator {
@@ -37,11 +35,8 @@ func (v *RegexValidator) Analyze(_ context.Context, response types.Response) *Fi
 
 	if strings.Contains(strings.ToUpper(category), "XSS") {
 		payload := strings.ToLower(response.PayloadUsed)
-		if payload != "" && strings.Contains(body, strings.ToLower(payload)) {
+		if payload != "" && strings.Contains(body, payload) {
 			return newFinding(response, "payload reflected in response body")
-		}
-		if xssReflectionPattern.MatchString(response.AttackBody) {
-			return newFinding(response, "script tag pattern detected in response body")
 		}
 	}
 
