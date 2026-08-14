@@ -7,19 +7,20 @@ import {
   useDeleteSystem,
   useSystem,
   useUpdateSystem,
-} from "@/lib/hooks/system/use-systems";
-import { CoverUpdateModal } from "@/components/cover/cover-update-modal";
-import { SystemForm } from "@/components/system/system-form";
+} from "@/lib/hooks/systems/use-systems";
+import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
+import { SystemForm } from "@/components/forms/system-form";
+import { SignaturePanel } from "@/components/signature/signature-panel";
 import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
-import { SystemDetailHero } from "@/components/system/system-detail-hero";
+import { SystemDetailHero } from "@/components/systems/system-detail-hero";
 import { AttackForm } from "@/components/attack/attack-form";
 import { canUseManualProxy } from "@/lib/auth/roles";
 import { useMe } from "@/lib/hooks/auth/use-auth";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { RemediationHistoryPanel } from "@/components/remediation/remediation-history-panel";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
-import { notify } from "@/lib/notify";
-import { FORM_MODAL_SIZE } from "@/lib/ui";
+import { notify } from "@/lib/ui/notify";
+import { FORM_MODAL_SIZE } from "@/lib/ui/form-modal";
 import { cn } from "@/lib/utils";
 import {
   Button,
@@ -106,16 +107,17 @@ export default function SystemDetailPage() {
         }
       />
 
-      <div id="guided-attack-form" className="guided-setup-section">
-        <AttackForm projectId={projectId} systemId={systemId} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div id="guided-signature-panel" className="guided-setup-section">
+          <SignaturePanel projectId={projectId} systemId={systemId} />
+        </div>
+        <div id="guided-attack-form" className="guided-setup-section">
+          <AttackForm projectId={projectId} systemId={systemId} />
+        </div>
       </div>
 
       <div id="guided-target-session" className="guided-setup-section">
-        <TargetSessionPanel
-          projectId={projectId}
-          systemId={systemId}
-          systemName={system.name}
-        />
+        <TargetSessionPanel projectId={projectId} systemId={systemId} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -159,7 +161,7 @@ export default function SystemDetailPage() {
             mode="edit"
             isLoading={updateSystem.isLoading}
             error={updateSystem.error}
-            submitLabel="Salvar alterações"
+            submitLabel="Salvar alteracoes"
             currentCoverPath={system.cover_path}
             defaultValues={{
               name: system.name,
@@ -183,7 +185,7 @@ export default function SystemDetailPage() {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         title="Excluir sistema"
-        description="Esta ação não pode ser desfeita."
+        description="Esta acao nao pode ser desfeita."
         footer={
           <>
             <Button variant="ghost" onClick={() => setDeleteOpen(false)}>

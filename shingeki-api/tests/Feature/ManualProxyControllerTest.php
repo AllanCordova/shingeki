@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Project\Project;
-use App\Models\System\ManualRouteMap;
-use App\Models\System\System;
-use App\Models\User\User;
+use App\Models\Identity\User;
+use App\Models\TargetAccess\ManualRouteMap;
+use App\Models\Workspace\Project;
+use App\Models\Workspace\System;
 use Illuminate\Support\Facades\Http;
 use Laravel\Sanctum\Sanctum;
 

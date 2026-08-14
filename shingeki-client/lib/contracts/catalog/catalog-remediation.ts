@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { AttackScanTypeValue } from "../attack/attack";
-import type { Stack } from "../system/stack";
+import type { Stack } from "../stacks/stack";
 import type { Timestamps } from "../common/common";
 import type { CatalogAuthor, CatalogListResponseMeta } from "./catalog-list";
 

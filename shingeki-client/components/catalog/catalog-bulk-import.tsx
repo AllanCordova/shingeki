@@ -8,7 +8,7 @@ import {
   useUploadCatalogImport,
 } from "@/lib/hooks/catalog/use-catalog-import";
 import { canBulkImportCatalog } from "@/lib/auth/roles";
-import { notify } from "@/lib/notify";
+import { notify } from "@/lib/ui/notify";
 import { Button, ErrorShow } from "@/components/ui";
 
 interface CatalogBulkImportProps {

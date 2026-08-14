@@ -7,10 +7,10 @@ import {
   coverUpdateOnlySchema,
   type CoverUpdateOnlyInput,
 } from "@/lib/contracts";
-import { applyApiFieldErrors } from "@/lib/forms";
+import { applyApiFieldErrors } from "@/lib/forms/apply-api-field-errors";
 import type { ApiError } from "@/lib/api/error-handler";
-import { FORM_MODAL_SIZE } from "@/lib/ui";
-import { CoverFields } from "@/components/cover/cover-fields";
+import { FORM_MODAL_SIZE } from "@/lib/ui/form-modal";
+import { CoverFields } from "@/components/forms/cover-fields";
 import { Button, ErrorShow, Modal } from "@/components/ui";
 
 interface CoverUpdateModalProps {

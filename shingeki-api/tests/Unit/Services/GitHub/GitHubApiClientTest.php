@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\GitHub\GitHubApiClient;
+use App\Services\Remediation\GitHub\GitHubApiClient;
 use Illuminate\Support\Facades\Http;
 
 describe('GitHubApiClient ensureBranchAt', function () {

@@ -1,14 +1,14 @@
 <?php
 
-use App\Enums\Attack\AttackCategory;
-use App\Enums\Attack\AttackRiskLevel;
-use App\Enums\Attack\AttackScanType;
-use App\Enums\Attack\AttackTargetLocation;
-use App\Enums\User\UserRole;
-use App\Models\Attack\Attack;
-use App\Models\Remediation\Remediation;
-use App\Models\System\Stack;
-use App\Models\User\User;
+use App\Enums\Catalog\AttackCategory;
+use App\Enums\Catalog\AttackRiskLevel;
+use App\Enums\Catalog\AttackTargetLocation;
+use App\Enums\Identity\UserRole;
+use App\Enums\Scanning\AttackScanType;
+use App\Models\Catalog\Attack;
+use App\Models\Catalog\Remediation;
+use App\Models\Catalog\Stack;
+use App\Models\Identity\User;
 use Laravel\Sanctum\Sanctum;
 
 const CATALOG_ATTACKS = '/api/catalog/attacks';

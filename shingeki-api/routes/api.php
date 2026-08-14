@@ -1,38 +1,33 @@
 <?php
 
-use App\Http\Controllers\Admin\AdminUserController;
-use App\Http\Controllers\Attack\AttackAcknowledgmentController;
-use App\Http\Controllers\Attack\AttackController;
-use App\Http\Controllers\Audit\AuditReportController;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Auth\GoogleAuthController;
 use App\Http\Controllers\Catalog\CatalogAttackController;
 use App\Http\Controllers\Catalog\CatalogAttackImportController;
 use App\Http\Controllers\Catalog\CatalogImportController;
 use App\Http\Controllers\Catalog\CatalogRemediationController;
 use App\Http\Controllers\Catalog\CatalogRemediationImportController;
-use App\Http\Controllers\Cover\CoverUploadController;
-use App\Http\Controllers\ManualProxy\ManualProxyController;
-use App\Http\Controllers\Notification\UserNotificationController;
-use App\Http\Controllers\Project\ProjectController;
+use App\Http\Controllers\Catalog\StackController;
+use App\Http\Controllers\Identity\AuthController;
+use App\Http\Controllers\Identity\CoverUploadController;
+use App\Http\Controllers\Notifications\UserNotificationController;
 use App\Http\Controllers\Remediation\AiRemediationController;
 use App\Http\Controllers\Remediation\GitHubRemediationController;
 use App\Http\Controllers\Remediation\RemediationController;
 use App\Http\Controllers\Remediation\RemediationHistoryController;
-use App\Http\Controllers\System\OwnedSystemController;
-use App\Http\Controllers\System\StackController;
-use App\Http\Controllers\System\SystemController;
-use App\Http\Controllers\System\SystemResultController;
-use App\Http\Controllers\TargetSession\TargetSessionCaptureController;
-use App\Http\Controllers\TargetSession\TargetSessionController;
+use App\Http\Controllers\Scanning\AttackController;
+use App\Http\Controllers\Scanning\AuditReportController;
+use App\Http\Controllers\Scanning\SystemResultController;
+use App\Http\Controllers\TargetAccess\ManualProxyController;
+use App\Http\Controllers\TargetAccess\SignatureController;
+use App\Http\Controllers\TargetAccess\TargetSessionCaptureController;
+use App\Http\Controllers\TargetAccess\TargetSessionController;
+use App\Http\Controllers\Workspace\ProjectController;
+use App\Http\Controllers\Workspace\SidebarNavigationController;
+use App\Http\Controllers\Workspace\SystemController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
-    Route::post('/google/exchange', [GoogleAuthController::class, 'exchange']);
-    Route::get('/google/redirect', [GoogleAuthController::class, 'redirect']);
-    Route::get('/google/callback', [GoogleAuthController::class, 'callback']);
+    Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -41,11 +36,15 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-Route::post('target-session/capture/{ticket}', [TargetSessionCaptureController::class, 'complete']);
+Route::post('target-session/capture/{ticket}', [TargetSessionCaptureController::class, 'complete'])
+    ->middleware('throttle:target-session-capture');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('cover-uploads', [CoverUploadController::class, 'index']);
     Route::delete('cover-uploads/{coverUpload}', [CoverUploadController::class, 'destroy']);
+
+    Route::get('navigation/sidebar', [SidebarNavigationController::class, 'show']);
+    Route::put('navigation/sidebar', [SidebarNavigationController::class, 'update']);
 
     Route::get('stacks', [StackController::class, 'index']);
 
@@ -56,12 +55,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/read-all', [UserNotificationController::class, 'markAllRead']);
         Route::patch('/{userNotification}/read', [UserNotificationController::class, 'markRead']);
         Route::delete('/{userNotification}', [UserNotificationController::class, 'destroy']);
-    });
-
-    Route::middleware('role:ADMIN')->prefix('admin')->group(function () {
-        Route::get('users', [AdminUserController::class, 'index']);
-        Route::put('users/{user}', [AdminUserController::class, 'update']);
-        Route::delete('users/{user}', [AdminUserController::class, 'destroy']);
     });
 
     Route::middleware('role:ADMIN,SPECIALIST')->prefix('catalog')->group(function () {
@@ -78,9 +71,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('projects/{project}/dashboard', [ProjectController::class, 'dashboard']);
     Route::apiResource('projects.systems', SystemController::class);
 
-    Route::get('systems', [OwnedSystemController::class, 'index']);
-    Route::get('systems/{system}', [OwnedSystemController::class, 'show']);
-    Route::put('systems/{system}/dispatch-settings', [OwnedSystemController::class, 'updateDispatchSettings']);
+    Route::prefix('projects/{project}/systems/{system}/signatures')->group(function () {
+        Route::post('/generate', [SignatureController::class, 'generate']);
+        Route::post('/validate', [SignatureController::class, 'validate'])->middleware('throttle:signature-verify');
+        Route::post('/revoke', [SignatureController::class, 'revoke']);
+    });
 
     Route::prefix('projects/{project}/systems/{system}/target-session')->group(function () {
         Route::get('/', [TargetSessionController::class, 'show']);
@@ -97,7 +92,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/routes/{manualRouteMap}', [ManualProxyController::class, 'destroyRoute']);
     });
 
-    Route::get('projects/{project}/systems/{system}/attack-acknowledgment', [AttackAcknowledgmentController::class, 'show']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);

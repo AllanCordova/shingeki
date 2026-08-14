@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\Attack\AttackScanType;
-use App\Models\Attack\Attack;
-use App\Models\User\User;
-use App\Services\Attack\AttackCatalogService;
+use App\Enums\Scanning\AttackScanType;
+use App\Models\Catalog\Attack;
+use App\Models\Identity\User;
+use App\Services\Catalog\AttackCatalogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);

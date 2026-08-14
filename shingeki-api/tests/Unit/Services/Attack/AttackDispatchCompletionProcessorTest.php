@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Attack\AttackDispatch;
-use App\Models\System\System;
-use App\Models\User\User;
-use App\Services\Attack\AttackDispatchCompletionProcessor;
+use App\Models\Identity\User;
+use App\Models\Scanning\AttackDispatch;
+use App\Models\Workspace\System;
+use App\Services\Scanning\Attack\AttackDispatchCompletionProcessor;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);

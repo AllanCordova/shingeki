@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\Project\Project;
-use App\Models\System\Stack;
-use App\Models\System\System;
-use App\Models\User\User;
+use App\Enums\TargetAccess\SignatureStatus;
+use App\Models\Catalog\Stack;
+use App\Models\Identity\User;
+use App\Models\TargetAccess\Signature;
+use App\Models\Workspace\Project;
+use App\Models\Workspace\System;
 use Database\Seeders\Concerns\PublishesSeedCovers;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -32,6 +34,7 @@ class VulnerableTargetSeeder extends Seeder
         }
 
         $targetUrl = rtrim((string) config('attacks.vulnerable_target_url'), '/');
+        $signatureToken = (string) config('attacks.vulnerable_target_signature_token');
 
         $project = Project::query()->updateOrCreate(
             [
@@ -63,5 +66,18 @@ class VulnerableTargetSeeder extends Seeder
                 $vanillaPhp->id => ['is_primary' => true],
             ]);
         }
+
+        Signature::query()->updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'system_id' => $system->id,
+            ],
+            [
+                'ip_address' => '127.0.0.1',
+                'token' => $signatureToken,
+                'status' => SignatureStatus::Permitted,
+                'expiration' => now()->addYear(),
+            ],
+        );
     }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import {
   ATTACK_TARGET_LOCATIONS,
   buildManualProxyPayload,
@@ -11,13 +12,16 @@ import {
   type ManualProxySendResponse,
   type ManualRouteMap,
 } from "@/lib/contracts";
+
 import {
   useDeleteManualRouteMap,
   useManualRouteMaps,
   useSaveManualRouteMap,
   useSendManualProxy,
 } from "@/lib/hooks/manual-proxy/use-manual-proxy";
-import { notify } from "@/lib/notify";
+
+import { notify } from "@/lib/ui/notify";
+
 import {
   Badge,
   Button,
@@ -34,43 +38,66 @@ import {
 
 const DEFAULT_FORM: ManualProxySendInput = {
   method: "GET",
+
   path: "/",
+
   query_json: "{}",
+
   headers_json: "{}",
+
   body: "",
+
   content_type: "",
+
   use_target_session: true,
+
   apply_payload: false,
+
   payload_target_location: "QUERY_PARAMETER",
+
   payload_field: "",
+
   payload_value: "",
 };
 
 export function ManualProxyPanel({
   projectId,
+
   systemId,
 }: {
   projectId: string;
+
   systemId: string;
 }) {
   const [form, setForm] = useState<ManualProxySendInput>(DEFAULT_FORM);
-  const [response, setResponse] = useState<ManualProxySendResponse | null>(null);
+
+  const [response, setResponse] = useState<ManualProxySendResponse | null>(
+    null,
+  );
+
   const [routeName, setRouteName] = useState("");
+
   const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
 
   const { data: routes, isLoading: routesLoading } = useManualRouteMaps(
     projectId,
+
     systemId,
   );
+
   const { sendRequest, isLoading, error, reset } = useSendManualProxy(
     projectId,
+
     systemId,
   );
+
   const saveRoute = useSaveManualRouteMap(projectId, systemId);
+
   const deleteRoute = useDeleteManualRouteMap(projectId, systemId);
 
   const updateField = <K extends keyof ManualProxySendInput>(
     key: K,
+
     value: ManualProxySendInput[K],
   ) => {
     setForm((current) => ({ ...current, [key]: value }));
@@ -78,67 +105,97 @@ export function ManualProxyPanel({
 
   const handleSend = async () => {
     const parsed = manualProxySendSchema.safeParse(form);
+
     if (!parsed.success) {
-      notify.error(parsed.error.issues[0]?.message ?? "Revise os campos do request.");
+      notify.error(
+        parsed.error.issues[0]?.message ?? "Revise os campos do request.",
+      );
+
       return;
     }
 
     try {
       reset();
+
       const result = await sendRequest(buildManualProxyPayload(parsed.data));
+
       setResponse(result);
-      notify.success(`Resposta ${result.status_code} em ${result.duration_ms} ms.`);
+
+      notify.success(
+        `Resposta ${result.status_code} em ${result.duration_ms} ms.`,
+      );
     } catch (err) {
-      notify.fromApiError(err, "Não foi possível enviar o request manual.");
+      notify.fromApiError(err, "Nao foi possivel enviar o request manual.");
     }
   };
 
   const handleSaveRoute = async () => {
     if (!routeName.trim()) {
       notify.error("Informe um nome para salvar a rota.");
+
       return;
     }
 
     const parsed = manualProxySendSchema.safeParse(form);
+
     if (!parsed.success) {
-      notify.error(parsed.error.issues[0]?.message ?? "Revise os campos antes de salvar.");
+      notify.error(
+        parsed.error.issues[0]?.message ?? "Revise os campos antes de salvar.",
+      );
+
       return;
     }
 
     try {
       await saveRoute.saveRoute({
         routeId: selectedRouteId ?? undefined,
+
         name: routeName.trim(),
+
         method: parsed.data.method,
+
         path: parsed.data.path,
+
         query_json: parsed.data.query_json,
+
         headers_json: parsed.data.headers_json,
+
         body: parsed.data.body,
+
         content_type: parsed.data.content_type,
       });
-      notify.success(selectedRouteId ? "Rota atualizada." : "Rota salva no mapa.");
+
+      notify.success(
+        selectedRouteId ? "Rota atualizada." : "Rota salva no mapa.",
+      );
     } catch (err) {
-      notify.fromApiError(err, "Não foi possível salvar a rota.");
+      notify.fromApiError(err, "Nao foi possivel salvar a rota.");
     }
   };
 
   const loadRoute = (route: ManualRouteMap) => {
     setForm(routeMapToSendInput(route));
+
     setRouteName(route.name);
+
     setSelectedRouteId(route.id);
+
     setResponse(null);
   };
 
   const handleDeleteRoute = async (routeId: string) => {
     try {
       await deleteRoute.deleteRoute(routeId);
+
       if (selectedRouteId === routeId) {
         setSelectedRouteId(null);
+
         setRouteName("");
       }
+
       notify.success("Rota removida.");
     } catch (err) {
-      notify.fromApiError(err, "Não foi possível remover a rota.");
+      notify.fromApiError(err, "Nao foi possivel remover a rota.");
     }
   };
 
@@ -153,7 +210,10 @@ export function ManualProxyPanel({
           <Select
             value={form.method}
             onChange={(event) =>
-              updateField("method", event.target.value as ManualProxySendInput["method"])
+              updateField(
+                "method",
+                event.target.value as ManualProxySendInput["method"],
+              )
             }
           >
             {manualProxyMethods.map((method) => (
@@ -204,7 +264,9 @@ export function ManualProxyPanel({
         <Field label="Content-Type">
           <Input
             value={form.content_type ?? ""}
-            onChange={(event) => updateField("content_type", event.target.value)}
+            onChange={(event) =>
+              updateField("content_type", event.target.value)
+            }
             placeholder="application/json"
           />
         </Field>
@@ -215,15 +277,17 @@ export function ManualProxyPanel({
             onChange={(event) =>
               updateField("use_target_session", event.target.checked)
             }
-            label="Usar sessão conectada do alvo"
-            description="Envia Cookie ou Bearer da sessão conectada acima."
+            label="Usar sessao conectada do alvo"
+            description="Envia Cookie ou Bearer da sessao conectada acima."
           />
 
           <Checkbox
             checked={form.apply_payload}
-            onChange={(event) => updateField("apply_payload", event.target.checked)}
+            onChange={(event) =>
+              updateField("apply_payload", event.target.checked)
+            }
             label="Aplicar payload de ataque"
-            description="Injeta o valor no campo conforme o target location do catálogo."
+            description="Injeta o valor no campo conforme o target location do catalogo."
           />
         </div>
       </div>
@@ -236,7 +300,9 @@ export function ManualProxyPanel({
               onChange={(event) =>
                 updateField(
                   "payload_target_location",
-                  event.target.value as ManualProxySendInput["payload_target_location"],
+
+                  event.target
+                    .value as ManualProxySendInput["payload_target_location"],
                 )
               }
             >
@@ -247,16 +313,22 @@ export function ManualProxyPanel({
               ))}
             </Select>
           </Field>
+
           <Field label="Campo">
             <Input
               value={form.payload_field ?? ""}
-              onChange={(event) => updateField("payload_field", event.target.value)}
+              onChange={(event) =>
+                updateField("payload_field", event.target.value)
+              }
             />
           </Field>
+
           <Field label="Valor">
             <Textarea
               value={form.payload_value ?? ""}
-              onChange={(event) => updateField("payload_value", event.target.value)}
+              onChange={(event) =>
+                updateField("payload_value", event.target.value)
+              }
               rows={3}
               className="font-mono text-xs"
             />
@@ -265,10 +337,19 @@ export function ManualProxyPanel({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" isLoading={isLoading} onClick={() => void handleSend()}>
+        <Button
+          type="button"
+          isLoading={isLoading}
+          onClick={() => void handleSend()}
+        >
           Enviar request
         </Button>
-        <Button type="button" variant="outline" onClick={() => setForm(DEFAULT_FORM)}>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setForm(DEFAULT_FORM)}
+        >
           Limpar
         </Button>
       </div>
@@ -284,6 +365,7 @@ export function ManualProxyPanel({
               />
             </Field>
           </div>
+
           <Button
             type="button"
             variant="outline"
@@ -310,15 +392,27 @@ export function ManualProxyPanel({
               >
                 <div className="flex flex-col gap-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-medium text-foreground">{route.name}</span>
+                    <span className="font-medium text-foreground">
+                      {route.name}
+                    </span>
+
                     <Badge tone="neutral">{route.method}</Badge>
                   </div>
-                  <code className="text-xs text-muted-foreground">{route.path}</code>
+
+                  <code className="text-xs text-muted-foreground">
+                    {route.path}
+                  </code>
                 </div>
+
                 <div className="flex gap-2">
-                  <Button type="button" variant="outline" onClick={() => loadRoute(route)}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => loadRoute(route)}
+                  >
                     Carregar
                   </Button>
+
                   <Button
                     type="button"
                     variant="ghost"
@@ -338,15 +432,18 @@ export function ManualProxyPanel({
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <Label>Resposta</Label>
+
             <Badge tone={response.status_code >= 400 ? "danger" : "success"}>
               {response.status_code}
             </Badge>
+
             <span className="text-sm text-muted-foreground">
               {response.duration_ms} ms
             </span>
           </div>
 
           <DumpBlock label="Request" value={response.request_dump} />
+
           <DumpBlock
             label="Response body"
             value={
@@ -365,41 +462,51 @@ function ManualProxyExample() {
   return (
     <div className="rounded-app border border-border bg-surface-muted/60 p-4 text-sm">
       <p className="font-medium text-foreground">
-        Exemplo: login com payload de SQL injection
+        Exemplo (lab 8090 — SQL injection no login)
       </p>
+
       <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
         <li>
-          <strong className="text-foreground">Método:</strong> POST ·{" "}
-          <strong className="text-foreground">Caminho:</strong> /login
+          <strong className="text-foreground">Metodo:</strong> POST ·{" "}
+          <strong className="text-foreground">Caminho:</strong> /login.php
         </li>
+
         <li>
           <strong className="text-foreground">Query JSON:</strong>{" "}
           <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs">{`{}`}</code>
         </li>
+
         <li>
           <strong className="text-foreground">Headers JSON:</strong>{" "}
           <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs">
             {`{"Accept": "text/html"}`}
           </code>
         </li>
+
         <li>
           <strong className="text-foreground">Body:</strong>{" "}
           <code className="rounded bg-surface px-1 py-0.5 font-mono text-xs">
             username=admin&amp;password=test
           </code>
         </li>
+
         <li>
           <strong className="text-foreground">Content-Type:</strong>{" "}
           application/x-www-form-urlencoded
         </li>
+
         <li>
-          Marque <strong className="text-foreground">Aplicar payload</strong> · Target location:{" "}
-          FORM · Campo: <code className="font-mono text-xs">username</code> · Valor:{" "}
-          <code className="font-mono text-xs">admin&apos; OR &apos;1&apos;=&apos;1</code>
+          Marque <strong className="text-foreground">Aplicar payload</strong> ·
+          Target location: FORM · Campo:{" "}
+          <code className="font-mono text-xs">username</code> · Valor:{" "}
+          <code className="font-mono text-xs">
+            admin&apos; OR &apos;1&apos;=&apos;1
+          </code>
         </li>
       </ul>
+
       <p className="mt-3 text-xs text-muted-foreground">
-        Conecte a sessão do alvo acima se a rota exigir login. Salve como rota{" "}
+        Conecte a sessao do alvo acima se a rota exigir login. Salve como rota{" "}
         <strong className="text-foreground">Login SQLi</strong> para reutilizar.
       </p>
     </div>
@@ -410,6 +517,7 @@ function DumpBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs font-medium text-muted-foreground">{label}</span>
+
       <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-app bg-surface-muted p-3 font-mono text-xs text-foreground">
         {value}
       </pre>

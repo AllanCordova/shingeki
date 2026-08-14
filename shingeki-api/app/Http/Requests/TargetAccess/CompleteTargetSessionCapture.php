@@ -1,0 +1,25 @@
+<?php
+
+namespace App\Http\Requests\TargetAccess;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+
+class CompleteTargetSessionCapture extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'cookie' => ['required_without:authorization', 'nullable', 'string', 'max:8192'],
+            'authorization' => ['required_without:cookie', 'nullable', 'string', 'max:8192'],
+        ];
+    }
+}

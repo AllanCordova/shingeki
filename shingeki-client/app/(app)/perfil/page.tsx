@@ -1,8 +1,8 @@
 "use client";
 
 import { useMe, useUpdateProfile } from "@/lib/hooks/auth/use-auth";
-import { notify } from "@/lib/notify";
-import { ProfileForm } from "@/components/auth/profile-form";
+import { notify } from "@/lib/ui/notify";
+import { ProfileForm } from "@/components/forms/profile-form";
 import {
   Card,
   CardContent,

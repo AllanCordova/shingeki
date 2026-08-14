@@ -1,9 +1,9 @@
 <?php
 
-use App\Enums\User\UserRole;
-use App\Models\Project\Project;
-use App\Models\System\System;
-use App\Models\User\User;
+use App\Enums\Identity\UserRole;
+use App\Models\Identity\User;
+use App\Models\Workspace\Project;
+use App\Models\Workspace\System;
 use Database\Seeders\DemoProjectsSeeder;
 use Database\Seeders\StackCatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;

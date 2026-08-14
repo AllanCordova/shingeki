@@ -11,7 +11,7 @@ import type {
   UpdateProfileFormInput,
   User,
 } from "@/lib/contracts";
-import { buildProfileUpdateFormData } from "@/lib/multipart";
+import { buildProfileUpdateFormData } from "@/lib/forms/multipart";
 import { resetClientAuthCache } from "@/lib/auth/session-cache";
 
 async function fetchMe(): Promise<User> {
