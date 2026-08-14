@@ -133,7 +133,7 @@ export function useDeleteDispatch(projectId: string, systemId: string) {
         queryKey: queryKeys.dispatches(projectId, systemId),
       });
       queryClient.removeQueries({
-        queryKey: queryKeys.dispatch(projectId, systemId, dispatchId),
+        queryKey: ["projects", projectId, "systems", systemId, "dispatches", dispatchId],
       });
     },
   });
@@ -160,7 +160,7 @@ export function useDeleteAllDispatches(projectId: string, systemId: string) {
         queryKey: queryKeys.dispatches(projectId, systemId),
       });
       queryClient.removeQueries({
-        queryKey: queryKeys.dispatches(projectId, systemId),
+        queryKey: ["projects", projectId, "systems", systemId, "dispatches"],
       });
     },
   });

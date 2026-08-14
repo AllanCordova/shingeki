@@ -2,11 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Enums\Scanning\DispatchProbeOutcome;
-use App\Models\Catalog\Attack;
-use App\Models\Scanning\AttackDispatch;
-use App\Models\Scanning\DispatchProbe;
-use App\Models\Workspace\System;
+use App\Enums\Attack\DispatchProbeOutcome;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\Attack\DispatchProbe;
+use App\Models\System\System;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

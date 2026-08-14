@@ -2,15 +2,15 @@
 
 use App\Enums\Catalog\CatalogImportStatus;
 use App\Enums\Catalog\CatalogImportType;
-use App\Models\Catalog\Attack;
+use App\Models\Attack\Attack;
 use App\Models\Catalog\CatalogImport;
-use App\Models\Catalog\Remediation;
-use App\Models\Catalog\Stack;
-use App\Models\Identity\User;
-use App\Services\Catalog\Import\AttackSpreadsheetParser;
-use App\Services\Catalog\Import\CatalogImportQueuePublisher;
-use App\Services\Catalog\Import\CatalogImportService;
-use App\Services\Catalog\Import\CatalogRemediationRowValidator;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\User\User;
+use App\Services\CatalogImport\AttackSpreadsheetParser;
+use App\Services\CatalogImport\CatalogImportQueuePublisher;
+use App\Services\CatalogImport\CatalogImportService;
+use App\Services\CatalogImport\CatalogRemediationRowValidator;
 use Illuminate\Http\UploadedFile;
 use Laravel\Sanctum\Sanctum;
 

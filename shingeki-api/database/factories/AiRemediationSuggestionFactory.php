@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Attack\AttackDispatch;
 use App\Models\Remediation\AiRemediationSuggestion;
-use App\Models\Scanning\AttackDispatch;
-use App\Models\Scanning\SystemResult;
+use App\Models\System\SystemResult;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

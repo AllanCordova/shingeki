@@ -8,8 +8,8 @@ import {
   parseCatalogRemediationPayload,
   type CatalogRemediationCreateInput,
 } from "@/lib/contracts";
-import { useStacks } from "@/lib/hooks/stacks/use-stacks";
-import { applyApiFieldErrors } from "@/lib/forms/apply-api-field-errors";
+import { useStacks } from "@/lib/hooks/system/use-stacks";
+import { applyApiFieldErrors } from "@/lib/forms";
 import type { ApiError } from "@/lib/api/error-handler";
 import {
   Button,
@@ -143,7 +143,7 @@ export function CatalogRemediationForm({
       </Field>
 
       <Field
-        label="Script de mitigacao"
+        label="Script de mitigação"
         htmlFor="code_snippet"
         error={errors.code_snippet?.message}
       >
@@ -177,7 +177,7 @@ export function CatalogRemediationForm({
           </Button>
         ) : null}
         <Button type="submit" isLoading={isLoading}>
-          Cadastrar medicacao
+          Cadastrar medicação
         </Button>
       </div>
     </form>

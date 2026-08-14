@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Remediation\Source\SourceFileNormalizer;
+namespace App\Services\Source;
 
 test('strips docker temp clone prefix from source paths', function () {
     expect(SourceFileNormalizer::normalize('/tmp/shingeki-sast-123/repo/public/login.php'))

@@ -9,6 +9,7 @@ import type { CoverUpload } from "@/lib/contracts/cover/cover-upload";
 import { cn } from "@/lib/utils";
 import { CoverLibraryPicker } from "./cover-library-picker";
 import { CoverStockPicker } from "./cover-stock-picker";
+import { AvatarCropDialog } from "./avatar-crop-dialog";
 import { Field } from "@/components/ui/field";
 import { Button } from "@/components/ui/button";
 
@@ -88,6 +89,7 @@ export function CoverUpload({
   const [selectedStockId, setSelectedStockId] = useState<number | null>(null);
   const [isPickingStock, setIsPickingStock] = useState(false);
   const [stockPickError, setStockPickError] = useState<string | null>(null);
+  const [cropSource, setCropSource] = useState<File | null>(null);
 
   const selectedUpload = libraryUploads.find((u) => u.id === selectedUploadId);
   const libraryPreviewSrc = selectedUpload
@@ -138,7 +140,18 @@ export function CoverUpload({
     setUploadBlockedMessage(null);
     clearStockSelection();
     onSelectUpload(undefined);
-    onChange(file ?? undefined);
+
+    if (!file) {
+      onChange(undefined);
+      return;
+    }
+
+    if (layout === "avatar") {
+      setCropSource(file);
+      return;
+    }
+
+    onChange(file);
   };
 
   const handlePickStockImage = async (image: CoverStockImage) => {
@@ -158,14 +171,19 @@ export function CoverUpload({
 
     try {
       const file = await coverStockImageToFile(image);
-      onChange(file);
-      setSelectedStockId(image.id);
+      if (layout === "avatar") {
+        setCropSource(file);
+        setSelectedStockId(image.id);
+      } else {
+        onChange(file);
+        setSelectedStockId(image.id);
+      }
     } catch (err) {
       setSelectedStockId(null);
       const message =
         err instanceof Error
           ? err.message
-          : "Nao foi possivel usar a imagem selecionada.";
+          : "Não foi possível usar a imagem selecionada.";
       setStockPickError(message);
       onChange(undefined);
     } finally {
@@ -181,7 +199,7 @@ export function CoverUpload({
   const fieldHint =
     hint ??
     (isAvatar
-      ? "Escolha uma foto na biblioteca ou envie do computador."
+      ? "Escolha uma foto na biblioteca ou envie do computador. No envio, você pode dar zoom e enquadrar."
       : required
         ? "Escolha uma origem abaixo. Apenas uma secao fica visivel por vez."
         : "Opcional na edicao. Troque a capa por uma das origens abaixo.");
@@ -203,10 +221,11 @@ export function CoverUpload({
           )}
         >
           {displaySrc ? (
+            // Object URL or remote preview; next/image needs a fixed remote allowlist.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={displaySrc}
-              alt={isAvatar ? "Pre-visualizacao do avatar" : "Pre-visualizacao da capa"}
+              alt={isAvatar ? "Pré-visualização do avatar" : "Pré-visualização da capa"}
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
@@ -216,7 +235,7 @@ export function CoverUpload({
                 isAvatar ? "min-h-[8rem]" : "min-h-[8rem]",
               )}
             >
-              {isAvatar ? "Sem foto" : "Pre-visualizacao da capa"}
+              {isAvatar ? "Sem foto" : "Pre-visualização da capa"}
             </div>
           )}
         </div>
@@ -226,7 +245,7 @@ export function CoverUpload({
         </p>
 
         <div
-          className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface-muted p-1"
+          className="grid grid-cols-3 gap-1 rounded-lg border border-border bg-surface-muted p-1"
           role="tablist"
           aria-label={isAvatar ? "Origem da foto" : "Origem da capa"}
         >
@@ -237,17 +256,19 @@ export function CoverUpload({
               role="tab"
               aria-selected={activeTab === tab.id}
               className={cn(
-                "flex-1 min-w-[5.5rem] rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1.5 py-2 text-center transition-colors",
                 activeTab === tab.id
                   ? "bg-surface text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
               onClick={() => setActiveTab(tab.id)}
             >
-              {tab.label}
+              <span className="w-full truncate text-xs font-medium sm:text-sm">
+                {tab.label}
+              </span>
               {tab.id === "library" ? (
-                <span className="ml-1 text-xs font-normal opacity-70">
-                  ({libraryCount}/{libraryLimit})
+                <span className="text-[10px] font-normal leading-none opacity-70 sm:text-xs">
+                  {libraryCount}/{libraryLimit}
                 </span>
               ) : null}
             </button>
@@ -318,6 +339,16 @@ export function CoverUpload({
                 >
                   {value ? "Trocar arquivo" : "Escolher arquivo"}
                 </Button>
+                {value && isAvatar ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isPickingStock}
+                    onClick={() => setCropSource(value)}
+                  >
+                    Ajustar enquadramento
+                  </Button>
+                ) : null}
                 {value ? (
                   <Button
                     type="button"
@@ -343,6 +374,25 @@ export function CoverUpload({
           ) : null}
         </div>
       </div>
+
+      {isAvatar ? (
+        <AvatarCropDialog
+          open={cropSource !== null}
+          file={cropSource}
+          onCancel={() => {
+            setCropSource(null);
+            if (inputRef.current) inputRef.current.value = "";
+            if (!value) {
+              clearStockSelection();
+            }
+          }}
+          onConfirm={(cropped) => {
+            onChange(cropped);
+            setCropSource(null);
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+        />
+      ) : null}
     </Field>
   );
 }

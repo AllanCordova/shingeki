@@ -7,7 +7,7 @@ O [client web](architecture/shingeki-client.md) consome a [API REST](API.md) via
 ## Antes de começar
 
 1. API rodando — [Como rodar o projeto](RUN-PROJECT.md)
-2. Seed de demonstração (opt-in) — `DEMO_SEED=true` e `DEMO_USER_PASSWORD` ([detalhes](RUN-PROJECT.md#credenciais-do-seed))
+2. Credenciais do seed — `test@example.com` / `password` ([detalhes](RUN-PROJECT.md#credenciais-do-seed))
 3. Arquitetura do client — [shingeki-client](architecture/shingeki-client.md)
 
 ## Recursos no client web

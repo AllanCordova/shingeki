@@ -2,10 +2,11 @@
 
 namespace Database\Factories;
 
-use App\Enums\Scanning\AttackScanType;
-use App\Models\Identity\User;
-use App\Models\Scanning\AttackDispatch;
-use App\Models\Workspace\System;
+use App\Enums\Attack\AttackDepth;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -24,6 +25,7 @@ class AttackDispatchFactory extends Factory
             'system_id' => System::factory(),
             'user_id' => User::factory(),
             'scan_type' => AttackScanType::Dast,
+            'depth' => AttackDepth::Full,
             'attacks_count' => 3,
             'dispatched_at' => now(),
         ];

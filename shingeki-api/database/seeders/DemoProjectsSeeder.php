@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\Catalog\Stack;
-use App\Models\Identity\User;
-use App\Models\Workspace\Project;
-use App\Models\Workspace\System;
+use App\Models\Project\Project;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\User\User;
 use Database\Seeders\Concerns\PublishesSeedCovers;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;

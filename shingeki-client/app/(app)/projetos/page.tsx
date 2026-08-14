@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { useProjects, useCreateProject } from "@/lib/hooks/projects/use-projects";
+import { useProjects, useCreateProject } from "@/lib/hooks/project/use-projects";
 import type { ProjectCreateInput } from "@/lib/contracts";
 import { useUiStore } from "@/lib/stores/ui-store";
-import { ProjectForm } from "@/components/forms/project-form";
+import { ProjectForm } from "@/components/projects/project-form";
 import { ProjectCard } from "@/components/projects/project-card";
 import { ProjectTemplatePicker } from "@/components/projects/project-template-picker";
 import { ReopenGuidedSetupButton } from "@/components/onboarding/reopen-guided-setup-button";
-import { notify } from "@/lib/ui/notify";
-import { FORM_MODAL_SIZE } from "@/lib/ui/form-modal";
+import { notify } from "@/lib/notify";
+import { FORM_MODAL_SIZE } from "@/lib/ui";
 import {
   AddActionButton,
   Button,
   EmptyState,
   ErrorShow,
+  LayoutTemplateIcon,
   Loading,
   Modal,
 } from "@/components/ui";
@@ -49,19 +49,25 @@ export default function ProjetosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Projetos
           </h1>
           <p className="text-sm text-muted-foreground">
-            Organize seus sistemas e testes de seguranca.
+            Organize seus sistemas e testes de segurança.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <ReopenGuidedSetupButton />
-          <Button variant="outline" onClick={() => openModal(TEMPLATE_MODAL_KEY)}>
-            Usar template
+          <Button
+            variant="outline"
+            className="px-2.5"
+            onClick={() => openModal(TEMPLATE_MODAL_KEY)}
+            aria-label="Usar template"
+            title="Usar template"
+          >
+            <LayoutTemplateIcon className="h-4 w-4" />
           </Button>
           <AddActionButton
             onClick={handleOpen}
@@ -78,7 +84,7 @@ export default function ProjetosPage() {
       ) : projects.length === 0 ? (
         <EmptyState
           title="Nenhum projeto ainda"
-          description="Crie seu primeiro projeto para comecar a cadastrar sistemas."
+          description="Crie seu primeiro projeto para começar a cadastrar sistemas."
           action={
             <AddActionButton
               onClick={handleOpen}

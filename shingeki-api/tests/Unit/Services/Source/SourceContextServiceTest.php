@@ -1,13 +1,13 @@
 <?php
 
-use App\Enums\Scanning\AttackScanType;
-use App\Models\Catalog\Attack;
-use App\Models\Identity\User;
-use App\Models\Scanning\AttackDispatch;
-use App\Models\Scanning\SystemResult;
-use App\Models\Workspace\System;
-use App\Services\Remediation\Source\GitHubRepositoryResolver;
-use App\Services\Remediation\Source\SourceContextService;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
+use App\Models\System\System;
+use App\Models\System\SystemResult;
+use App\Models\User\User;
+use App\Services\Source\GitHubRepositoryResolver;
+use App\Services\Source\SourceContextService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 

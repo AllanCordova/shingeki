@@ -2,17 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui";
-import { useSidebarNavigation } from "@/lib/hooks/settings/use-sidebar-navigation";
+import { Button, MapIcon } from "@/components/ui";
+import { useMe } from "@/lib/hooks/auth/use-auth";
+import { useSidebarNavigation } from "@/lib/hooks/navigation/use-sidebar-navigation";
 import {
   GUIDED_SETUP_SESSION_EVENT,
   guidedSetupResumePath,
   readGuidedSetupSession,
   reopenGuidedSetupSession,
-} from "@/lib/onboarding/guided-setup";
+} from "@/lib/onboarding";
 
 export function ReopenGuidedSetupButton() {
   const router = useRouter();
+  const { user } = useMe();
   const { meta, items, isLoading } = useSidebarNavigation();
   const [isActive, setIsActive] = useState(() => readGuidedSetupSession().active);
 
@@ -33,7 +35,7 @@ export function ReopenGuidedSetupButton() {
   if (isLoading || isActive || !meta) return null;
 
   const handleReopen = () => {
-    const session = reopenGuidedSetupSession(meta, items);
+    const session = reopenGuidedSetupSession(meta, items, user?.id);
     const resumePath = guidedSetupResumePath(session);
 
     if (resumePath) {
@@ -42,8 +44,15 @@ export function ReopenGuidedSetupButton() {
   };
 
   return (
-    <Button type="button" variant="outline" onClick={handleReopen}>
-      Reabrir guia
+    <Button
+      type="button"
+      variant="outline"
+      className="px-2.5"
+      onClick={handleReopen}
+      aria-label="Reabrir guia"
+      title="Reabrir guia"
+    >
+      <MapIcon className="h-4 w-4" />
     </Button>
   );
 }

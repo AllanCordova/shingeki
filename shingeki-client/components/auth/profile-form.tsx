@@ -6,7 +6,7 @@ import {
   updateProfileFormSchema,
   type UpdateProfileFormInput,
 } from "@/lib/contracts";
-import { applyApiFieldErrors } from "@/lib/forms/apply-api-field-errors";
+import { applyApiFieldErrors } from "@/lib/forms";
 import type { ApiError } from "@/lib/api/error-handler";
 import { AvatarFields } from "@/components/auth/avatar-fields";
 import { Button, ErrorShow, Field, Input } from "@/components/ui";

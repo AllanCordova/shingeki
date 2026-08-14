@@ -5,11 +5,7 @@ Workflow: [`.github/workflows/ci.yml`](https://github.com/AllanCordova/shingeki/
 | Job | Ferramenta |
 |-----|------------|
 | `lint` | Laravel Pint |
-| `analyse` | Larastan / PHPStan (nível 5) |
-| `tests` | Pest com cobertura mínima de 40% (`composer test:coverage`) |
-| `queue-integration` | Publishers/consumers contra RabbitMQ real (`tests/Integration`) |
-
-A suíte padrão (`composer test`) usa SQLite em memória e `QUEUE_CONNECTION=sync`. Os testes de fila ficam em `tests/Integration` e só rodam no job dedicado (ou localmente com `RABBITMQ_INTEGRATION=true`).
+| `tests` | Pest (`php artisan test`) |
 
 ## Rodar localmente (`shingeki-api`)
 
@@ -18,24 +14,14 @@ Com `composer install` já executado:
 ```bash
 cd shingeki-api
 composer lint
-composer analyse
 composer test
-composer test:coverage
-```
-
-Fila real (RabbitMQ local):
-
-```bash
-RABBITMQ_INTEGRATION=true php vendor/bin/pest tests/Integration
 ```
 
 | Comando | Uso |
 |---------|-----|
 | `composer lint` | Lint (igual ao CI) |
 | `composer lint:fix` | Só corrigir estilo |
-| `composer analyse` | Análise estática (Larastan) |
-| `composer test` | Testes unitários/feature (igual ao job `tests`, sem cobertura) |
-| `composer test:coverage` | Testes com limite de cobertura |
+| `composer test` | Testes (igual ao CI) |
 
 ## Documentação (MkDocs)
 

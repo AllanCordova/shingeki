@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Identity\User;
-use App\Models\Workspace\Project;
+use App\Models\Project\Project;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

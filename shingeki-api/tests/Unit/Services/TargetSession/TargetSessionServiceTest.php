@@ -1,7 +1,7 @@
 <?php
 
-use App\Enums\TargetAccess\TargetAuthType;
-use App\Services\TargetAccess\TargetSession\TargetSessionService;
+use App\Enums\TargetSession\TargetAuthType;
+use App\Services\TargetSession\TargetSessionService;
 
 test('buildHeaders normalizes bearer token', function () {
     $service = app(TargetSessionService::class);

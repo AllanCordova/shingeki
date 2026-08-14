@@ -2,8 +2,8 @@
 
 namespace App\Services\Remediation;
 
-use App\Models\Scanning\SystemResult;
-use App\Services\Remediation\Source\SourceFileNormalizer;
+use App\Models\System\SystemResult;
+use App\Services\Source\SourceFileNormalizer;
 
 class FindingLocationResolver
 {

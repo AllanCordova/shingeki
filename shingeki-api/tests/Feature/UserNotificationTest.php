@@ -2,20 +2,20 @@
 
 use App\Enums\Catalog\CatalogImportStatus;
 use App\Enums\Catalog\CatalogImportType;
-use App\Enums\Notifications\UserNotificationStatus;
-use App\Enums\Notifications\UserNotificationType;
-use App\Models\Catalog\Attack;
+use App\Enums\User\UserNotificationStatus;
+use App\Enums\User\UserNotificationType;
+use App\Models\Attack\Attack;
+use App\Models\Attack\AttackDispatch;
 use App\Models\Catalog\CatalogImport;
-use App\Models\Identity\User;
-use App\Models\Notifications\UserNotification;
-use App\Models\Scanning\AttackDispatch;
-use App\Models\TargetAccess\Signature;
-use App\Models\Workspace\Project;
-use App\Models\Workspace\System;
-use App\Services\Catalog\Import\CatalogImportService;
-use App\Services\Notifications\UserNotificationService;
-use App\Services\Scanning\Attack\AttackDispatchCompletionProcessor;
-use App\Services\Scanning\Attack\AttackQueuePublisher;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserNotification;
+use App\Services\Attack\AttackDispatchCompletionProcessor;
+use App\Services\Attack\AttackQueuePublisher;
+use App\Services\CatalogImport\CatalogImportService;
+use App\Services\Notification\UserNotificationService;
+use App\Support\AttackAcknowledgmentTerms;
 use Laravel\Sanctum\Sanctum;
 
 const NOTIFICATIONS = '/api/notifications';
@@ -35,7 +35,7 @@ describe('user notifications api', function () {
             'status' => UserNotificationStatus::Completed,
             'title' => 'Importacao concluida',
             'body' => '10 ok',
-            'action_url' => '/admin/ataques',
+            'action_url' => '/auditoria/ataques',
         ]);
 
         $this->getJson(NOTIFICATIONS)
@@ -185,15 +185,15 @@ describe('notification lifecycle integration', function () {
         $project = Project::factory()->for($user)->create();
         $system = System::factory()->for($project)->create();
 
-        Signature::factory()->for($user)->for($system)->permitted()->create([
-            'token' => str_repeat('d', 64),
-        ]);
-
         $this->mock(AttackQueuePublisher::class)->shouldReceive('publishDispatchBatch')->once();
 
         Sanctum::actingAs($user);
 
-        $response = $this->postJson('/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/dispatch', [])
+        $response = $this->postJson('/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/dispatch', [
+            'accepted_responsibility' => true,
+            'accepted_legal_terms' => true,
+            'terms_version' => AttackAcknowledgmentTerms::VERSION,
+        ])
             ->assertAccepted();
 
         $dispatchId = $response->json('dispatch.id');
@@ -215,7 +215,7 @@ describe('notification lifecycle integration', function () {
         $completed = $pending->fresh();
         expect($completed->status)->toBe(UserNotificationStatus::Completed)
             ->and($completed->read_at)->toBeNull()
-            ->and($completed->body)->toContain('2 finding');
+            ->and($completed->body)->toContain('2 achado');
     });
 
     test('catalog import completion updates notification', function () {

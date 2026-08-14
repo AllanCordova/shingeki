@@ -2,17 +2,16 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Catalog\AttackCategory;
-use App\Enums\Catalog\AttackRiskLevel;
-use App\Enums\Catalog\AttackTargetLocation;
-use App\Enums\Identity\UserRole;
-use App\Enums\Scanning\AttackScanType;
-use App\Models\Catalog\Attack;
-use App\Models\Identity\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackRiskLevel;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\Attack\AttackTargetLocation;
+use App\Enums\User\UserRole;
+use App\Models\Attack\Attack;
+use App\Models\User\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AttackCatalogSeeder extends Seeder
 {
@@ -63,8 +62,8 @@ class AttackCatalogSeeder extends Seeder
         $admin = User::firstOrCreate(
             ['email' => config('attacks.catalog_admin_email')],
             [
-                'name' => 'Catalog Owner',
-                'password' => Hash::make(Str::password(48)),
+                'name' => 'Attack Catalog Admin',
+                'password' => Hash::make('password'),
                 'role' => UserRole::Admin,
             ],
         );

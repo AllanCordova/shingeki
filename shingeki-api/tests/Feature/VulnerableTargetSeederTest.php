@@ -1,10 +1,9 @@
 <?php
 
-use App\Models\Catalog\Stack;
-use App\Models\Identity\User;
-use App\Models\TargetAccess\Signature;
-use App\Models\Workspace\Project;
-use App\Models\Workspace\System;
+use App\Models\Project\Project;
+use App\Models\System\Stack;
+use App\Models\System\System;
+use App\Models\User\User;
 use Database\Seeders\AttackCatalogSeeder;
 use Database\Seeders\RemediationCatalogSeeder;
 use Database\Seeders\StackCatalogSeeder;
@@ -13,10 +12,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('vulnerable target seeder creates lab project system and permitted signature', function () {
+test('vulnerable target seeder creates lab project and system', function () {
     config([
         'attacks.vulnerable_target_url' => 'http://127.0.0.1:8090',
-        'attacks.vulnerable_target_signature_token' => str_repeat('b', 64),
     ]);
 
     User::factory()->create(['email' => 'test@example.com']);
@@ -42,15 +40,6 @@ test('vulnerable target seeder creates lab project system and permitted signatur
 
     expect($system)->not->toBeNull()
         ->and($system->target_url)->toBe('http://127.0.0.1:8090');
-
-    $signature = Signature::query()
-        ->where('user_id', $user->id)
-        ->where('system_id', $system->id)
-        ->first();
-
-    expect($signature)->not->toBeNull()
-        ->and($signature->token)->toBe(str_repeat('b', 64))
-        ->and($signature->status->value)->toBe('PERMITTED');
 
     $vanillaPhp = Stack::query()->where('slug', 'vanilla_php')->firstOrFail();
 

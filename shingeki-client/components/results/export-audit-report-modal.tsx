@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { notify } from "@/lib/ui/notify";
+import { notify } from "@/lib/notify";
 import { Button, ErrorShow, Modal } from "@/components/ui";
 
 interface ExportAuditReportModalProps {

@@ -7,15 +7,15 @@ import {
   useDeleteProject,
   useProject,
   useUpdateProject,
-} from "@/lib/hooks/projects/use-projects";
-import { useCreateSystem, useSystems } from "@/lib/hooks/systems/use-systems";
-import { CoverUpdateModal } from "@/components/forms/cover-update-modal";
-import { ProjectForm } from "@/components/forms/project-form";
-import { SystemForm } from "@/components/forms/system-form";
-import { SystemCard } from "@/components/systems/system-card";
+} from "@/lib/hooks/project/use-projects";
+import { useCreateSystem, useSystems } from "@/lib/hooks/system/use-systems";
+import { CoverUpdateModal } from "@/components/cover/cover-update-modal";
+import { ProjectForm } from "@/components/projects/project-form";
+import { SystemForm } from "@/components/system/system-form";
+import { SystemCard } from "@/components/system/system-card";
 import { ProjectDashboardPanel } from "@/components/projects/project-dashboard-panel";
-import { notify } from "@/lib/ui/notify";
-import { FORM_MODAL_SIZE } from "@/lib/ui/form-modal";
+import { notify } from "@/lib/notify";
+import { FORM_MODAL_SIZE } from "@/lib/ui";
 import type { SystemCreateInput } from "@/lib/contracts";
 import {
   AddActionButton,
@@ -175,7 +175,7 @@ export default function ProjectDetailPage() {
             mode="edit"
             isLoading={updateProject.isLoading}
             error={updateProject.error}
-            submitLabel="Salvar alteracoes"
+            submitLabel="Salvar alterações"
             currentCoverPath={project.cover_path}
             defaultValues={{
               name: project.name,
@@ -220,7 +220,7 @@ export default function ProjectDetailPage() {
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         title="Excluir projeto"
-        description="Esta acao nao pode ser desfeita."
+        description="Esta ação não pode ser desfeita."
         footer={
           <>
             <Button variant="ghost" onClick={() => setDeleteOpen(false)}>

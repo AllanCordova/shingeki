@@ -2,12 +2,12 @@
 
 namespace Database\Factories;
 
-use App\Enums\Catalog\AttackCategory;
-use App\Enums\Catalog\AttackRiskLevel;
-use App\Enums\Catalog\AttackTargetLocation;
-use App\Enums\Scanning\AttackScanType;
-use App\Models\Catalog\Attack;
-use App\Models\Identity\User;
+use App\Enums\Attack\AttackCategory;
+use App\Enums\Attack\AttackRiskLevel;
+use App\Enums\Attack\AttackScanType;
+use App\Enums\Attack\AttackTargetLocation;
+use App\Models\Attack\Attack;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

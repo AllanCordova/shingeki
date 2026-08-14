@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Scanning\SystemResult;
+use App\Models\System\SystemResult;
 use App\Services\Remediation\FindingLocationResolver;
 
 test('resolves structured columns when present', function () {

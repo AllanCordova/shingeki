@@ -2,18 +2,17 @@
 
 namespace App\Services\Remediation;
 
-use App\Enums\Scanning\AttackScanType;
-use App\Models\Catalog\Remediation;
-use App\Models\Catalog\Stack;
-use App\Models\Scanning\SystemResult;
+use App\Enums\Attack\AttackScanType;
+use App\Models\Remediation\Remediation;
+use App\Models\System\Stack;
+use App\Models\System\SystemResult;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 class RemediationResolver
 {
-    /**
-     * @var Collection<int, Remediation>|null
-     */
-    private ?Collection $catalog = null;
+    /** @var array<string, SupportCollection<int, Remediation>> */
+    private array $catalogByStackId = [];
 
     /**
      * @param  Collection<int, Stack>  $stacks
@@ -22,7 +21,7 @@ class RemediationResolver
     public function resolveForResult(SystemResult $result, Collection $stacks): array
     {
         $result->loadMissing(['attack', 'attackDispatch']);
-        $this->warm($stacks);
+        $this->warmCatalog($stacks);
 
         $resolved = [];
 
@@ -42,27 +41,38 @@ class RemediationResolver
     /**
      * @param  Collection<int, Stack>  $stacks
      */
-    private function warm(Collection $stacks): void
+    private function warmCatalog(Collection $stacks): void
     {
-        if ($this->catalog !== null) {
+        $missingIds = $stacks
+            ->pluck('id')
+            ->filter(fn (string $id): bool => ! array_key_exists($id, $this->catalogByStackId))
+            ->values()
+            ->all();
+
+        if ($missingIds === []) {
             return;
         }
 
-        $stackIds = $stacks->pluck('id')->filter()->all();
+        foreach ($missingIds as $stackId) {
+            $this->catalogByStackId[$stackId] = collect();
+        }
 
-        $this->catalog = $stackIds === []
-            ? new Collection
-            : Remediation::query()->whereIn('stack_id', $stackIds)->get();
+        Remediation::query()
+            ->whereIn('stack_id', $missingIds)
+            ->get()
+            ->each(function (Remediation $remediation): void {
+                $this->catalogByStackId[$remediation->stack_id]->push($remediation);
+            });
     }
 
     private function findRemediation(SystemResult $result, Stack $stack): ?Remediation
     {
+        $catalog = $this->catalogByStackId[$stack->id] ?? collect();
         $scanType = $result->attackDispatch?->scan_type;
         $category = $result->attack?->category;
-        $forStack = $this->catalog?->where('stack_id', $stack->id) ?? collect();
 
         if ($scanType === AttackScanType::Sast && filled($result->payload_used)) {
-            $byRule = $forStack->first(
+            $byRule = $catalog->first(
                 fn (Remediation $remediation): bool => $remediation->semgrep_rule_id === $result->payload_used,
             );
 
@@ -85,12 +95,12 @@ class RemediationResolver
             }
         }
 
-        return $forStack->first(function (Remediation $remediation) use ($category, $scanType): bool {
-            if ($remediation->semgrep_rule_id !== null) {
+        return $catalog->first(function (Remediation $remediation) use ($category, $scanType): bool {
+            if ($remediation->attack_category !== $category) {
                 return false;
             }
 
-            if ($remediation->attack_category !== $category) {
+            if ($remediation->semgrep_rule_id !== null) {
                 return false;
             }
 

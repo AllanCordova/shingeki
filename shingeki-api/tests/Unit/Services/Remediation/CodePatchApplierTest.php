@@ -10,13 +10,13 @@ test('replaces matched snippet when present in file', function () {
         file: 'search.php',
         startLine: 2,
         endLine: 3,
-        matchedSnippet: 'echo $query;',
+        matchedSnippet: "echo \$query;",
     );
 
     $patched = $applier->apply($content, $location, "echo htmlspecialchars(\$query, ENT_QUOTES, 'UTF-8');");
 
     expect($patched)->toContain('htmlspecialchars')
-        ->and($patched)->not->toContain('echo $query;');
+        ->and($patched)->not->toContain("echo \$query;");
 });
 
 test('replaces entire heredoc block when finding starts on echo heredoc line', function () {

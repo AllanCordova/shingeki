@@ -1,45 +1,31 @@
 import Link from "next/link";
-import { resolveCoverSrc } from "@/lib/cover/cover-image";
 import { cn } from "@/lib/utils";
+import { UserAvatar, type UserAvatarSize } from "@/components/ui/user-avatar";
 
 interface UserAvatarLinkProps {
   name: string;
   avatarPath?: string | null;
-  size?: "sm" | "md";
+  size?: UserAvatarSize;
   className?: string;
 }
-
-const sizes = {
-  sm: "h-12 w-12 text-sm",
-  md: "h-15 w-15 text-lg",
-};
 
 export function UserAvatarLink({
   name,
   avatarPath,
-  size = "sm",
+  size = "md",
   className,
 }: UserAvatarLinkProps) {
-  const src = resolveCoverSrc(avatarPath);
-  const initial = name.trim().charAt(0).toUpperCase() || "?";
-
   return (
     <Link
       href="/perfil"
       aria-label="Abrir perfil"
       title="Perfil"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-surface-muted font-semibold text-foreground transition-opacity hover:opacity-90",
-        sizes[size],
+        "inline-flex shrink-0 transition-opacity hover:opacity-90",
         className,
       )}
     >
-      {src ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="h-full w-full object-cover" />
-      ) : (
-        <span aria-hidden>{initial}</span>
-      )}
+      <UserAvatar name={name} avatarPath={avatarPath} size={size} />
     </Link>
   );
 }

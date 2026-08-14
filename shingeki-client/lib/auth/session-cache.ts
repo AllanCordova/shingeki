@@ -1,7 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { User } from "@/lib/contracts";
 import { queryKeys } from "@/lib/query-keys";
-import { discardGuidedSetupSession } from "@/lib/onboarding/guided-setup";
+
+const GUIDED_SETUP_SESSION_KEY = "shingeki_guided_setup_v1";
 
 /** Limpa cache de sessao ao trocar de usuario (login, registro, logout). */
 export function resetClientAuthCache(
@@ -9,7 +10,11 @@ export function resetClientAuthCache(
   user?: User | null,
 ) {
   queryClient.clear();
-  discardGuidedSetupSession();
+
+  // Só a sessão ativa do guia (sessionStorage). O "já fechei" fica em localStorage.
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(GUIDED_SETUP_SESSION_KEY);
+  }
 
   if (user) {
     queryClient.setQueryData(queryKeys.me, user);

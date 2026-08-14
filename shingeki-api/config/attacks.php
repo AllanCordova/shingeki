@@ -2,7 +2,7 @@
 
 return [
 
-    'catalog_admin_email' => env('ATTACKS_CATALOG_ADMIN_EMAIL', 'catalog-owner@shingeki.local'),
+    'catalog_admin_email' => env('ATTACKS_CATALOG_ADMIN_EMAIL', 'admin@admin.com'),
 
     'vulnerable_target_url' => env('VULNERABLE_TARGET_URL', 'http://127.0.0.1:8090'),
 

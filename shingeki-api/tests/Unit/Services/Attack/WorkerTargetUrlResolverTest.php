@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Scanning\Attack\WorkerTargetUrlResolver;
+use App\Services\Attack\WorkerTargetUrlResolver;
 
 test('worker target url resolver maps lab browser url to docker service', function () {
     config([

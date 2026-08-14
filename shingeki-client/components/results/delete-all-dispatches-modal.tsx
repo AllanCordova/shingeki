@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeleteAllDispatches } from "@/lib/hooks/results/use-results";
-import { notify } from "@/lib/ui/notify";
+import { notify } from "@/lib/notify";
 import { Button, ErrorShow, Modal } from "@/components/ui";
 
 interface DeleteAllDispatchesModalProps {
@@ -45,7 +45,7 @@ export function DeleteAllDispatchesModal({
       open={open}
       onClose={handleClose}
       title="Excluir todos os disparos"
-      description="Esta acao nao pode ser desfeita."
+      description="Esta ação não pode ser desfeita."
       footer={
         <>
           <Button variant="ghost" onClick={handleClose}>

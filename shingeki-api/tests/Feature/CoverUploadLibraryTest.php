@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Identity\User;
-use App\Models\Identity\UserCoverUpload;
-use App\Models\Workspace\Project;
-use App\Models\Workspace\System;
+use App\Models\Project\Project;
+use App\Models\System\System;
+use App\Models\User\User;
+use App\Models\User\UserCoverUpload;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;

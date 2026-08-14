@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Enums\Identity\UserRole;
-use App\Models\Identity\User;
+use App\Enums\User\UserRole;
+use App\Models\User\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 

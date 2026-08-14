@@ -2,7 +2,6 @@
 
 import type { AiRemediatedFinding } from "@/lib/contracts";
 import { formatFindingSourceLocation } from "@/lib/results/source-location";
-import { safeExternalUrl } from "@/lib/urls";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
@@ -96,25 +95,18 @@ export function AiRemediationFindingCard({
 
         {suggestion.references.length > 0 ? (
           <ul className="list-disc pl-5 text-xs text-muted-foreground">
-            {suggestion.references.map((reference) => {
-              const href = safeExternalUrl(reference);
-              return (
-                <li key={reference}>
-                  {href ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="underline hover:text-foreground"
-                    >
-                      {reference}
-                    </a>
-                  ) : (
-                    reference
-                  )}
-                </li>
-              );
-            })}
+            {suggestion.references.map((reference) => (
+              <li key={reference}>
+                <a
+                  href={reference}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline hover:text-foreground"
+                >
+                  {reference}
+                </a>
+              </li>
+            ))}
           </ul>
         ) : null}
       </CardContent>

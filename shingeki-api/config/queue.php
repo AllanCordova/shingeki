@@ -97,22 +97,15 @@ return [
                 [
                     'host' => env('RABBITMQ_HOST', '127.0.0.1'),
                     'port' => env('RABBITMQ_PORT', 5672),
-                    'user' => env('RABBITMQ_USER'),
-                    'password' => env('RABBITMQ_PASSWORD'),
+                    'user' => env('RABBITMQ_USER', 'guest'),
+                    'password' => env('RABBITMQ_PASSWORD', 'guest'),
                     'vhost' => env('RABBITMQ_VHOST', '/'),
                 ],
             ],
-            'secure' => filter_var(env('RABBITMQ_SSL', false), FILTER_VALIDATE_BOOL),
             'options' => [
                 'queue' => [
                     'declare' => true,
                     'bind' => true,
-                ],
-                'ssl_options' => [
-                    'cafile' => env('RABBITMQ_SSL_CAFILE'),
-                    'local_cert' => env('RABBITMQ_SSL_CERT'),
-                    'local_pk' => env('RABBITMQ_SSL_KEY'),
-                    'verify_peer' => filter_var(env('RABBITMQ_SSL_VERIFY', true), FILTER_VALIDATE_BOOL),
                 ],
             ],
             'worker' => env('RABBITMQ_WORKER', 'default'),

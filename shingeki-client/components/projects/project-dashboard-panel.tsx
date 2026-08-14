@@ -13,7 +13,7 @@ import {
   CardTitle,
   Loading,
 } from "@/components/ui";
-import { useProjectDashboard } from "@/lib/hooks/projects/use-project-dashboard";
+import { useProjectDashboard } from "@/lib/hooks/project/use-project-insights";
 
 function trendLabel(direction: TrendDirection, value: number): string {
   if (direction === "flat") return "Estavel vs. scan anterior";
@@ -84,7 +84,7 @@ export function ProjectDashboardPanel({ projectId }: { projectId: string }) {
       />
 
       <DashboardCard
-        title="Remediacao"
+        title="Remediação"
         description="Sistemas com achados no ultimo scan"
         value={String(dashboard.systems_with_findings.length)}
         footer={
@@ -102,7 +102,7 @@ export function ProjectDashboardPanel({ projectId }: { projectId: string }) {
               ))}
             </ul>
           ) : (
-            <span className="text-xs text-muted-foreground">Nenhuma acao pendente.</span>
+            <span className="text-xs text-muted-foreground">Nenhuma ação pendente.</span>
           )
         }
       />

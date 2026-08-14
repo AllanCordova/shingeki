@@ -29,11 +29,6 @@
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
-        <env name="SSRF_ALLOW_PRIVATE_NETWORKS" value="true"/>
-        <env name="SSRF_RESOLVE_DNS" value="false"/>
-        <env name="GITHUB_REQUIRE_REPOSITORY_ALLOWLIST" value="false"/>
-        <env name="RABBITMQ_USER" value="guest"/>
-        <env name="RABBITMQ_PASSWORD" value="guest"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>

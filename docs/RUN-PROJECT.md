@@ -30,19 +30,9 @@ Instale e prepare a API:
 cd shingeki-api
 composer install
 php artisan key:generate
-php artisan migrate
+php artisan migrate --seed
 php artisan storage:link
 ```
-
-O `DatabaseSeeder` **só** carrega o catálogo (ataques, stacks, remediações). Contas de demonstração **não** entram por padrão.
-
-Para o ambiente de lab local:
-
-```bash
-DEMO_SEED=true DEMO_USER_PASSWORD=password php artisan db:seed
-```
-
-`DEMO_SEED=true` também pode ir no `.env` da API. O entrypoint Docker (`RUN_DB_SEED`) permanece **desligado** por padrão.
 
 Instale o client:
 
@@ -122,14 +112,12 @@ docker exec shingeki-rabbitmq rabbitmqctl list_queues name messages consumers
 
 `attacks.results` com mensagens e **0 consumers** → reinicie o container: `docker compose restart api-consumers`.
 
-## Credenciais do seed de demonstração {#credenciais-do-seed}
-
-Disponíveis **somente** quando `DEMO_SEED=true` e `DEMO_USER_PASSWORD` estão definidos. Sem isso, o seed cria só o catálogo; o dono interno do catálogo (`catalog-owner@shingeki.local`) **não** é conta de login.
+## Credenciais do seed {#credenciais-do-seed}
 
 | E-mail | Senha | Perfil |
 |--------|-------|--------|
-| `test@example.com` | valor de `DEMO_USER_PASSWORD` | `SPECIALIST` — **Pentest Lab** + projetos demo (Netflix, Mercado Livre, Nubank, iFood) |
-| `admin@admin.com` | valor de `DEMO_USER_PASSWORD` | `ADMIN` — catálogo global + mesmos projetos demo |
+| `test@example.com` | `password` | `SPECIALIST` — **Pentest Lab** + projetos demo (Netflix, Mercado Livre, Nubank, iFood) |
+| `admin@admin.com` | `password` | `ADMIN` — catálogo global + mesmos projetos demo |
 
 Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 

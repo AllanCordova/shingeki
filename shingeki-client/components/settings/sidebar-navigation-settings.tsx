@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
   KeyboardSensor,
@@ -22,8 +22,8 @@ import type { SidebarNavItem } from "@/lib/contracts";
 import {
   useSidebarNavigation,
   useUpdateSidebarNavigation,
-} from "@/lib/hooks/settings/use-sidebar-navigation";
-import { notify } from "@/lib/ui/notify";
+} from "@/lib/hooks/navigation/use-sidebar-navigation";
+import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import {
   Button,
@@ -239,9 +239,26 @@ export function SidebarNavigationSettings() {
   const { items, isLoading, isError, error, refetch } = useSidebarNavigation();
   const { updateSidebar, isLoading: isSaving, error: saveError } =
     useUpdateSidebarNavigation();
-  const initialGroups = useMemo(() => groupItems(items), [items]);
+  const itemsSignature = useMemo(
+    () =>
+      items
+        .map(
+          (item) =>
+            `${item.type}:${item.project_id}:${item.system_id ?? ""}:${item.visible}:${item.sort_order}:${item.name}`,
+        )
+        .join("|"),
+    [items],
+  );
+  const initialGroups = useMemo(() => groupItems(items), [itemsSignature]);
   const [groups, setGroups] = useState(initialGroups);
   const [dirty, setDirty] = useState(false);
+  const [groupsSource, setGroupsSource] = useState(itemsSignature);
+
+  if (itemsSignature !== groupsSource) {
+    setGroupsSource(itemsSignature);
+    setGroups(initialGroups);
+    setDirty(false);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -251,11 +268,6 @@ export function SidebarNavigationSettings() {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
-
-  useEffect(() => {
-    setGroups(initialGroups);
-    setDirty(false);
-  }, [initialGroups]);
 
   const markDirty = () => setDirty(true);
 
@@ -311,7 +323,7 @@ export function SidebarNavigationSettings() {
   const handleSave = async () => {
     const payload = flattenGroups(groups);
     await notify.run(() => updateSidebar(payload), {
-      success: "Navegacao da sidebar atualizada.",
+      success: "Navegação da sidebar atualizada.",
     });
     setDirty(false);
   };
@@ -332,7 +344,7 @@ export function SidebarNavigationSettings() {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-sm text-muted-foreground">
-        Escolha quais projetos e sistemas aparecem na sidebar. Arraste pelo icone
+        Escolha quais projetos e sistemas aparecem na sidebar. Arraste pelo ícone
         de alca ou use as setas para definir a ordem.
       </p>
 
@@ -500,7 +512,7 @@ export function SidebarNavigationSettings() {
           isLoading={isSaving}
           disabled={!dirty || isSaving}
         >
-          Salvar navegacao
+          Salvar navegação
         </Button>
       </div>
     </div>

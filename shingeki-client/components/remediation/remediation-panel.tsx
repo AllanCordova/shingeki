@@ -4,12 +4,11 @@ import { useState, type ReactNode } from "react";
 import type { RemediatedFinding } from "@/lib/contracts";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
 import { useAiRemediateSystem, useGitHubRemediationPr, useRemediateSystem } from "@/lib/hooks/remediation/use-remediate";
-import { notify } from "@/lib/ui/notify";
+import { notify } from "@/lib/notify";
 import { AiRemediationFindingCard } from "@/components/remediation/ai-remediation-finding-card";
 import { GitHubPrPreviewModal } from "@/components/remediation/github-pr-preview-modal";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import { cn } from "@/lib/utils";
-import { safeExternalUrl } from "@/lib/urls";
 import {
   Badge,
   Button,
@@ -113,7 +112,7 @@ export function RemediationPanel({
     setHasCatalog(true);
     if (notifyOnSuccess) {
       notify.success(
-        `${result.findings_count} achado(s) com sugestoes de correcao.`,
+        `${result.findings_count} achado(s) com sugestões de correção.`,
       );
     }
   };
@@ -131,7 +130,7 @@ export function RemediationPanel({
     setHasAi(true);
     if (options?.notifyOnSuccess) {
       notify.success(
-        `${result.findings_count} sugestao(oes) de IA gerada(s) via ${result.provider}.`,
+        `${result.findings_count} sugestão(ões) de IA gerada(s) via ${result.provider}.`,
       );
     }
   };
@@ -139,9 +138,9 @@ export function RemediationPanel({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Remediacao</CardTitle>
+        <CardTitle>Remediação</CardTitle>
         <CardDescription>
-          Gere sugestoes pelo catalogo ou pela IA e alterne entre as visoes com
+          Gere sugestões pelo catálogo ou pela IA e alterne entre as visoes com
           os controles abaixo.
         </CardDescription>
       </CardHeader>
@@ -160,10 +159,10 @@ export function RemediationPanel({
               void runAction(async () => {
                 await loadCatalogPage(1, true);
                 setView("catalog");
-              }, "Nao foi possivel gerar as correcoes.")
+              }, "Não foi possível gerar as correções.")
             }
           >
-            Gerar correcoes
+            Gerar correções
           </Button>
           <Button
             type="button"
@@ -173,7 +172,7 @@ export function RemediationPanel({
               void runAction(async () => {
                 await loadAiPage(1, { notifyOnSuccess: true });
                 setView("ai");
-              }, "Nao foi possivel gerar sugestoes com IA.")
+              }, "Não foi possível gerar sugestões com IA.")
             }
           >
             Sugerir com IA
@@ -186,7 +185,7 @@ export function RemediationPanel({
               onClick={() =>
                 void runAction(
                   () => loadAiPage(1, { regenerate: true, notifyOnSuccess: true }),
-                  "Nao foi possivel gerar sugestoes com IA.",
+                  "Não foi possível gerar sugestões com IA.",
                 )
               }
             >
@@ -212,7 +211,7 @@ export function RemediationPanel({
           input={githubPrInput}
           isConfirming={githubPrLoading}
           onConfirm={() =>
-            void runAction(submitGitHubPullRequest, "Nao foi possivel abrir o pull request no GitHub.")
+            void runAction(submitGitHubPullRequest, "Não foi possível abrir o pull request no GitHub.")
           }
         />
 
@@ -224,7 +223,7 @@ export function RemediationPanel({
                 disabled={!hasCatalog}
                 onClick={() => setView("catalog")}
               >
-                Shingeki remediacoes
+                Shingeki remediações
               </ViewToggleButton>
               <ViewToggleButton
                 active={view === "ai"}
@@ -238,13 +237,13 @@ export function RemediationPanel({
             {view === "catalog" ? (
               !hasCatalog || !data ? (
                 <EmptyState
-                  title="Catalogo ainda nao gerado"
-                  description='Clique em "Gerar correcoes" para ver os snippets do algoritmo.'
+                  title="Catálogo ainda nao gerado"
+                  description='Clique em "Gerar correções" para ver os snippets do algoritmo.'
                 />
               ) : data.findings_count === 0 ? (
                 <EmptyState
                   title="Nenhum achado para remediar"
-                  description="Execute um ataque e aguarde os resultados antes de gerar correcoes."
+                  description="Execute um ataque e aguarde os resultados antes de gerar correções."
                 />
               ) : (
                 <div className="flex flex-col gap-4">
@@ -260,7 +259,7 @@ export function RemediationPanel({
                     onPageChange={(page) =>
                       void runAction(
                         () => loadCatalogPage(page),
-                        "Nao foi possivel carregar a pagina de correcoes.",
+                        "Não foi possível carregar a página de correções.",
                       )
                     }
                   />
@@ -274,7 +273,7 @@ export function RemediationPanel({
             ) : aiData.findings_count === 0 ? (
               <EmptyState
                 title="Nenhum achado para IA"
-                description="Execute um ataque e aguarde os resultados antes de gerar sugestoes."
+                description="Execute um ataque e aguarde os resultados antes de gerar sugestões."
               />
             ) : (
               <div className="flex flex-col gap-4">
@@ -296,7 +295,7 @@ export function RemediationPanel({
                   onPageChange={(page) =>
                     void runAction(
                       () => loadAiPage(page),
-                      "Nao foi possivel carregar a pagina de sugestoes de IA.",
+                      "Não foi possível carregar a página de sugestões de IA.",
                     )
                   }
                 />
@@ -385,25 +384,18 @@ function FindingRemediationCard({ finding }: { finding: RemediatedFinding }) {
               </pre>
               {remediation.references.length > 0 ? (
                 <ul className="list-disc pl-5 text-xs text-muted-foreground">
-                  {remediation.references.map((reference) => {
-                    const href = safeExternalUrl(reference);
-                    return (
-                      <li key={reference}>
-                        {href ? (
-                          <a
-                            href={href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline hover:text-foreground"
-                          >
-                            {reference}
-                          </a>
-                        ) : (
-                          reference
-                        )}
-                      </li>
-                    );
-                  })}
+                  {remediation.references.map((reference) => (
+                    <li key={reference}>
+                      <a
+                        href={reference}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline hover:text-foreground"
+                      >
+                        {reference}
+                      </a>
+                    </li>
+                  ))}
                 </ul>
               ) : null}
             </div>
