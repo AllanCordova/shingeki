@@ -330,6 +330,10 @@ describe('GET attack-acknowledgment', function () {
 
         Sanctum::actingAs($user);
 
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once();
+
         $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
             ->assertAccepted();
 
