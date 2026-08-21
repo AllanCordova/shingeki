@@ -4,7 +4,7 @@ Rules for user-facing text in the Shingeki product (UI, emails, in-app help, cli
 
 ## Where this applies
 
-- `shingeki-client` UI (pages, panels, modals, toasts, empty states, helper text)
+- `apps/client` UI (pages, panels, modals, toasts, empty states, helper text)
 - User-visible errors returned to the browser (API messages that surface in the client)
 - Onboarding / guided setup copy
 

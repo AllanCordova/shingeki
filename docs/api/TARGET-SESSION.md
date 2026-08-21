@@ -6,7 +6,7 @@ Conecta a sessao autenticada do alvo para o worker DAST acessar rotas protegidas
 
 ### 1. Extensao Chrome/Edge (recomendado para SaaS)
 
-Pacote [`shingeki-extension`](../../shingeki-extension/README.md).
+Pacote [`apps/extension`](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md).
 
 1. Client chama `POST .../target-session/connect/start`.
 2. Se a extensao estiver instalada e o modo for `external`, o client **arma** a extensao (`ticket`, `capture_api_base`, `target_origin`, `openUrl`) e a extensao abre o login em **aba normal** (nao popup).
@@ -14,7 +14,7 @@ Pacote [`shingeki-extension`](../../shingeki-extension/README.md).
 4. Na extensao: **Capturar sessao** → a extensao resolve a aba do `target_origin` (mesmo se a aba ativa for outra) → `POST /api/target-session/capture/{ticket}`.
 5. O client atualiza o status via polling (2s / 120s) ou mensagem da extensao.
 
-Download da extensao empacotada pelo client: `/extensions/shingeki-target-session.zip`. Distribuicao via Chrome Web Store / Edge Add-ons fica documentada no README da extensao (fora da UI do produto).
+Download da extensão empacotada pelo client: `/extensions/shingeki-target-session.zip`. Como gerar o ZIP e carregar no Chrome: [README da extensão](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md).
 
 ### 2. Popup cooperativo (lab)
 
@@ -69,7 +69,7 @@ Inicia captura via popup e/ou extensao.
 
 Para alvos externos, `mode` e `external` e `capture_callback_url` aponta para `/shingeki-capture.php` no alvo (fluxo lab).
 
-No **shingeki-vulnerable-target**, apos login bem-sucedido em `/login.php`, a sessao PHP (`PHPSESSID`) e enviada automaticamente para a API quando o popup redireciona para `/shingeki-capture.php?ticket=...`. Rotas protegidas de teste: `/dashboard.php`, `/profile.php`, `/notes.php`, `/app/browse/{file}`.
+No lab, o popup redireciona para `/shingeki-capture.php?ticket=...` após o login. Vetores autenticados e credenciais: [shingeki-vulnerable-target.md](../architecture/shingeki-vulnerable-target.md).
 
 ## POST /api/target-session/capture/{ticket}
 
@@ -167,6 +167,6 @@ Na pagina do sistema: **Conectar ao alvo**.
 - Sem extensao / lab: popup automatico quando o alvo coopere.
 - Fallback: import manual Cookie/Bearer.
 
-Campo opcional `login_url` no sistema sobrescreve a URL de login (`open_url` / base do popup externo).
+Campo opcional `login_url` no sistema sobrescreve a URL de login (`open_url` / base do popup externo). Ver [PROJECTS-AND-SYSTEMS.md](PROJECTS-AND-SYSTEMS.md).
 
-Env opcional do client: `NEXT_PUBLIC_SHINGEKI_EXTENSION_ID` (so se quiser messaging direto; o content script em localhost nao precisa).
+Env opcional do client: `NEXT_PUBLIC_SHINGEKI_EXTENSION_ID` (só se quiser messaging direto; o content script em localhost não precisa). Detalhes de empacotamento: [README da extensão](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md).

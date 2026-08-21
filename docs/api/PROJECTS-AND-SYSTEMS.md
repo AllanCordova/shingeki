@@ -95,6 +95,7 @@ Base: `/api/projects/{project}/systems`
       "cover_path": "/storage/covers/....jpg",
       "name": "Vulnerable PHP Target",
       "target_url": "http://127.0.0.1:8090",
+      "login_url": "http://127.0.0.1:8090/login.php",
       "repository_url": "https://github.com/...",
       "stacks": [
         { "id": "uuid", "slug": "laravel", "name": "Laravel", "languages": ["php"] }
@@ -114,6 +115,7 @@ Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional
 |-------|-------------|
 | `name` | sim |
 | `target_url` | sim (URL válida) |
+| `login_url` | não (URL de login do alvo; sobrescreve a usada na [sessão do alvo](TARGET-SESSION.md)) |
 | `repository_url` | sim (URL válida) |
 | `stack_ids` | sim (array de UUIDs; mínimo 1) — ver [STACKS.md](STACKS.md) |
 | `cover` / `cover_upload_id` | não (opcional; web) |
@@ -128,7 +130,7 @@ Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID.
 
 ### PUT /api/projects/{project}/systems/{system}
 
-Campos opcionais: `name`, `target_url`, `repository_url`, `stack_ids` ([STACKS.md](STACKS.md)), `cover`, `cover_upload_id`.
+Campos opcionais: `name`, `target_url`, `login_url`, `repository_url`, `stack_ids` ([STACKS.md](STACKS.md)), `cover`, `cover_upload_id`.
 
 **Resposta `200`:** `{ "message": "...", "system": { ... } }`
 
@@ -147,3 +149,46 @@ Libera a capa do sistema se não estiver em uso em outro recurso do mesmo usuár
 ## Autorização
 
 Cada ação usa policies Laravel (`view`, `update`, `delete`, etc.). Tentativas sobre recursos de outro usuário retornam `403`.
+
+## Dashboard do projeto
+
+`GET /api/projects/{project}/dashboard`
+
+Agrega o último disparo **concluído** de cada sistema do projeto.
+
+**Resposta `200`:** `{ "dashboard": { ... } }`
+
+| Campo | Significado |
+|-------|-------------|
+| `systems_count` | Sistemas no projeto |
+| `total_findings` | Soma de `findings_count` do último dispatch concluído de cada sistema |
+| `previous_total_findings` | Soma do dispatch anterior (tendência) |
+| `findings_trend` | `total - previous` |
+| `trend_direction` | `up` / `down` / `flat` |
+| `last_dispatch` | Dispatch mais recente (qualquer status) |
+| `systems_with_findings` | Sistemas cujo último dispatch concluído tem achados |
+
+## Sistemas do usuário (lista plana)
+
+Atalhos sem o `{project}` na URL — ainda restringidos aos sistemas dos projetos do usuário autenticado.
+
+### GET /api/systems
+
+Lista sistemas do usuário (`name` asc), cada um com `project: { id, name }` e campos DAST persistidos (`dast_start_path`, `dast_max_routes`).
+
+### GET /api/systems/{system}
+
+Detalhe do mesmo formato.
+
+### PUT /api/systems/{system}/dispatch-settings
+
+Persiste o escopo DAST padrão do sistema (pré-preenche o modal de disparo).
+
+**Body (JSON):**
+
+| Campo | Regras |
+|-------|--------|
+| `dast_start_path` | presente; string ou `null`; path normalizado |
+| `dast_max_routes` | presente; inteiro 1–500 ou `null` |
+
+No client: `/configuracoes/sistemas/{systemId}/dispatch`. No disparo pontual, `start_path` / `max_routes` no body ainda sobrescrevem o lote — ver [ATTACKS-AND-RESULTS.md](ATTACKS-AND-RESULTS.md).

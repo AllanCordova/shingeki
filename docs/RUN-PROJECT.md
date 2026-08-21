@@ -12,8 +12,8 @@ Na raiz do monorepo:
 
 ```bash
 cp .env.example .env
-cp shingeki-api/.env.example shingeki-api/.env
-cp shingeki-client/.env.example shingeki-client/.env.local
+cp apps/api/.env.example apps/api/.env
+cp apps/client/.env.example apps/client/.env.local
 ```
 
 Suba a infraestrutura e os consumers:
@@ -27,7 +27,7 @@ Isso sobe **MySQL**, **RabbitMQ** e **`api-consumers`** (consumers Laravel: `att
 Instale e prepare a API:
 
 ```bash
-cd shingeki-api
+cd apps/api
 composer install
 php artisan key:generate
 php artisan migrate --seed
@@ -37,7 +37,7 @@ php artisan storage:link
 Instale o client:
 
 ```bash
-cd shingeki-client
+cd apps/client
 npm install
 ```
 
@@ -56,14 +56,14 @@ docker compose up -d --remove-orphans
 **Terminal 2 — API HTTP:**
 
 ```bash
-cd shingeki-api
+cd apps/api
 php artisan serve
 ```
 
 **Terminal 3 — Client web:**
 
 ```bash
-cd shingeki-client
+cd apps/client
 npm run dev
 ```
 
@@ -123,9 +123,19 @@ Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS
 
 **SAST:** o worker clona o `repository_url` do sistema. Defina `GITHUB_TOKEN` no `.env` da raiz para repositórios privados.
 
+### Opcionais
+
+Não copie estes blocos para outros guias — só os nomes das variáveis e o link.
+
+| Recurso | Onde configurar | Contrato |
+|---------|-----------------|----------|
+| Login Google | `GOOGLE_*` em `apps/api/.env` | [AUTHENTICATION.md](api/AUTHENTICATION.md) |
+| Remediação IA / PR GitHub | `AI_*`, `GEMINI_*` / `GROQ_*`, `GITHUB_*` na API | [REMEDIATION.md](api/REMEDIATION.md) |
+| Banco de imagens (Pexels) | `PEXELS_API_KEY` em `apps/client/.env.local` | [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md) |
+
 ## Referência
 
-- Testes da API: `cd shingeki-api && composer test`
+- Testes da API: `cd apps/api && composer test`
 - Contratos HTTP: [API.md](API.md)
 - Client web: [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md)
 - CI: [ci/overview.md](ci/overview.md)

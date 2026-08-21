@@ -27,8 +27,8 @@ Do not invent a parallel stack when the repo already has a good answer.
 
 ```text
 Browser (Next UI)
-  → same-origin BFF (`shingeki-client/app/api/*`)
-    → Laravel (`shingeki-api`) with Sanctum Bearer
+  → same-origin BFF (`apps/client/app/api/*`)
+    → Laravel (`apps/api`) with Sanctum Bearer
       → DB / queues / workers
 ```
 

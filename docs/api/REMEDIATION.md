@@ -254,7 +254,7 @@ Abre um pull request no GitHub com correções geradas pela IA para achados **SA
 |----------|-----------|
 | `GITHUB_TOKEN` | Personal access token ou token de GitHub App |
 | `GITHUB_DEFAULT_BRANCH` | Branch base para PR (padrão `main`; repo [AllanCordova/vulnerable-target](https://github.com/AllanCordova/vulnerable-target) usa `master`) |
-| `GITHUB_REPOSITORY_SOURCE_PREFIX` | Prefixo no repo GitHub quando o SAST escaneia só a subpasta (ex.: `shingeki-vulnerable-target`) |
+| `GITHUB_REPOSITORY_SOURCE_PREFIX` | Prefixo no repo GitHub quando o SAST escaneia só a subpasta (ex.: `labs/vulnerable-target`) |
 | `GITHUB_REMEDIATION_BRANCH_PREFIX` | Prefixo da branch (padrão `fix-security`) |
 
 ## Historico do sistema

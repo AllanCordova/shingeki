@@ -78,13 +78,6 @@ URLs relativas ao client Next.js:
 ## Client web
 
 - Sininho no header (`NotificationBell`) com poll a cada 20s
+- Página `/notificacoes`
 - Ao disparar scan ou enviar CSV, toast orienta acompanhar pelo sininho
-- BFF: `shingeki-client/app/api/notifications/*`
-
-## Migration
-
-```bash
-php artisan migrate
-```
-
-Tabela: `user_notifications` (`2026_06_21_100000_create_user_notifications_table.php`).
+- BFF: `apps/client/app/api/notifications/*`

@@ -6,32 +6,9 @@ Requer workers, filas e (para DAST em laboratório) alvo vulnerável. API e stac
 
 ## Ambiente de laboratório
 
-### Stack completa
+Stack, consumers e URLs de serviço: [RUN-PROJECT.md](../RUN-PROJECT.md). Vetores e credenciais do alvo: [shingeki-vulnerable-target.md](../architecture/shingeki-vulnerable-target.md).
 
-Na raiz do monorepo:
-
-```bash
-docker compose up -d
-docker compose --profile stack up -d --build
-```
-
-Em terminais separados:
-
-```bash
-cd shingeki-api
-php artisan serve
-```
-
-```bash
-cd shingeki-client
-npm run dev
-```
-
-Os consumers Laravel (`attacks:consume-results`, `catalog:consume-imports`) rodam no container **`api-consumers`** — não é necessário executá-los no host, a menos que você opte pelo fluxo sem Docker descrito em [RUN-PROJECT.md](../RUN-PROJECT.md).
-
-Client web: detalhes em [RUN-PROJECT.md](../RUN-PROJECT.md) e [WEB-DEVELOPMENT.md](../WEB-DEVELOPMENT.md).
-
-O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
+O alvo usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 
 | Contexto | URL do alvo |
 |----------|-------------|
@@ -39,11 +16,11 @@ O alvo de laboratório usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
 | Worker DAST (Docker) | resolvido automaticamente para `http://vulnerable-target` |
 | API — manual proxy | `WorkerTargetUrlResolver::forManualProxy()` — URL do browser/lab (ver [MANUAL-PROXY.md](MANUAL-PROXY.md)) |
 
-**Importante:** nao cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames so existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila. Registros legados com `http://vulnerable-target` funcionam no manual proxy via reescrita automatica.
+**Importante:** não cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames só existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila. Registros legados com `http://vulnerable-target` funcionam no manual proxy via reescrita automática.
 
 ### Aceite de responsabilidade
 
-Antes de disparar ataques, o client deve enviar no body o aceite de responsabilidade e termos legais (`accepted_responsibility`, `accepted_legal_terms`, `terms_version`). A API valida e grava auditoria em `attack_acknowledgments`. Fluxo completo: [ATTACK-ACKNOWLEDGMENT.md](ATTACK-ACKNOWLEDGMENT.md).
+Antes de disparar ataques, o client envia o aceite no body. A API valida e grava auditoria. Contrato completo (versão, GET de status, o que foi removido): [ATTACK-ACKNOWLEDGMENT.md](ATTACK-ACKNOWLEDGMENT.md).
 
 ## POST .../attacks/dispatch (DAST)
 
@@ -72,7 +49,7 @@ O lote inclui ataques cujo autor tem papel `ADMIN` ou `SPECIALIST` no catálogo 
 - `start_path` (opcional, DAST): rota semente do crawl (ex. `/products`). Pode ser path relativo ou URL; a API normaliza para path. O worker inicia o BFS nessa rota (mesma origem do `target_url`).
 - `max_routes` (opcional, DAST): orçamento máximo de páginas visitadas no discovery (1–500). Quando `start_path` é enviado e `max_routes` é omitido, o padrão é `50`. Sobrescreve `MaxPages` do depth (incluindo quick).
 
-Código de aceite: `SHINGEKI-ATTACK-ACK-1` (`AttackAcknowledgmentTerms`). Versão atual: `2026-07-13`.
+Código de aceite: ver [ATTACK-ACKNOWLEDGMENT.md](ATTACK-ACKNOWLEDGMENT.md) (`AttackAcknowledgmentTerms`). Não duplicar a versão aqui.
 
 **Resposta `202`:**
 
@@ -123,7 +100,7 @@ No client, a profundidade (e o escopo opcional de rota no DAST) é escolhida em 
 
 `POST /api/projects/{project}/systems/{system}/attacks/dispatch/sast`
 
-Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [shingeki-sast-worker](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
+Enfileira o catálogo **SAST** (`scan_type: SAST`) para análise estática do `repository_url` do sistema. Publica na fila `attacks.sast.dispatch`. O worker [workers/sast](../architecture/shingeki-sast-worker.md) executa Semgrep (PHP, TypeScript, JavaScript) e publica achados na mesma fila `attacks.results` do DAST.
 
 **Body (JSON):** igual ao dispatch DAST (aceite obrigatório + `depth` opcional). Campos `start_path` / `max_routes` podem ser persistidos, mas o worker SAST não usa escopo de crawl. No SAST, `depth` é persistido e enviado na fila, mas o worker não altera a análise estática.
 
@@ -147,13 +124,23 @@ Lista dispatches do sistema (mais recentes primeiro).
     {
       "id": "uuid",
       "system_id": "uuid",
+      "scan_type": "DAST",
+      "depth": "full",
       "attacks_count": 12,
       "dispatched_at": "...",
       "completed_at": "...",
       "duration_ms": 45000,
       "findings_count": 3,
+      "probes_count": 40,
+      "vectors_discovered": 8,
+      "jobs_planned": 40,
       "status": "completed",
-      "..."
+      "probe_counts": {
+        "all": 40,
+        "vulnerable": 3,
+        "clean": 35,
+        "error": 2
+      }
     }
   ]
 }
@@ -161,45 +148,32 @@ Lista dispatches do sistema (mais recentes primeiro).
 
 `status`: `pending` enquanto `completed_at` for `null`; `completed` caso contrário.
 
+**Probes** são tentativas de payload (`dispatch_probes`), distintas dos **achados** (`system_results`). O worker DAST publica `attack.probe` para cada tentativa (`vulnerable` / `clean` / `error`) e um achado só quando a evidência confirma vulnerabilidade. Contrato da fila: [shingeki-dast-worker.md](../architecture/shingeki-dast-worker.md).
+
 ## GET .../system-results/{attack_dispatch}
 
-Detalhe de um dispatch com achados.
+Detalhe de um dispatch com achados **e** probes, ambos paginados.
 
-**Resposta `200`:**
+**Query:**
 
-```json
-{
-  "dispatch": { "...": "..." },
-  "results": [
-    {
-      "id": "uuid",
-      "system_id": "uuid",
-      "attack_dispatch_id": "uuid",
-      "attack_id": "uuid",
-      "vulnerable_route": "/path",
-      "payload_used": "...",
-      "evidence": "...",
-      "http_request": "...",
-      "attack": {
-        "id": "uuid",
-        "category": "...",
-        "target_location": "...",
-        "risk_level": "..."
-      },
-      "created_at": "...",
-      "updated_at": "..."
-    }
-  ]
-}
-```
+| Param | Default | Descrição |
+|-------|---------|-----------|
+| `results_page` / `results_per_page` | `1` / `25` | Paginação dos achados (máx. 100) |
+| `page` / `per_page` | `1` / `25` | Paginação dos probes |
+| `filter` | `all` | Probes: `all`, `vulnerable`, `clean` |
+| `category`, `risk_level`, `route`, `q` | — | Filtros de log (achados e probes) |
 
-O parâmetro de rota é o UUID do `AttackDispatch` (nome da rota: `attack_dispatch`).
+**Resposta `200`:** `{ dispatch, results, results_pagination, probes, probes_pagination, probe_counts, filter, log_filters }`
+
+Cada achado inclui `source_file`, `start_line`, `end_line` e `matched_snippet` quando o SAST (ou o normalizador) preenche localização de código.
+
+O parâmetro de rota é o UUID do `AttackDispatch`.
 
 ## DELETE .../system-results/{attack_dispatch}
 
 `DELETE /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}`
 
-Remove um disparo e todos os `system_results` associados.
+Remove um disparo e os `system_results` / `dispatch_probes` associados.
 
 **Resposta `200`:**
 
@@ -215,7 +189,7 @@ Remove um disparo e todos os `system_results` associados.
 
 `DELETE /api/projects/{project}/systems/{system}/system-results`
 
-Remove **todos** os dispatches e achados do sistema.
+Remove **todos** os dispatches, achados e probes do sistema.
 
 **Resposta `200`:**
 
@@ -224,6 +198,24 @@ Remove **todos** os dispatches e achados do sistema.
   "message": "All attack dispatches deleted successfully."
 }
 ```
+
+## GET .../system-results/compare
+
+`GET /api/projects/{project}/systems/{system}/system-results/compare?baseline_id={uuid}&target_id={uuid}`
+
+Compara achados de dois dispatches do mesmo sistema (fingerprint: `attack_id` + rota + arquivo/linha + payload).
+
+**Resposta `200`:** `baseline`, `target`, `summary` (`new` / `resolved` / `persisted`) e as três listas de achados.
+
+No client: `/projetos/.../sistemas/.../comparar`.
+
+## GET .../system-results/{attack_dispatch}/export
+
+`GET /api/projects/{project}/systems/{system}/system-results/{attack_dispatch}/export`
+
+Baixa o relatório de auditoria em **PDF** (disparo precisa estar concluído). `422` se ainda estiver pendente.
+
+No client: modal de exportação na página do dispatch.
 
 ## Exemplo com curl
 

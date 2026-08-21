@@ -14,11 +14,13 @@ The repo is already in good shape. Do not reinvent architecture on every feature
 
 | Area | Role |
 |------|------|
-| `shingeki-api` | Laravel API (REST + Lighthouse GraphQL) |
-| `shingeki-client` | Next.js BFF + UI (React Query + Apollo where needed) |
-| Workers / other packages | Follow each package’s local pattern |
+| `apps/api` | Laravel API (REST + Lighthouse GraphQL) |
+| `apps/client` | Next.js BFF + UI (React Query + Apollo where needed) |
+| `apps/extension` | Chrome/Edge extension (target-session capture) |
+| `workers/dast`, `workers/sast` | Go queue consumers |
+| `labs/vulnerable-target` | Intentionally vulnerable PHP lab |
 
-### Client (`shingeki-client`)
+### Client (`apps/client`)
 
 - Data hooks in `lib/hooks/{Resource}` (e.g. `project/`, `system/`, `catalog/`).
 - Shared contracts/types in `lib/contracts/{Resource}` with barrel `lib/contracts/index.ts`.
@@ -28,7 +30,7 @@ The repo is already in good shape. Do not reinvent architecture on every feature
 - Thin pages in `app/`.
 - REST + React Query by default; Apollo only where GraphQL is already adopted (e.g. sidebar).
 
-### API (`shingeki-api`)
+### API (`apps/api`)
 
 - Thin controllers; business rules in `app/Services`.
 - Domain folders by resource (not a flat dump): `app/Models/{Resource}`, `app/Http/Controllers/{Resource}`, `app/Http/Requests/{Resource}`, `app/Policies/{Resource}`, `app/Enums/{Resource}` — same resource names already used under `app/Services/{Resource}` where applicable.

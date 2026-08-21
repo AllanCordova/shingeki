@@ -4,15 +4,7 @@ Envio de requests HTTP customizados ao `target_url` do sistema, com injeção op
 
 ## Papéis
 
-Rotas exigem `auth:sanctum` e middleware `role:ADMIN,SPECIALIST`.
-
-| Papel | Acesso |
-|-------|--------|
-| `USER` | Sem acesso |
-| `SPECIALIST` | Enviar requests e gerenciar rotas próprias |
-| `ADMIN` | Mesmo que `SPECIALIST` |
-
-Policy: `SystemPolicy::useManualProxy`.
+Papéis globais: [AUTHENTICATION.md](AUTHENTICATION.md). Nestas rotas: `auth:sanctum` + `role:ADMIN,SPECIALIST` (`SystemPolicy::useManualProxy`). `USER` não acessa.
 
 ## Resolução de URL
 
@@ -83,4 +75,4 @@ Query e headers vazios são persistidos como `null` e serializados como `{}` na 
 - Botão **Arsenal manual** no hero da página do sistema (ADMIN/SPECIALIST)
 - Painel inclui sessão do alvo + formulário de proxy + mapa de rotas
 
-BFF: `shingeki-client/app/api/projects/.../manual-proxy/*`.
+BFF: `apps/client/app/api/projects/.../manual-proxy/*`.

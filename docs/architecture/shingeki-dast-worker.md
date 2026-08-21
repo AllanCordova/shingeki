@@ -1,6 +1,6 @@
-# shingeki-dast-worker
+# DAST worker (`workers/dast`)
 
-Microsserviço **Go** que consome lotes de ataque do RabbitMQ, descobre superfície no alvo, executa payloads do catálogo, valida evidências e publica achados de volta para a API.
+Microsserviço **Go** que consome lotes de ataque do RabbitMQ, descobre superfície no alvo, executa payloads do catálogo, valida evidências e publica probes e achados de volta para a API.
 
 ## Pipeline
 
@@ -17,7 +17,7 @@ flowchart LR
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
 3. **Attack** aplica injectors conforme categoria e local do vetor.
 4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing; diff de corpo só para categorias sem validador específico).
-5. **Publisher** envia uma mensagem por achado na fila de saída.
+5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed`.
 
 ## Pacotes `internal/`
 
@@ -69,7 +69,29 @@ flowchart LR
 
 `start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica.
 
-### Saída: `attacks.results` (uma mensagem por achado)
+### Saída: `attacks.results`
+
+A mesma fila carrega três eventos. A API consome via `attacks:consume-results` (container **`api-consumers`**).
+
+**Probe** (`event: attack.probe`) — toda tentativa de payload, persistida em `dispatch_probes`:
+
+```json
+{
+  "event": "attack.probe",
+  "dispatch_id": "uuid",
+  "system_id": "uuid",
+  "attack_id": "uuid",
+  "route": "/login",
+  "payload_used": "' OR 1=1 --",
+  "http_request": "POST /login HTTP/1.1\r\n...",
+  "outcome": "vulnerable",
+  "evidence": "SQL error signature detected in response body"
+}
+```
+
+`outcome`: `vulnerable`, `clean` ou `error` (`error_message` obrigatório quando `error`).
+
+**Achado** — uma mensagem por vulnerabilidade confirmada; persiste `SystemResult`:
 
 ```json
 {
@@ -82,7 +104,7 @@ flowchart LR
 }
 ```
 
-A API consome essa fila via `attacks:consume-results` (container **`api-consumers`** no setup padrão) e persiste `SystemResult` vinculado ao `AttackDispatch`.
+Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULTS.md).
 
 ## Discovery
 
@@ -110,4 +132,4 @@ A API consome essa fila via `attacks:consume-results` (container **`api-consumer
 ## Relação com a API e o alvo
 
 - A API publica o batch após validar o aceite de responsabilidade no dispatch ([ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md)) e a policy do sistema.
-- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já autorizado pela API no dispatch. Alvo de lab: [shingeki-vulnerable-target](shingeki-vulnerable-target.md).
+- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já autorizado pela API no dispatch. Alvo de lab: [vulnerable-target](shingeki-vulnerable-target.md).

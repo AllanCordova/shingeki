@@ -1,26 +1,26 @@
 # Clientes
 
-Guia de desenvolvimento do frontend web do Shingeki. Voltar ao [início](index.md).
+Índice dos clients do Shingeki. Setup: [RUN-PROJECT.md](RUN-PROJECT.md). Contratos HTTP: [API.md](API.md). Voltar ao [início](index.md).
 
-O [client web](architecture/shingeki-client.md) consome a [API REST](API.md) via BFF Next.js com cookie http-only (Sanctum).
+| Client | Documento |
+|--------|-----------|
+| Web (Next.js + BFF) | Arquitetura: [shingeki-client.md](architecture/shingeki-client.md). Desenvolvimento: [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md). |
+| Extensão Chrome/Edge | Contrato: [TARGET-SESSION.md](api/TARGET-SESSION.md). Empacotamento: [apps/extension/README.md](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md). |
 
-## Antes de começar
-
-1. API rodando — [Como rodar o projeto](RUN-PROJECT.md)
-2. Credenciais do seed — `test@example.com` / `password` ([detalhes](RUN-PROJECT.md#credenciais-do-seed))
-3. Arquitetura do client — [shingeki-client](architecture/shingeki-client.md)
+O browser nunca vê o token Sanctum: cookie http-only no BFF.
 
 ## Recursos no client web
 
-| Recurso | Disponível |
-|---------|------------|
-| Auth (login/registro) | Sim |
-| Projetos e sistemas | Sim |
-| Assinaturas e dispatch DAST/SAST | Sim |
-| Resultados e remediação | Sim |
-| Preview e abertura de PR no GitHub (SAST) | Sim |
-| Admin / catálogo (`ADMIN`, `SPECIALIST`) | Auditoria no client; `ADMIN` também em `/admin/users/permissoes` |
-| Notificações | Sim |
-| Arsenal manual | Sim |
-
-Guia de desenvolvimento: [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md).
+| Recurso | Onde |
+|---------|------|
+| Auth (e-mail + Google) | Login/registro; perfil com avatar |
+| Projetos, dashboard e sistemas | `/projetos`, settings DAST em `/configuracoes/sistemas` |
+| Aceite + dispatch DAST/SAST | Página do sistema (não há mais assinatura digital no alvo) |
+| Resultados, probes, gráfico, comparar, PDF | Página do dispatch e `/comparar` |
+| Remediação, IA, PR GitHub, histórico | Página do sistema / dispatch |
+| Auditoria (catálogo) | `/auditoria/*` (`ADMIN`, `SPECIALIST`) |
+| Admin de papéis | `/admin/users/permissoes` (`ADMIN`) |
+| Sidebar | GraphQL — `/configuracoes/navegacao` |
+| Notificações | Sininho + `/notificacoes` |
+| Arsenal manual | `/projetos/.../arsenal` |
+| Sessão do alvo | Painel no sistema; extensão ou popup/lab |

@@ -6,13 +6,9 @@ Importação em massa via CSV: [CATALOG-BULK-IMPORT.md](CATALOG-BULK-IMPORT.md).
 
 ## Papéis (`role`)
 
-| Valor | Descrição |
-|-------|-----------|
-| `USER` | Usuário padrão (registro). Sem acesso às rotas `/api/catalog/*`. |
-| `SPECIALIST` | Gerencia catálogo: CRUD, importação CSV e área admin no client. |
-| `ADMIN` | Mesmas capacidades de catálogo que `SPECIALIST`, mais bypass de ownership (edita/remove qualquer registro). |
+Fonte única: [AUTHENTICATION.md](AUTHENTICATION.md). Resumo: `USER` não acessa `/api/catalog/*`; `SPECIALIST` gerencia o próprio catálogo; `ADMIN` ignora ownership.
 
-Rotas abaixo exigem `auth:sanctum` e middleware `role:ADMIN,SPECIALIST` (admins passam em qualquer rota com `role:*`).
+Rotas abaixo exigem `auth:sanctum` e middleware `role:ADMIN,SPECIALIST`.
 
 ## Permissões por registro
 
