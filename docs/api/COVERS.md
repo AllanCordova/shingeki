@@ -22,6 +22,8 @@ Envie **apenas um** dos campos de capa por requisição (quando quiser definir c
 
 Regras: `prohibits` impede enviar `cover` e `cover_upload_id` juntos. Upload de capa apenas no **client web**.
 
+Banco de imagens (Pexels) é só no BFF: `GET /api/cover-stock-images` e `POST /api/cover-stock-images/download` (`PEXELS_API_KEY` em `apps/client/.env.local`). A Laravel só recebe o arquivo já baixado, como qualquer `cover`.
+
 Ao enviar arquivo novo (capa de projeto/sistema **ou** foto de perfil), a API registra entrada na biblioteca (`user_cover_uploads`) via `UserCoverLibraryService::registerUpload` — unico ponto de entrada para midia do usuario.
 
 ## Biblioteca por usuário

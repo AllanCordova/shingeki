@@ -1,18 +1,23 @@
 # Visão geral
 
-Workflow: [`.github/workflows/ci.yml`](https://github.com/AllanCordova/shingeki/blob/main/.github/workflows/ci.yml) — dispara em **push** e **pull_request**. Hoje cobre apenas **`shingeki-api`** (PHP 8.4).
+Workflow: [`.github/workflows/ci.yml`](https://github.com/AllanCordova/shingeki/blob/main/.github/workflows/ci.yml) — dispara em **push** e **pull_request**.
 
-| Job | Ferramenta |
-|-----|------------|
-| `lint` | Laravel Pint |
-| `tests` | Pest (`php artisan test`) |
+Este arquivo descreve o que o CI **roda hoje** — não o que poderia rodar.
 
-## Rodar localmente (`shingeki-api`)
+| Job | Ferramenta | Pasta |
+|-----|------------|-------|
+| `lint` | Laravel Pint | `apps/api` |
+| `tests` | Pest (`php artisan test`) | `apps/api` |
+| `dast-worker` | `go vet` / `go test` | `workers/dast` |
+
+Não entram no workflow (ainda): `workers/sast`, `apps/client`, `apps/extension`.
+
+## Rodar localmente (`apps/api`)
 
 Com `composer install` já executado:
 
 ```bash
-cd shingeki-api
+cd apps/api
 composer lint
 composer test
 ```
@@ -22,6 +27,8 @@ composer test
 | `composer lint` | Lint (igual ao CI) |
 | `composer lint:fix` | Só corrigir estilo |
 | `composer test` | Testes (igual ao CI) |
+
+Worker DAST: `cd workers/dast && go vet ./... && go test -race ./...`.
 
 ## Documentação (MkDocs)
 
@@ -36,8 +43,10 @@ mkdocs serve
 
 Abre **http://127.0.0.1:8001/shingeki/**
 
-Build local (pasta `site/`):
+Build local (pasta `site/`, gerada e ignorada pelo git):
 
 ```bash
 mkdocs build
 ```
+
+Convenção de fontes únicas: [index.md](../index.md#fontes-de-verdade).

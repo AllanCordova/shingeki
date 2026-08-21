@@ -17,7 +17,7 @@ Ensure the code is correct, readable, secure, aligned with project patterns (or 
 
 ### 2. Tests
 
-- Run affected tests (Pest in `shingeki-api`, lint/typecheck in `shingeki-client` when relevant).
+- Run affected tests (Pest in `apps/api`, lint/typecheck in `apps/client` when relevant).
 - Cover the happy path and authorization/ownership when the change touches user data.
 - Do not call it done if the feature test fails or was removed without a replacement.
 

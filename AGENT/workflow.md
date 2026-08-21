@@ -13,7 +13,7 @@ Standard flow for delivering a feature (or non-trivial change) in this repositor
 5. Git + PR ([`git.md`](git.md))
 ```
 
-Do not skip steps for changes that touch the API, auth, user data, or more than one package (`shingeki-api` / `shingeki-client`).
+Do not skip steps for changes that touch the API, auth, user data, or more than one package (`apps/api` / `apps/client`).
 
 ## 0. Architecture check
 

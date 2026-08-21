@@ -24,6 +24,7 @@ Cadastra usuário e retorna token.
     "name": "Nome",
     "email": "user@example.com",
     "role": "USER",
+    "avatar_path": null,
     "created_at": "...",
     "updated_at": "..."
   },
@@ -55,10 +56,10 @@ Cadastra usuário e retorna token.
 | Valor | Descrição |
 |-------|-----------|
 | `USER` | Padrão no registro. Acesso a projetos, sistemas, ataques e remediação de achados. |
-| `SPECIALIST` | Gerencia o catálogo global (`/api/catalog/*`). Atribuído manualmente ou via seed. |
-| `ADMIN` | Acesso total ao catálogo, incluindo editar/remover registros de outros autores. |
+| `SPECIALIST` | Gerencia o catálogo global (`/api/catalog/*`) e o arsenal manual. Atribuído manualmente ou via seed. |
+| `ADMIN` | Catálogo sem restrição de ownership, administração de usuários e as mesmas capacidades de `SPECIALIST`. |
 
-Detalhes das rotas de catálogo: [CATALOG.md](CATALOG.md). Administração de usuários: [ADMIN-USERS.md](ADMIN-USERS.md).
+Esta tabela é a fonte única de papéis. Catálogo: [CATALOG.md](CATALOG.md). Usuários: [ADMIN-USERS.md](ADMIN-USERS.md).
 
 ## POST /api/auth/logout
 
@@ -80,15 +81,23 @@ Retorna o usuário autenticado.
 
 ```json
 {
-  "user": { "...": "..." }
+  "user": {
+    "id": "uuid",
+    "name": "Nome",
+    "email": "user@example.com",
+    "role": "USER",
+    "avatar_path": "/storage/covers/....jpg",
+    "created_at": "...",
+    "updated_at": "..."
+  }
 }
 ```
 
 ## PUT /api/auth/me
 
-Atualiza perfil. Todos os campos são opcionais (`sometimes`).
+Atualiza perfil. Todos os campos são opcionais (`sometimes`). Aceita JSON ou `multipart/form-data` (avatar).
 
-**Body (JSON):**
+**Body:**
 
 | Campo | Regras |
 |-------|--------|
@@ -96,6 +105,11 @@ Atualiza perfil. Todos os campos são opcionais (`sometimes`).
 | `email` | e-mail único (exceto o próprio usuário) |
 | `password` | mín. 8, `confirmed`; exige `current_password` |
 | `current_password` | obrigatório quando `password` é enviado |
+| `avatar` | arquivo imagem, máx. 5 MB; `prohibits: avatar_upload_id` |
+| `avatar_upload_id` | UUID da biblioteca de capas; `prohibits: avatar` |
+| `remove_avatar` | boolean; remove a foto de perfil |
+
+Avatar entra na mesma biblioteca de capas. Ver [COVERS.md](COVERS.md).
 
 **Resposta `200`:**
 

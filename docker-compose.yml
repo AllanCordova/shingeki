@@ -50,13 +50,13 @@ services:
 
   api-consumers:
     build:
-      context: ./shingeki-api
+      context: ./apps/api
       dockerfile: Dockerfile.consumers
     container_name: shingeki-api-consumers
     restart: unless-stopped
     env_file:
       - .env
-      - path: ./shingeki-api/.env
+      - path: ./apps/api/.env
         required: false
     environment:
       DB_HOST: mysql
@@ -81,13 +81,13 @@ services:
   sast-worker:
     profiles: ["stack"]
     build:
-      context: ./shingeki-sast-worker
+      context: ./workers/sast
       dockerfile: deployments/Dockerfile
     container_name: shingeki-sast-worker
     restart: unless-stopped
     env_file:
       - .env
-      - path: ./shingeki-sast-worker/.env
+      - path: ./workers/sast/.env
         required: false
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -107,13 +107,13 @@ services:
   dast-worker:
     profiles: ["stack"]
     build:
-      context: ./shingeki-dast-worker
+      context: ./workers/dast
       dockerfile: deployments/Dockerfile
     container_name: shingeki-dast-worker
     restart: unless-stopped
     env_file:
       - .env
-      - path: ./shingeki-dast-worker/.env
+      - path: ./workers/dast/.env
         required: false
     environment:
       RABBITMQ_HOST: rabbitmq
@@ -141,7 +141,7 @@ services:
   vulnerable-target:
     profiles: ["stack"]
     build:
-      context: ./shingeki-vulnerable-target
+      context: ./labs/vulnerable-target
     container_name: shingeki-vulnerable-target
     restart: unless-stopped
     ports:
