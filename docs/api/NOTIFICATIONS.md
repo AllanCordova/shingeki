@@ -73,18 +73,11 @@ URLs relativas ao client Next.js:
 | Tipo | Destino típico |
 |------|----------------|
 | `attack_dispatch` | Página de resultados do dispatch |
-| `catalog_import` | `/admin/ataques` ou `/admin/medicacoes` |
+| `catalog_import` | `/auditoria/ataques` ou `/auditoria/medicacoes` |
 
 ## Client web
 
 - Sininho no header (`NotificationBell`) com poll a cada 20s
+- Página `/notificacoes`
 - Ao disparar scan ou enviar CSV, toast orienta acompanhar pelo sininho
-- BFF: `shingeki-client/app/api/notifications/*`
-
-## Migration
-
-```bash
-php artisan migrate
-```
-
-Tabela: `user_notifications` (`2026_06_21_100000_create_user_notifications_table.php`).
+- BFF: `apps/client/app/api/notifications/*`

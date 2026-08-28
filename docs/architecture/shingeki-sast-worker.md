@@ -1,4 +1,4 @@
-# shingeki-sast-worker
+# SAST worker (`workers/sast`)
 
 Microsserviço **Go** que consome lotes SAST do RabbitMQ, clona o repositório do sistema, executa **Semgrep** (PHP, TypeScript e JavaScript) e publica achados na mesma fila de resultados usada pelo DAST.
 
@@ -38,7 +38,7 @@ flowchart LR
 | `attacks.sast.dispatch` | API → worker | Batch SAST (`scan_type: SAST`, `repository_url` obrigatório) |
 | `attacks.results` | worker → API | Achados e `attack.dispatch.completed` (compartilhada com DAST) |
 
-O comando `attacks:consume-results` (no container **`api-consumers`**) processa resultados de **ambos** os workers.
+O comando `attacks:consume-results` (no container **`api-consumers`**) processa resultados de **ambos** os workers. O SAST não publica probes (`attack.probe`) — só achados e conclusão.
 
 ## Mapeamento de achados SAST
 
@@ -51,7 +51,7 @@ O comando `attacks:consume-results` (no container **`api-consumers`**) processa 
 
 ## Variáveis de ambiente
 
-Ver [`shingeki-sast-worker/.env.example`](https://github.com/AllanCordova/shingeki/blob/main/shingeki-sast-worker/.env.example).
+Ver [`workers/sast/.env.example`](https://github.com/AllanCordova/shingeki/blob/main/workers/sast/.env.example).
 
 | Variável | Default | Descrição |
 |----------|---------|-----------|

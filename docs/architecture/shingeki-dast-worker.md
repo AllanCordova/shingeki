@@ -1,6 +1,6 @@
-# shingeki-dast-worker
+# DAST worker (`workers/dast`)
 
-Microsserviço **Go** que consome lotes de ataque do RabbitMQ, descobre superfície no alvo, executa payloads do catálogo, valida evidências e publica achados de volta para a API.
+Microsserviço **Go** que consome lotes de ataque do RabbitMQ, descobre superfície no alvo, executa payloads do catálogo, valida evidências e publica probes e achados de volta para a API.
 
 ## Pipeline
 
@@ -16,8 +16,8 @@ flowchart LR
 1. **Consumer** lê mensagem batch da fila de entrada.
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
 3. **Attack** aplica injectors conforme categoria e local do vetor.
-4. **Evidence** confirma vulnerabilidade (regex, diff, timing, diálogo XSS com Rod quando habilitado).
-5. **Publisher** envia uma mensagem por achado na fila de saída.
+4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing; diff de corpo só para categorias sem validador específico).
+5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed`.
 
 ## Pacotes `internal/`
 
@@ -28,11 +28,11 @@ flowchart LR
 | `contracts` | Tipos de dispatch, result, completion (JSON alinhado à API) |
 | `discovery` | Orquestra BFS + crawlers estático (Colly) e dinâmico (Rod/SPA) |
 | `discovery/static` | Colly — HTML estático |
-| `discovery/dynamic` | Rod — SPAs quando `DISCOVERY_ROD_ENABLED=true` |
+| `discovery/dynamic` | Rod — click/explore em SPA quando `DISCOVERY_ROD_ENABLED=true` |
 | `discovery/bfs` | Fila de URLs/fronteira de exploração |
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
-| `evidence` | Motor de validação (regex, diff de corpo, timing) |
+| `evidence` | Motor de validação (regex, markers de path traversal, timing; diff genérico limitado) |
 | `evidence/xss` | Rod para diálogo/alerta em XSS |
 | `orchestrator` | Liga discovery → attack → evidence → publish |
 | `oast` | Cliente opcional para cenários out-of-band |
@@ -44,6 +44,10 @@ flowchart LR
 ```json
 {
   "event": "attack.dispatch.batch",
+  "scan_type": "DAST",
+  "depth": "full",
+  "start_path": "/products",
+  "max_routes": 50,
   "system_id": "uuid",
   "user_id": "uuid",
   "target_url": "https://target.example",
@@ -61,7 +65,33 @@ flowchart LR
 }
 ```
 
-### Saída: `attacks.results` (uma mensagem por achado)
+`depth` (`quick` | `full`) ajusta discovery: **quick** usa limites menores e desliga Rod; **full** (padrão) usa `DISCOVERY_MAX_*`.
+
+`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica.
+
+### Saída: `attacks.results`
+
+A mesma fila carrega três eventos. A API consome via `attacks:consume-results` (container **`api-consumers`**).
+
+**Probe** (`event: attack.probe`) — toda tentativa de payload, persistida em `dispatch_probes`:
+
+```json
+{
+  "event": "attack.probe",
+  "dispatch_id": "uuid",
+  "system_id": "uuid",
+  "attack_id": "uuid",
+  "route": "/login",
+  "payload_used": "' OR 1=1 --",
+  "http_request": "POST /login HTTP/1.1\r\n...",
+  "outcome": "vulnerable",
+  "evidence": "SQL error signature detected in response body"
+}
+```
+
+`outcome`: `vulnerable`, `clean` ou `error` (`error_message` obrigatório quando `error`).
+
+**Achado** — uma mensagem por vulnerabilidade confirmada; persiste `SystemResult`:
 
 ```json
 {
@@ -74,13 +104,24 @@ flowchart LR
 }
 ```
 
-A API consome essa fila via `attacks:consume-results` (container **`api-consumers`** no setup padrão) e persiste `SystemResult` vinculado ao `AttackDispatch`.
+Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULTS.md).
 
 ## Discovery
 
 - **Estático**: Colly segue links e formulários em HTML tradicional.
-- **Dinâmico** (opcional): headless Chromium (Rod) para rotas renderizadas no cliente.
-- **BFS**: limita profundidade e evita explosão de URLs no lab.
+- **Dinâmico** (Rod, quando `DISCOVERY_ROD_ENABLED=true`): após o seed, faz **click/explore** — clica botões/links da UI, observa mudança de URL e XHR same-origin, e monta vetores. Prioriza ações CRUD (criar/editar/…); ignora logout/mailto/javascript e URLs da blocklist (`/cdn-cgi/`, analytics, assets).
+- **BFS estático / budgets**: `depth` (`quick`/`full`) ajusta `MaxDepth`/`MaxPages` e desliga Rod no `quick`. `start_path` define a semente; `max_routes` sobrescreve `MaxPages`. Clique limitado por `DISCOVERY_MAX_CLICKS` (default 80); settle pós-clique em `DISCOVERY_EXPLORE_SETTLE` (default `1500ms`).
+- Com `start_path` presente, o composite dispara Rod mesmo se o Colly já tiver vetores suficientes (explore focado na feature).
+
+### Variáveis úteis (discovery)
+
+| Env | Default | Papel |
+|-----|---------|--------|
+| `DISCOVERY_ROD_ENABLED` | `false` | Liga Chromium/Rod |
+| `DISCOVERY_MAX_PAGES` | `50` | Páginas/estados no crawl |
+| `DISCOVERY_MAX_CLICKS` | `80` | Cliques no explore Rod |
+| `DISCOVERY_EXPLORE_SETTLE` | `1500ms` | Espera após navigate/click |
+| `DISCOVERY_MIN_VECTORS_FOR_ROD` | `2` | Sem `start_path`, Rod só se Colly achar poucos vetores |
 
 ## Execução de ataques
 
@@ -90,5 +131,5 @@ A API consome essa fila via `attacks:consume-results` (container **`api-consumer
 
 ## Relação com a API e o alvo
 
-- A API publica o batch após validar assinatura no HTML do alvo ([shingeki-vulnerable-target](shingeki-vulnerable-target.md)).
-- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já validado pela API no dispatch.
+- A API publica o batch após validar o aceite de responsabilidade no dispatch ([ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md)) e a policy do sistema.
+- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já autorizado pela API no dispatch. Alvo de lab: [vulnerable-target](shingeki-vulnerable-target.md).

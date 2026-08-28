@@ -1,73 +1,89 @@
-# shingeki-client
+# Client (`apps/client`)
 
-Cliente web **Next.js** (App Router) que cobre autenticação, projetos, sistemas, assinaturas, disparo de ataques, resultados e upload de capas. Consome a API Laravel via **BFF** (`app/api/*`).
+Cliente web **Next.js** (App Router) que cobre autenticação (e-mail e Google), projetos, sistemas, disparo de ataques (com aceite), resultados, remediação e upload de capas. Consome a Laravel via **BFF** (`app/api/*`).
+
+Como subir: [RUN-PROJECT.md](../RUN-PROJECT.md). Guia de desenvolvimento: [WEB-DEVELOPMENT.md](../WEB-DEVELOPMENT.md).
 
 ## Estrutura de pastas
 
 ```
 app/
-  (auth)/            # Login e registro (rotas públicas)
-  (app)/             # Área autenticada (header + páginas de projetos/sistemas/resultados)
-  api/               # Route handlers REST — proxy para a Laravel
-  page.tsx           # Landing pública (/) com seções de produto
-proxy.ts             # Proteção de rotas privadas; `/` é pública
+  (auth)/            # Login e registro
+  (app)/             # Área autenticada
+    projetos/        # Projetos, sistemas, resultados, comparar, gráfico, arsenal, histórico
+    auditoria/       # Catálogo global (ADMIN, SPECIALIST)
+    admin/           # Permissões de usuários (ADMIN)
+    configuracoes/   # Navegação (GraphQL) e settings DAST do sistema
+    perfil/          # Perfil e avatar
+    notificacoes/
+    termos/ataques/
+  api/               # Route handlers — proxy REST e GraphQL para a Laravel
+  conectar-alvo/     # Captura same-origin da sessão do alvo
+  page.tsx           # Landing pública
+proxy.ts             # Rotas privadas; `/` é pública
 lib/
-  api/               # Cliente HTTP (browser/servidor) + error-handler (mensagens em PT)
-  contracts/         # Schemas Zod (formulários) + tipos de resposta da API
-  hooks/             # React Query (auth, projects, systems, attack, results, notifications, manual-proxy, …)
-  catalog/           # list-query compartilhado para admin de catálogo
-  stores/            # Zustand — tema e estado de UI
+  api/               # Cliente HTTP + error-handler (mensagens em PT)
+  contracts/         # Zod + tipos de resposta
+  graphql/           # Apollo + query da sidebar
+  hooks/             # React Query (e hook Apollo da navegação)
+  stores/            # Zustand — tema e UI
 components/
-  ui/                # Primitivos (Button, Input, Modal, CoverUpload, CoverLibraryPicker, …)
-  forms/             # Project, System, CoverFields, login/register
-  landing/           # Página inicial pública (seções, nav, scroll)
-  projects/ systems/ signature/ attack/ results/ remediation/ notifications/ manual-proxy/
+  ui/ landing/ cover/ projects/ systems/ attack/ results/
+  remediation/ notifications/ manual-proxy/ catalog/ target-session/ auth/
 ```
 
 ## BFF (Backend for Frontend)
 
 - O browser chama apenas rotas relativas `/api/...` do Next.js.
-- Handlers em `app/api/` leem sessão no servidor e repassam para `API_BASE_URL` (Laravel) com `Authorization: Bearer`.
-- Upload de capas: rotas BFF dedicadas (`cover-uploads`) repassam `multipart/form-data` sem expor a URL da API ao bundle do cliente.
+- Handlers leem a sessão no servidor e repassam para `API_BASE_URL` com `Authorization: Bearer`.
+- GraphQL: `POST /api/graphql` → `POST {API origin}/graphql` (`forwardToGraphql`).
+- Capas: `cover-uploads` (multipart) e **banco de imagens** (`cover-stock-images`) via Pexels (`PEXELS_API_KEY` no client — não passa pela Laravel).
+- Upload de avatar: `PUT /api/auth/me` com multipart.
 
 ## Autenticação
 
-- Token Sanctum guardado em cookie **http-only** pelas rotas `app/api/auth/*`.
-- O browser não acessa o token em JavaScript; cookies vão automaticamente nas chamadas ao BFF.
-- Demais rotas `app/api/*` leem o cookie no servidor e montam o header Bearer para a Laravel.
+- Token Sanctum em cookie **http-only** (`app/api/auth/*`).
+- O browser não lê o token; cookies vão nas chamadas ao BFF.
+- Google: BFF `/api/auth/google*` + OIDC na API (ID Token + nonce anti CSRF). Contrato: [AUTHENTICATION.md](../api/AUTHENTICATION.md).
 
 ## Estado e dados
 
 | Camada | Uso |
 |--------|-----|
-| **Zustand** | UI pura: tema claro/escuro, modais, menu |
-| **React Query** | Dados da API; `staleTime` alto em projetos/sistemas; `staleTime: 0` + polling em dispatches/resultados pendentes |
+| **Zustand** | UI pura: tema, modais, menu |
+| **React Query** | Dados REST; `staleTime` alto em projetos/sistemas; polling em dispatches/resultados pendentes e no sininho |
+| **Apollo** | Só sidebar: query `sidebarNavigation` e mutation `syncSidebarNavigation` |
 
 ## Formulários e erros
 
 - `react-hook-form` + `zodResolver` alinhados a `lib/contracts/`.
-- Respostas `422` da API mapeadas de volta para campos via `error-handler` (português).
+- Respostas `422` mapeadas para campos via `error-handler` (português).
 
 ## Capas e mídia
 
-- Seleção: arquivo novo (`cover`) ou item da biblioteca (`cover_upload_id`).
-- Exibição: `NEXT_PUBLIC_MEDIA_BASE_URL` + `cover_path` retornado pela API (sem sufixo `/api`).
+- Seleção: arquivo novo (`cover`), item da biblioteca (`cover_upload_id`) ou imagem de banco (Pexels → download no BFF → upload na biblioteca).
+- Exibição: `NEXT_PUBLIC_MEDIA_BASE_URL` + `cover_path` / `avatar_path` (sem sufixo `/api`).
 
 ## Tema (design system)
 
 - Tokens em `app/globals.css` com Tailwind v4 (`@theme inline`).
 - Componentes usam utilitários derivados das variáveis — sem cores fixas no JSX.
-- Alternância de tema no header via store Zustand.
-- Landing pública (`components/landing/`) usa seções claras/escuras com scroll suave e navegação por âncora.
+- Alternância de tema no header via Zustand.
+- Landing pública (`components/landing/`) com seções claras/escuras e âncoras.
 
-## Fluxos recentes
+## Rotas de produto
 
 | Fluxo | Onde |
 |-------|------|
-| Landing `/` | Pública; CTA para login ou área logada conforme cookie |
-| Dispatch | Sem campo de token — depende de assinatura validada no sistema |
-| Resultados | Lista com exclusão individual ou em massa (modais) |
-| Remediação | Toggle catálogo vs IA; cards com contexto de código e confiança |
-| Admin / catálogo | Sidebar `/admin` para `ADMIN` e `SPECIALIST`: CRUD de ataques/medicações, **paginação**, **filtro por autor** e import CSV |
-| Arsenal manual | `/projetos/.../sistemas/.../arsenal` — proxy HTTP, payload catalogado, mapa de rotas; link no hero do sistema |
-| Notificações | Sininho no header (`NotificationBell`); poll 20s; badge unread + pending; toasts após dispatch/import CSV |
+| Landing `/` | Pública; CTA para login ou área logada |
+| Dispatch | Aceite por sistema + modal de profundidade (`quick`/`full`) e escopo DAST |
+| Resultados | Achados + probes (filtro de outcome), gráfico, comparar dispatches, export PDF |
+| Remediação | Catálogo vs IA; preview e abertura de PR no GitHub (SAST); histórico |
+| Auditoria | `/auditoria/*` (`ADMIN`, `SPECIALIST`) |
+| Admin | `/admin/users/permissoes` (`ADMIN`) |
+| Navegação | `/configuracoes/navegacao` — preferências GraphQL da sidebar |
+| Settings DAST | `/configuracoes/sistemas/.../dispatch` — `dast_start_path` / `dast_max_routes` |
+| Guia inicial | Abre sozinho sem projetos se o usuário ainda não dispensou |
+| Arsenal manual | `/projetos/.../sistemas/.../arsenal` |
+| Notificações | Sininho no header (poll 20s) + `/notificacoes` |
+| Sessão do alvo | Painel no sistema/arsenal; extensão em `apps/extension` |

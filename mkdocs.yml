@@ -60,20 +60,21 @@ nav:
     - Como rodar: RUN-PROJECT.md
   - Arquitetura:
     - Visão geral: ARCHITECTURE.md
-    - shingeki-api: architecture/shingeki-api.md
-    - shingeki-client: architecture/shingeki-client.md
-    - shingeki-dast-worker: architecture/shingeki-dast-worker.md
-    - shingeki-sast-worker: architecture/shingeki-sast-worker.md
-    - shingeki-vulnerable-target: architecture/shingeki-vulnerable-target.md
+    - API: architecture/shingeki-api.md
+    - Client: architecture/shingeki-client.md
+    - DAST worker: architecture/shingeki-dast-worker.md
+    - SAST worker: architecture/shingeki-sast-worker.md
+    - Lab (alvo vulnerável): architecture/shingeki-vulnerable-target.md
   - API:
     - Visão geral: API.md
     - Conta e recursos:
       - Autenticação: api/AUTHENTICATION.md
+      - Administração de usuários: api/ADMIN-USERS.md
       - Projetos e sistemas: api/PROJECTS-AND-SYSTEMS.md
       - Stacks: api/STACKS.md
       - Capas: api/COVERS.md
     - Scan e segurança:
-      - Assinaturas: api/SIGNATURES.md
+      - Aceite de responsabilidade: api/ATTACK-ACKNOWLEDGMENT.md
       - Sessão do alvo: api/TARGET-SESSION.md
       - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
       - Arsenal manual: api/MANUAL-PROXY.md

@@ -10,21 +10,23 @@ Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](d
 
 | Diretório | Descrição |
 |-----------|-----------|
-| [`shingeki-api/`](shingeki-api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
-| [`shingeki-client/`](shingeki-client/) | Frontend Next.js (BFF, React Query, autenticação) |
-| [`shingeki-dast-worker/`](shingeki-dast-worker/) | Worker Go (discovery, ataques, evidências) |
-| [`shingeki-vulnerable-target/`](shingeki-vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
+| [`apps/api/`](apps/api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
+| [`apps/client/`](apps/client/) | Frontend Next.js (BFF, React Query, autenticação) |
+| [`apps/extension/`](apps/extension/) | Extensão Chrome/Edge (captura de sessão do alvo) |
+| [`workers/dast/`](workers/dast/) | Worker Go DAST (discovery, ataques, evidências) |
+| [`workers/sast/`](workers/sast/) | Worker Go SAST (clone + Semgrep) |
+| [`labs/vulnerable-target/`](labs/vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
 
 ## Documentação
 
 **[https://allancordova.github.io/shingeki/](https://allancordova.github.io/shingeki/)**
 
-Guia completo: **[docs/RUN-PROJECT.md](docs/RUN-PROJECT.md)**
+Fonte canônica: **[`docs/`](docs/index.md)** (cada tópico tem um arquivo dono — [fontes de verdade](docs/index.md#fontes-de-verdade)). Como subir a stack: **[docs/RUN-PROJECT.md](docs/RUN-PROJECT.md)**.
 
 ```bash
-docker compose up -d          # MySQL + RabbitMQ
-cd shingeki-api && php artisan serve
-cd shingeki-client && npm run dev
+docker compose up -d          # MySQL + RabbitMQ + api-consumers
+cd apps/api && php artisan serve
+cd apps/client && npm run dev
 ```
 
 | Tópico | Arquivo no repositório |
@@ -43,10 +45,6 @@ mkdocs serve
 ```
 
 http://127.0.0.1:8001/shingeki/
-
-## Módulos da disciplina
-
-Módulos aplicados neste projeto (detalhes e caminhos no código): **[MODULOS-DISCIPLINA.md](MODULOS-DISCIPLINA.md)**
 
 ## Licença
 

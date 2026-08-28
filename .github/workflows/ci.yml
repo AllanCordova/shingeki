@@ -9,7 +9,7 @@ env:
 
 defaults:
   run:
-    working-directory: shingeki-api
+    working-directory: apps/api
 
 jobs:
   lint:
@@ -28,19 +28,19 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: shingeki-api/vendor
-          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('shingeki-api/composer.lock') }}
+          path: apps/api/vendor
+          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-${{ env.PHP_VERSION }}-
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Fix code style (Laravel Pint)
-        if: ${{ hashFiles('shingeki-api/vendor/bin/pint') != '' }}
+        if: ${{ hashFiles('apps/api/vendor/bin/pint') != '' }}
         run: vendor/bin/pint
 
       - name: Verify code style (Laravel Pint)
-        if: ${{ hashFiles('shingeki-api/vendor/bin/pint') != '' }}
+        if: ${{ hashFiles('apps/api/vendor/bin/pint') != '' }}
         run: vendor/bin/pint --test
 
   tests:
@@ -60,8 +60,8 @@ jobs:
       - name: Cache Composer dependencies
         uses: actions/cache@v4
         with:
-          path: shingeki-api/vendor
-          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('shingeki-api/composer.lock') }}
+          path: apps/api/vendor
+          key: composer-${{ env.PHP_VERSION }}-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-${{ env.PHP_VERSION }}-
 
       - name: Install dependencies
@@ -74,3 +74,25 @@ jobs:
 
       - name: Run tests
         run: composer test
+
+  dast-worker:
+    name: DAST worker (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workers/dast
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: workers/dast/go.mod
+          cache-dependency-path: workers/dast/go.sum
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race ./...

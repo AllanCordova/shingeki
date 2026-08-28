@@ -1,39 +1,41 @@
 # Desenvolvimento — Web (Next.js)
 
-Guia do client Next.js. Setup inicial: [RUN-PROJECT.md](RUN-PROJECT.md). Índice de clients: [CLIENTS.md](CLIENTS.md).
+Guia específico do `apps/client`. Setup da stack e seed: [RUN-PROJECT.md](RUN-PROJECT.md). Índice de clients: [CLIENTS.md](CLIENTS.md). Arquitetura: [shingeki-client.md](architecture/shingeki-client.md).
 
 ## Subir o client
 
-Com a API rodando em `http://127.0.0.1:8000`:
+Com a API em `http://127.0.0.1:8000`:
 
 ```bash
-cd shingeki-client
+cd apps/client
 npm run dev
 ```
 
-Abra http://localhost:3000.
+Abra http://localhost:3000. Credenciais: [RUN-PROJECT.md](RUN-PROJECT.md#credenciais-do-seed).
 
-Credenciais do seed: [RUN-PROJECT.md](RUN-PROJECT.md#credenciais-do-seed).
+O BFF em `/api` encaminha para a Laravel via `API_BASE_URL` em `apps/client/.env.local` (copie de `.env.example`).
 
-O client usa o BFF em `/api` e repassa requisições para a Laravel via `API_BASE_URL` em `shingeki-client/.env.local` (copie de `.env.example` no setup).
+## Variáveis do client
+
+| Variável | Papel |
+|----------|--------|
+| `API_BASE_URL` | Origin da Laravel + `/api` (REST) |
+| `NEXT_PUBLIC_MEDIA_BASE_URL` | Origin da Laravel **sem** `/api` (capas e avatar) |
+| `PEXELS_API_KEY` | Banco de imagens no BFF (`cover-stock-images`); sem chave a busca retorna `503` |
+| `NEXT_PUBLIC_SHINGEKI_EXTENSION_ID` | Opcional; messaging direto com a extensão |
+
+Google OIDC configura-se na **API** (`GOOGLE_*`), não no client. Contrato: [AUTHENTICATION.md](api/AUTHENTICATION.md).
+
+IA e GitHub configuram-se na API. Ver [REMEDIATION.md](api/REMEDIATION.md).
+
+## GraphQL
+
+A sidebar usa Apollo contra `POST /api/graphql` (BFF → `POST /graphql` na Laravel). Não use GraphQL para CRUD. Desenho: [shingeki-api.md](architecture/shingeki-api.md#rest-vs-graphql).
 
 ## Build de produção
 
 ```bash
-cd shingeki-client
+cd apps/client
 npm run build
 npm start
 ```
-
-Contratos HTTP: [API.md](API.md).
-
-## Remediação com IA (opcional)
-
-Em `shingeki-api/.env`:
-
-```bash
-AI_PROVIDER=gemini
-GEMINI_API_KEY=sua-chave
-```
-
-Alternativa Groq: `AI_PROVIDER=groq` e `GROQ_API_KEY`. Detalhes: [api/REMEDIATION.md](api/REMEDIATION.md#post-remediateai).

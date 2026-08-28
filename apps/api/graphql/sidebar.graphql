@@ -1,0 +1,56 @@
+type Query @guard {
+  sidebarNavigation: SidebarNavigation!
+    @field(resolver: "App\\GraphQL\\Queries\\SidebarNavigationQuery")
+}
+
+type Mutation @guard {
+  syncSidebarNavigation(items: [SidebarNavItemInput!]!): SidebarNavigation!
+    @field(resolver: "App\\GraphQL\\Mutations\\SyncSidebarNavigation")
+}
+
+type SidebarNavigation {
+  meta: SidebarNavigationMeta!
+  items: [SidebarNavItem!]!
+  tree: [SidebarNavProject!]!
+}
+
+type SidebarNavigationMeta {
+  projectsCount: Int!
+  systemsCount: Int!
+}
+
+type SidebarNavItem {
+  id: ID
+  type: SidebarNavItemType!
+  projectId: ID!
+  projectName: String
+  systemId: ID
+  name: String!
+  visible: Boolean!
+  sortOrder: Int!
+}
+
+enum SidebarNavItemType {
+  PROJECT
+  SYSTEM
+}
+
+type SidebarNavProject {
+  id: ID!
+  name: String!
+  sortOrder: Int!
+  systems: [SidebarNavSystem!]!
+}
+
+type SidebarNavSystem {
+  id: ID!
+  name: String!
+  sortOrder: Int!
+}
+
+input SidebarNavItemInput {
+  projectId: ID!
+  systemId: ID
+  visible: Boolean!
+  sortOrder: Int!
+}
