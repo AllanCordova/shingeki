@@ -55,7 +55,7 @@ function escapeHtml(value) {
 
 captureBtn.addEventListener("click", async () => {
   captureBtn.disabled = true;
-  messageEl.textContent = "Capturando cookies do alvo...";
+  messageEl.textContent = "Capturando cookies, storage e rotas do alvo...";
   messageEl.className = "";
 
   const result = await chrome.runtime.sendMessage({

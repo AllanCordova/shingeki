@@ -6,6 +6,8 @@ return [
 
     'vulnerable_target_url' => env('VULNERABLE_TARGET_URL', 'http://127.0.0.1:8090'),
 
+    'juice_shop_url' => env('JUICE_SHOP_URL', 'http://127.0.0.1:3001'),
+
     // URL used in RabbitMQ batches when target_url points at the lab on localhost.
     'vulnerable_target_worker_url' => env('VULNERABLE_TARGET_WORKER_URL', 'http://vulnerable-target'),
 

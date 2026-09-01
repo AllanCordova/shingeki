@@ -32,7 +32,7 @@ func ToResultMessage(
 
 	return contracts.ResultMessage{
 		DispatchID:      batch.DispatchID,
-		AttackID:        batch.PrimaryAttackID(),
+		AttackID:        AttackIDForFinding(batch, finding),
 		SystemID:        batch.SystemID,
 		VulnerableRoute: route,
 		PayloadUsed:     finding.CheckID,
@@ -42,6 +42,62 @@ func ToResultMessage(
 		StartLine:       finding.Line,
 		EndLine:         findingEndLine(finding),
 		MatchedSnippet:  finding.Snippet,
+	}
+}
+
+func AttackIDForFinding(batch contracts.DispatchBatch, finding scanner.Finding) string {
+	if len(batch.Attacks) == 0 {
+		return ""
+	}
+	if len(batch.Attacks) == 1 {
+		return batch.Attacks[0].AttackID
+	}
+
+	check := strings.ToLower(finding.CheckID)
+	path := strings.ToLower(finding.Path)
+	bestID := batch.Attacks[0].AttackID
+	bestScore := 0
+
+	for _, attack := range batch.Attacks {
+		score := 0
+		for _, lang := range attack.PayloadLanguages() {
+			lang = strings.ToLower(strings.TrimSpace(lang))
+			if lang == "" {
+				continue
+			}
+			if strings.Contains(check, lang) || languageMatchesPath(lang, path) {
+				score += 2
+			}
+		}
+		category := normalizeCategory(attack.Category)
+		if category != "" && strings.Contains(check, category) {
+			score += 3
+		}
+		if score > bestScore {
+			bestScore = score
+			bestID = attack.AttackID
+		}
+	}
+
+	return bestID
+}
+
+func normalizeCategory(category string) string {
+	category = strings.ToLower(strings.TrimSpace(category))
+	category = strings.ReplaceAll(category, "_", "-")
+	return category
+}
+
+func languageMatchesPath(language, path string) bool {
+	switch language {
+	case "php":
+		return strings.HasSuffix(path, ".php")
+	case "javascript", "js":
+		return strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".jsx") || strings.HasSuffix(path, ".mjs")
+	case "typescript", "ts":
+		return strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".tsx")
+	default:
+		return false
 	}
 }
 

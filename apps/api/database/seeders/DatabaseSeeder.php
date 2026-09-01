@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
 
         // $this->call(UsersSeeder::class);
         $this->call(VulnerableTargetSeeder::class);
+        $this->call(JuiceShopSeeder::class);
         $this->call(DemoProjectsSeeder::class);
     }
 }

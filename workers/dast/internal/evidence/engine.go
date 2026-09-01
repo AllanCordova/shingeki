@@ -40,7 +40,7 @@ func NewCompositeValidator(validators ...Validator) *CompositeValidator {
 }
 
 func (c *CompositeValidator) Analyze(ctx context.Context, response types.Response) *Finding {
-	if response.Error != nil {
+	if response.Error != nil && !response.TimedOut {
 		return nil
 	}
 	for _, validator := range c.validators {

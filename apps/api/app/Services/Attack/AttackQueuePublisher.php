@@ -60,12 +60,49 @@ class AttackQueuePublisher
         }
 
         if ($targetAuth !== null) {
-            $payload['auth'] = $targetAuth;
+            $payload['auth'] = $this->objectifyAuthStorageMaps($targetAuth);
         }
 
         $message = json_encode($payload, JSON_THROW_ON_ERROR);
 
         $connection->pushRaw($message, $dispatchQueue);
+    }
+
+    /**
+     * PHP json_encode turns empty assoc arrays into []. The DAST worker expects objects.
+     *
+     * @param  array<string, mixed>  $auth
+     * @return array<string, mixed>
+     */
+    private function objectifyAuthStorageMaps(array $auth): array
+    {
+        $storage = $auth['storage'] ?? null;
+        if (! is_array($storage)) {
+            return $auth;
+        }
+
+        foreach (['local', 'session'] as $key) {
+            if (array_key_exists($key, $storage) && is_array($storage[$key])) {
+                $storage[$key] = (object) $storage[$key];
+            }
+        }
+
+        if (isset($storage['origins']) && is_array($storage['origins'])) {
+            foreach ($storage['origins'] as $index => $origin) {
+                if (! is_array($origin)) {
+                    continue;
+                }
+                foreach (['local', 'session'] as $key) {
+                    if (array_key_exists($key, $origin) && is_array($origin[$key])) {
+                        $storage['origins'][$index][$key] = (object) $origin[$key];
+                    }
+                }
+            }
+        }
+
+        $auth['storage'] = $storage;
+
+        return $auth;
     }
 
     private function dispatchQueueFor(AttackScanType $scanType): string

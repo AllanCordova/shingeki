@@ -94,8 +94,6 @@ func (c *Consumer) handleDelivery(ctx context.Context, delivery amqp.Delivery) {
 			"system_id", batch.SystemID,
 			"error", err,
 		)
-		_ = delivery.Nack(false, false)
-		return
 	}
 
 	if err := delivery.Ack(false); err != nil {

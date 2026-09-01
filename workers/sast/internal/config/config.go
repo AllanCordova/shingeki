@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +36,7 @@ type ScannerConfig struct {
 	CloneTimeout      time.Duration
 	ScanTimeout       time.Duration
 	Languages         []string
+	CloneHosts        []string
 	GitHubToken       string
 	LabRepositoryPath string
 }
@@ -49,7 +52,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid RABBITMQ_PREFETCH: %w", err)
 	}
 
-	jobTimeout, err := time.ParseDuration(getEnv("WORKER_JOB_TIMEOUT", "30m"))
+	jobTimeout, err := time.ParseDuration(getEnv("WORKER_JOB_TIMEOUT", "40m"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid WORKER_JOB_TIMEOUT: %w", err)
 	}
@@ -64,7 +67,10 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid SAST_SCAN_TIMEOUT: %w", err)
 	}
 
-	languages := parseLanguages(getEnv("SAST_LANGUAGES", "php,typescript,javascript"))
+	needed := cloneTimeout + scanTimeout + 5*time.Minute
+	if jobTimeout < needed {
+		jobTimeout = needed
+	}
 
 	cfg := Config{
 		RabbitMQ: RabbitMQConfig{
@@ -72,7 +78,7 @@ func Load() (Config, error) {
 			Port:          port,
 			User:          getEnv("RABBITMQ_USER", "guest"),
 			Password:      getEnv("RABBITMQ_PASSWORD", "guest"),
-			VHost:         getEnv("RABBITMQ_VHOST", "/"),
+			VHost:         normalizeVHost(getEnv("RABBITMQ_VHOST", "/")),
 			DispatchQueue: getEnv("RABBITMQ_ATTACKS_DISPATCH_QUEUE", "attacks.sast.dispatch"),
 			ResultsQueue:  getEnv("RABBITMQ_ATTACKS_RESULTS_QUEUE", "attacks.results"),
 			PrefetchCount: prefetch,
@@ -84,7 +90,8 @@ func Load() (Config, error) {
 			SemgrepBinary:     getEnv("SEMGREP_BINARY", "semgrep"),
 			CloneTimeout:      cloneTimeout,
 			ScanTimeout:       scanTimeout,
-			Languages:         languages,
+			Languages:         parseCSV(getEnv("SAST_LANGUAGES", "php,typescript,javascript")),
+			CloneHosts:        parseCSV(getEnv("SAST_CLONE_HOSTS", "github.com")),
 			GitHubToken:       getEnv("GITHUB_TOKEN", ""),
 			LabRepositoryPath: getEnv("SAST_LAB_REPOSITORY_PATH", ""),
 		},
@@ -98,25 +105,36 @@ func Load() (Config, error) {
 }
 
 func (c Config) RabbitMQURL() string {
-	return fmt.Sprintf("amqp://%s:%s@%s:%d%s",
-		c.RabbitMQ.User,
-		c.RabbitMQ.Password,
-		c.RabbitMQ.Host,
-		c.RabbitMQ.Port,
-		c.RabbitMQ.VHost,
-	)
+	u := url.URL{
+		Scheme: "amqp",
+		User:   url.UserPassword(c.RabbitMQ.User, c.RabbitMQ.Password),
+		Host:   net.JoinHostPort(c.RabbitMQ.Host, strconv.Itoa(c.RabbitMQ.Port)),
+		Path:   c.RabbitMQ.VHost,
+	}
+	return u.String()
 }
 
-func parseLanguages(raw string) []string {
+func normalizeVHost(vhost string) string {
+	vhost = strings.TrimSpace(vhost)
+	if vhost == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(vhost, "/") {
+		return "/" + vhost
+	}
+	return vhost
+}
+
+func parseCSV(raw string) []string {
 	parts := strings.Split(raw, ",")
-	languages := make([]string, 0, len(parts))
+	values := make([]string, 0, len(parts))
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
 		if part != "" {
-			languages = append(languages, part)
+			values = append(values, part)
 		}
 	}
-	return languages
+	return values
 }
 
 func getEnv(key, fallback string) string {

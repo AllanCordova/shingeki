@@ -1,6 +1,6 @@
 # Extensão (`apps/extension`)
 
-Extensão **Chrome / Edge (Manifest V3)** que captura cookies HttpOnly do domínio do alvo e completa o ticket público `POST /api/target-session/capture/{ticket}`.
+Extensão **Chrome / Edge (Manifest V3)** que captura cookies HttpOnly **com atributos**, `localStorage`/`sessionStorage` (todos os frames), User-Agent e rotas XHR/fetch do domínio do alvo, e completa o ticket público `POST /api/target-session/capture/{ticket}`.
 
 Contrato HTTP e fluxos (popup, extensão, import): [docs/api/TARGET-SESSION.md](../../docs/api/TARGET-SESSION.md). Este README é a fonte única de **instalação, ZIP e `manifest.json`**.
 
@@ -55,7 +55,9 @@ Para outro host do client, edite `content_scripts.matches` e `externally_connect
 2. A extensao abre o login em **aba normal** (nao popup) — o icone fica na barra.
 3. Faca login nessa aba.
 4. Clique no icone Shingeki (pode estar em qualquer aba) → **Capturar sessao**.
-5. A extensao procura a aba do `target_origin`, envia cookies e o Shingeki fica **Conectada**.
+5. A extensao procura a aba do `target_origin`, envia cookies estruturados, storage, UA e rotas XHR; o Shingeki fica **Conectada**.
+
+No GET da sessao, `replay.cookie_count` / `replay.route_count` confirmam o que foi gravado (sem valores). Recarregue a extensao apos atualizar o `manifest.json` (`0.1.3`).
 
 ## Checklist manual
 
@@ -79,8 +81,8 @@ Para outro host do client, edite `content_scripts.matches` e `externally_connect
 
 | Arquivo | Papel |
 |---------|--------|
-| `manifest.json` | MV3, `cookies`, `host_permissions: <all_urls>` |
-| `background.js` | Armar ticket, abrir aba, ler cookies, POST capture |
+| `manifest.json` | MV3, `cookies`, `webRequest`, `scripting`, `host_permissions: <all_urls>` |
+| `background.js` | Armar ticket, gravar XHR, ler cookies estruturados + storage em todos os frames, POST capture |
 | `popup.html` / `popup.js` | UI Capturar |
 | `content-bridge.js` | Ponte `postMessage` com o client |
 | `pack.ps1` | Gera o ZIP em `apps/client/public/extensions/` |

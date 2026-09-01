@@ -1,10 +1,13 @@
 package injectors
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
@@ -45,7 +48,7 @@ func build(job types.Job, inject bool) (RequestSpec, error) {
 	case "JSON_BODY", "API_ENDPOINT":
 		return buildJSON(job, inject)
 	case "FILE_UPLOAD":
-		return buildForm(job, inject)
+		return buildMultipart(job, inject)
 	default:
 		return buildQuery(job, inject)
 	}
@@ -61,17 +64,7 @@ func buildQuery(job types.Job, inject bool) (RequestSpec, error) {
 		values.Set(key, val)
 	}
 	if inject {
-		key := job.ParamKey
-		if key == "" && job.Payload.Field != "" {
-			key = job.Payload.Field
-		}
-		if key == "" && len(values) > 0 {
-			for k := range values {
-				key = k
-				break
-			}
-		}
-		if key != "" {
+		if key := injectKey(job, firstQueryKey(values)); key != "" {
 			values.Set(key, job.Payload.Value)
 		}
 	}
@@ -137,10 +130,7 @@ func encodeDotDotSegments(payload string) string {
 func buildHeader(job types.Job, inject bool) (RequestSpec, error) {
 	headers := cloneHeaders(job.Vector.Headers)
 	if inject {
-		name := job.Payload.Field
-		if name == "" {
-			name = "X-Forwarded-For"
-		}
+		name := injectKey(job, "X-Forwarded-For")
 		headers[name] = job.Payload.Value
 	}
 	return RequestSpec{
@@ -153,16 +143,8 @@ func buildHeader(job types.Job, inject bool) (RequestSpec, error) {
 func buildCookie(job types.Job, inject bool) (RequestSpec, error) {
 	headers := cloneHeaders(job.Vector.Headers)
 	if inject {
-		name := job.Payload.Field
-		if name == "" {
-			name = "session"
-		}
-		pair := name + "=" + job.Payload.Value
-		if existing := strings.TrimSpace(headers["Cookie"]); existing != "" {
-			headers["Cookie"] = existing + "; " + pair
-		} else {
-			headers["Cookie"] = pair
-		}
+		name := injectKey(job, "session")
+		headers["Cookie"] = setCookiePair(headers["Cookie"], name, job.Payload.Value)
 	}
 	return RequestSpec{
 		Method:  firstNonEmpty(job.Vector.Method, http.MethodGet),
@@ -177,17 +159,7 @@ func buildForm(job types.Job, inject bool) (RequestSpec, error) {
 		values.Set(key, val)
 	}
 	if inject {
-		key := job.ParamKey
-		if key == "" && job.Payload.Field != "" {
-			key = job.Payload.Field
-		}
-		if key == "" && len(values) > 0 {
-			for k := range values {
-				key = k
-				break
-			}
-		}
-		if key != "" {
+		if key := injectKey(job, firstQueryKey(values)); key != "" {
 			values.Set(key, job.Payload.Value)
 		}
 	}
@@ -207,19 +179,15 @@ func buildForm(job types.Job, inject bool) (RequestSpec, error) {
 func buildJSON(job types.Job, inject bool) (RequestSpec, error) {
 	payload := map[string]any{}
 	if job.Vector.Body != "" {
-		_ = json.Unmarshal([]byte(job.Vector.Body), &payload)
+		if err := json.Unmarshal([]byte(job.Vector.Body), &payload); err != nil {
+			return RequestSpec{}, fmt.Errorf("invalid json body: %w", err)
+		}
 	}
 	for key, val := range job.Vector.Params {
 		payload[key] = val
 	}
 	if inject {
-		key := job.ParamKey
-		if key == "" && job.Payload.Field != "" {
-			key = job.Payload.Field
-		}
-		if key == "" {
-			key = "input"
-		}
+		key := injectKey(job, "input")
 		payload[key] = job.Payload.Value
 	}
 	body, err := json.Marshal(payload)
@@ -237,6 +205,97 @@ func buildJSON(job types.Job, inject bool) (RequestSpec, error) {
 		Headers: headers,
 		Body:    string(body),
 	}, nil
+}
+
+func buildMultipart(job types.Job, inject bool) (RequestSpec, error) {
+	var buf bytes.Buffer
+	writer := multipart.NewWriter(&buf)
+	for key, val := range job.Vector.Params {
+		if key == "" {
+			continue
+		}
+		if err := writer.WriteField(key, val); err != nil {
+			return RequestSpec{}, err
+		}
+	}
+	field := injectKey(job, "file")
+	filename := "probe.txt"
+	contents := "dast-probe"
+	if inject {
+		filename = job.Payload.Value
+		if filename == "" {
+			filename = "probe.txt"
+		}
+		contents = job.Payload.Value
+	}
+	part, err := writer.CreateFormFile(field, filename)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+	if _, err := part.Write([]byte(contents)); err != nil {
+		return RequestSpec{}, err
+	}
+	if err := writer.Close(); err != nil {
+		return RequestSpec{}, err
+	}
+	headers := cloneHeaders(job.Vector.Headers)
+	headers["Content-Type"] = writer.FormDataContentType()
+	return RequestSpec{
+		Method:  firstNonEmpty(job.Vector.Method, http.MethodPost),
+		URL:     job.Vector.Route,
+		Headers: headers,
+		Body:    buf.String(),
+	}, nil
+}
+
+func injectKey(job types.Job, fallback string) string {
+	if job.ParamKey != "" {
+		return job.ParamKey
+	}
+	if job.Payload.Field != "" {
+		return job.Payload.Field
+	}
+	return fallback
+}
+
+func firstQueryKey(values url.Values) string {
+	if len(values) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys[0]
+}
+
+func setCookiePair(existing, name, value string) string {
+	pair := name + "=" + value
+	existing = strings.TrimSpace(existing)
+	if existing == "" {
+		return pair
+	}
+	parts := strings.Split(existing, ";")
+	replaced := false
+	out := make([]string, 0, len(parts)+1)
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		current, _, _ := strings.Cut(part, "=")
+		if strings.EqualFold(strings.TrimSpace(current), name) {
+			out = append(out, pair)
+			replaced = true
+			continue
+		}
+		out = append(out, part)
+	}
+	if !replaced {
+		out = append(out, pair)
+	}
+	return strings.Join(out, "; ")
 }
 
 func cloneHeaders(src map[string]string) map[string]string {

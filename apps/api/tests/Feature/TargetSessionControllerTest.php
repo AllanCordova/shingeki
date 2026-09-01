@@ -53,6 +53,13 @@ describe('system target session', function () {
 
         $session = SystemTargetSession::query()->first();
         expect($session->headers['Cookie'])->toBe('laravel_session=abc123; XSRF-TOKEN=xyz');
+
+        $this->getJson(targetSessionUrl($project, $system))
+            ->assertOk()
+            ->assertJsonPath('connected', true)
+            ->assertJsonPath('replay.cookie_count', 0)
+            ->assertJsonPath('replay.route_count', 0)
+            ->assertJsonPath('replay.has_storage', false);
     });
 
     test('stores bearer session with normalized authorization header', function () {

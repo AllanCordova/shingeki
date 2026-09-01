@@ -28,6 +28,7 @@ class SystemTargetSession extends Model
         'system_id',
         'auth_type',
         'headers',
+        'storage',
         'expires_at',
     ];
 
@@ -39,6 +40,7 @@ class SystemTargetSession extends Model
         return [
             'auth_type' => TargetAuthType::class,
             'headers' => 'encrypted:array',
+            'storage' => 'encrypted:array',
             'expires_at' => 'datetime',
         ];
     }
@@ -64,5 +66,27 @@ class SystemTargetSession extends Model
     public function headerNames(): array
     {
         return array_values(array_keys($this->headers ?? []));
+    }
+
+    /**
+     * Counts only — never returns cookie values, tokens, or storage contents.
+     *
+     * @return array{cookie_count: int, route_count: int, has_storage: bool, has_user_agent: bool}
+     */
+    public function replayMeta(): array
+    {
+        $storage = $this->storage ?? [];
+        $cookies = is_array($storage['cookies'] ?? null) ? $storage['cookies'] : [];
+        $routes = is_array($storage['routes'] ?? null) ? $storage['routes'] : [];
+        $local = is_array($storage['local'] ?? null) ? $storage['local'] : [];
+        $session = is_array($storage['session'] ?? null) ? $storage['session'] : [];
+        $origins = is_array($storage['origins'] ?? null) ? $storage['origins'] : [];
+
+        return [
+            'cookie_count' => count($cookies),
+            'route_count' => count($routes),
+            'has_storage' => $local !== [] || $session !== [] || $origins !== [],
+            'has_user_agent' => filled($storage['user_agent'] ?? null),
+        ];
     }
 }

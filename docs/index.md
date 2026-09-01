@@ -18,7 +18,8 @@ Plataforma para detecção automatizada e remediação interativa de vulnerabili
 - **Workers** — DAST (Go) e SAST (Semgrep) via RabbitMQ.
 - **Client web** — Next.js com BFF (cookie http-only) e Apollo na navegação.
 - **Extensão** — Chrome/Edge para capturar sessão HttpOnly do alvo.
-- **Lab** — alvo PHP vulnerável para testes locais.
+- **Lab** — alvo PHP vulnerável para testes de pipeline.
+- **Treino DAST** — [OWASP Juice Shop](architecture/shingeki-juice-shop.md) (SPA realista, gabarito).
 
 Diagrama e pacotes: [Arquitetura](ARCHITECTURE.md).
 
@@ -38,6 +39,7 @@ A documentação canônica vive em `docs/` (este site). Cada tópico tem **um** 
 | Papéis (`USER` / `SPECIALIST` / `ADMIN`) | [AUTHENTICATION.md](api/AUTHENTICATION.md) |
 | Aceite de responsabilidade no dispatch | [ATTACK-ACKNOWLEDGMENT.md](api/ATTACK-ACKNOWLEDGMENT.md) |
 | Vetores e credenciais do lab | [shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |
+| Gold set Juice Shop (treino DAST) | [shingeki-juice-shop.md](architecture/shingeki-juice-shop.md) |
 | Empacotamento da extensão | [apps/extension/README.md](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md) |
 | Contrato da sessão do alvo | [TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Jobs do CI | [ci/overview.md](ci/overview.md) |

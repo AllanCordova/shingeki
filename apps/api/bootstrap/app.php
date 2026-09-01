@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => null);
+        $middleware->trustProxies(at: '*');
         $middleware->prepend(HandleCors::class);
         $middleware->alias([
             'role' => EnsureUserRole::class,

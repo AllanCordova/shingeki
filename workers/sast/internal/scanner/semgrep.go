@@ -1,11 +1,13 @@
 package scanner
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strings"
+	"unicode"
 
 	"github.com/shingeki/sast-worker/internal/config"
 )
@@ -27,7 +29,7 @@ func NewSemgrepScanner(cfg config.ScannerConfig) *SemgrepScanner {
 	return &SemgrepScanner{cfg: cfg}
 }
 
-func (s *SemgrepScanner) Scan(ctx context.Context, repoDir string) ([]Finding, error) {
+func (s *SemgrepScanner) Scan(ctx context.Context, repoDir string, languages []string) ([]Finding, error) {
 	scanCtx, cancel := context.WithTimeout(ctx, s.cfg.ScanTimeout)
 	defer cancel()
 
@@ -37,41 +39,76 @@ func (s *SemgrepScanner) Scan(ctx context.Context, repoDir string) ([]Finding, e
 		"--quiet",
 		"--metrics=off",
 	}
-	for _, lang := range s.languagesToScan() {
-		args = append(args, "--config", langConfig(lang))
+	for _, lang := range s.languagesToScan(languages) {
+		cfg, ok := langConfig(lang)
+		if !ok {
+			continue
+		}
+		args = append(args, "--config", cfg)
+	}
+	if !hasLangConfig(args) {
+		return nil, fmt.Errorf("semgrep scan: no valid languages")
 	}
 	args = append(args, repoDir)
 
 	cmd := exec.CommandContext(scanCtx, s.cfg.SemgrepBinary, args...)
-	output, err := cmd.CombinedOutput()
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if !ok || exitErr.ExitCode() != 1 {
-			return nil, fmt.Errorf("semgrep scan: %w: %s", err, string(output))
+			return nil, fmt.Errorf("semgrep scan: %w: %s", err, strings.TrimSpace(stderr.String()))
 		}
 	}
 
-	return ParseSemgrepOutput(output)
+	return ParseSemgrepOutput(stdout.Bytes())
 }
 
-func (s *SemgrepScanner) languagesToScan() []string {
+func (s *SemgrepScanner) languagesToScan(override []string) []string {
+	if len(override) > 0 {
+		return override
+	}
 	if len(s.cfg.Languages) == 0 {
 		return []string{"php", "typescript", "javascript"}
 	}
 	return s.cfg.Languages
 }
 
-func langConfig(language string) string {
-	switch strings.ToLower(language) {
-	case "php":
-		return "p/php"
-	case "typescript", "ts":
-		return "p/typescript"
-	case "javascript", "js":
-		return "p/javascript"
-	default:
-		return "p/" + language
+func hasLangConfig(args []string) bool {
+	for i, arg := range args {
+		if arg == "--config" && i+1 < len(args) {
+			return true
+		}
 	}
+	return false
+}
+
+func langConfig(language string) (string, bool) {
+	language = strings.ToLower(strings.TrimSpace(language))
+	switch language {
+	case "ts":
+		language = "typescript"
+	case "js":
+		language = "javascript"
+	}
+	if !validLanguage(language) {
+		return "", false
+	}
+	return "p/" + language, true
+}
+
+func validLanguage(language string) bool {
+	if language == "" {
+		return false
+	}
+	for _, r := range language {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
 }
 
 type semgrepReport struct {
@@ -94,6 +131,13 @@ type semgrepResult struct {
 }
 
 func ParseSemgrepOutput(output []byte) ([]Finding, error) {
+	output = bytes.TrimSpace(output)
+	if start := bytes.IndexByte(output, '{'); start >= 0 {
+		if end := bytes.LastIndexByte(output, '}'); end >= start {
+			output = output[start : end+1]
+		}
+	}
+
 	var report semgrepReport
 	if err := json.Unmarshal(output, &report); err != nil {
 		return nil, fmt.Errorf("parse semgrep json: %w", err)

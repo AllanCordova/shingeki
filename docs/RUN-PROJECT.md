@@ -93,7 +93,7 @@ docker compose --profile stack up -d --build
 
 Na primeira vez, ou após mudar código dos workers, use `--build`.
 
-O alvo de laboratório fica em `http://127.0.0.1:8090` (porta `VULNERABLE_TARGET_PORT`).
+O alvo de laboratório fica em `http://127.0.0.1:8090` (porta `VULNERABLE_TARGET_PORT`). O Juice Shop de treino fica em `http://127.0.0.1:3001` (`JUICE_SHOP_PORT`, evita colidir com o client). Gold set: [shingeki-juice-shop.md](architecture/shingeki-juice-shop.md).
 
 ### Fluxo de um disparo DAST
 

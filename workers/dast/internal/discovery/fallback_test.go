@@ -1,51 +1,31 @@
 package discovery
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/shingeki/dast-worker/internal/attack"
-	"github.com/shingeki/dast-worker/internal/contracts"
 )
 
-func TestFallbackVectorsMapToCatalog(t *testing.T) {
-	vectors := fallbackVectors("http://vulnerable-target")
-	if len(vectors) < 3 {
-		t.Fatalf("expected at least 3 fallback vectors, got %d", len(vectors))
+func TestFallbackVectorsUsesSeedOnly(t *testing.T) {
+	vectors := fallbackVectors("http://vulnerable-target/app")
+	if len(vectors) != 1 {
+		t.Fatalf("expected 1 fallback vector, got %d", len(vectors))
+	}
+	if vectors[0].Route != "http://vulnerable-target/app" {
+		t.Fatalf("unexpected route %s", vectors[0].Route)
+	}
+	if vectors[0].TargetLocation != "URL_PATH" {
+		t.Fatalf("expected URL_PATH, got %s", vectors[0].TargetLocation)
 	}
 
-	attacks := []contracts.AttackItem{
-		{AttackID: "1", TargetLocation: "FORM", Payload: json.RawMessage(`{"field":"email"}`)},
-		{AttackID: "2", TargetLocation: "QUERY_PARAMETER", Payload: json.RawMessage(`{"parameter":"q"}`)},
-		{AttackID: "3", TargetLocation: "URL_PATH", Payload: json.RawMessage(`{"value":"../storage/secret.txt"}`)},
-	}
-
-	jobs := attack.MapVectorsToJobs(vectors, attacks)
-	if len(jobs) == 0 {
-		t.Fatal("expected jobs from fallback vectors, got 0")
+	for _, vector := range vectors {
+		if strings.Contains(vector.Route, "login.php") || strings.Contains(vector.Route, "notes.php") {
+			t.Fatalf("fallback must not invent lab routes, got %s", vector.Route)
+		}
 	}
 }
 
-func TestFallbackVectorsIncludeNextRoutes(t *testing.T) {
-	vectors := fallbackVectors("http://localhost:3000")
-	routes := make([]string, 0, len(vectors))
-	for _, vector := range vectors {
-		routes = append(routes, vector.Route)
-	}
-
-	hasLogin := false
-	hasProjects := false
-	for _, route := range routes {
-		if strings.Contains(route, "/login") {
-			hasLogin = true
-		}
-		if strings.Contains(route, "/projetos") {
-			hasProjects = true
-		}
-	}
-
-	if !hasLogin || !hasProjects {
-		t.Fatalf("expected Next.js fallback routes, got %v", routes)
+func TestFallbackVectorsEmpty(t *testing.T) {
+	if got := fallbackVectors("  "); got != nil {
+		t.Fatalf("expected nil, got %+v", got)
 	}
 }

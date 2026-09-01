@@ -24,6 +24,7 @@ class RemediationCatalogSeeder extends Seeder
         $laravel = Stack::query()->where('slug', 'laravel')->firstOrFail();
         $express = Stack::query()->where('slug', 'express')->firstOrFail();
         $react = Stack::query()->where('slug', 'react')->firstOrFail();
+        $angular = Stack::query()->where('slug', 'angular')->firstOrFail();
 
         $entries = [
             // Vanilla PHP — alvo vulnerável de laboratório (DAST)
@@ -128,6 +129,15 @@ class RemediationCatalogSeeder extends Seeder
                 'description' => 'Do not render untrusted HTML. Prefer text nodes or sanitize before using dangerouslySetInnerHTML.',
                 'code_snippet' => "// Prefer:\n<p>{userInput}</p>\n\n// If HTML is required, sanitize first:\nimport DOMPurify from 'dompurify';\n<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />",
                 'references' => ['https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html'],
+            ],
+            // Angular
+            [
+                'stack_id' => $angular->id,
+                'attack_category' => AttackCategory::Xss,
+                'title' => 'Keep Angular interpolation and avoid bypassing sanitizer',
+                'description' => 'Bind untrusted input as text. Do not use bypassSecurityTrustHtml unless the value is already sanitized.',
+                'code_snippet' => "import { Component } from '@angular/core';\n\n@Component({ selector: 'app-search', template: '<p>{{ query }}</p>' })\nexport class SearchComponent {\n  query = '';\n}",
+                'references' => ['https://angular.dev/best-practices/security'],
             ],
         ];
 

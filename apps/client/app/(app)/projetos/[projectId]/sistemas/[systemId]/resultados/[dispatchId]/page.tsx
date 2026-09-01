@@ -5,6 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useResults } from "@/lib/hooks/results/use-results";
 import type { DispatchProbeListFilter } from "@/lib/contracts";
+import {
+  dispatchStatusLabel,
+  dispatchStatusTone,
+} from "@/lib/contracts/attack/attack";
 import type { AttackDispatch } from "@/lib/contracts/attack/attack";
 import type { PaginationMeta, SystemResult } from "@/lib/contracts/results/result";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
@@ -172,10 +176,8 @@ export default function ResultsDetailPage() {
                 Disparo {formatDate(dispatch?.dispatched_at)}
               </h1>
               <ScanTypeBadge scanType={dispatch?.scan_type} />
-              <Badge
-                tone={dispatch?.status === "completed" ? "success" : "warning"}
-              >
-                {dispatch?.status === "completed" ? "Concluido" : "Processando"}
+              <Badge tone={dispatchStatusTone(dispatch?.status ?? "pending")}>
+                {dispatchStatusLabel(dispatch?.status ?? "pending")}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -189,6 +191,11 @@ export default function ResultsDetailPage() {
                 ? ` · ${formatDuration(dispatch.duration_ms)}`
                 : ""}
             </p>
+            {dispatch?.status === "failed" ? (
+              <p className="text-sm text-danger">
+                O scan nao foi concluido. Tente disparar novamente.
+              </p>
+            ) : null}
           </div>
 
           {dispatch?.status === "completed" ? (

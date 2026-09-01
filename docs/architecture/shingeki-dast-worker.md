@@ -17,7 +17,7 @@ flowchart LR
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
 3. **Attack** aplica injectors conforme categoria e local do vetor.
 4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing; diff de corpo só para categorias sem validador específico).
-5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed`.
+5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed` com `status` `completed` ou `failed`.
 
 ## Pacotes `internal/`
 
@@ -26,16 +26,14 @@ flowchart LR
 | `config` | Variáveis de ambiente (RabbitMQ, flags de discovery) |
 | `queue` | Conexão, declare de filas, consumer e publisher |
 | `contracts` | Tipos de dispatch, result, completion (JSON alinhado à API) |
-| `discovery` | Orquestra BFS + crawlers estático (Colly) e dinâmico (Rod/SPA) |
-| `discovery/static` | Colly — HTML estático |
-| `discovery/dynamic` | Rod — click/explore em SPA quando `DISCOVERY_ROD_ENABLED=true` |
-| `discovery/bfs` | Fila de URLs/fronteira de exploração |
+| `discovery` | Orquestra crawler dinâmico (Rod/SPA) com fallback estático (Colly) |
+| `discovery/static` | Colly — HTML estático, só se o Chromium falhar ou Rod estiver desligado |
+| `discovery/dynamic` | Rod — browser-first: DOM renderizado, cliques, forms e XHR/fetch |
+| `discovery/bfs` | Fila de prioridade de URLs (score) e filtros de origem/blocklist |
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
 | `evidence` | Motor de validação (regex, markers de path traversal, timing; diff genérico limitado) |
-| `evidence/xss` | Rod para diálogo/alerta em XSS |
 | `orchestrator` | Liga discovery → attack → evidence → publish |
-| `oast` | Cliente opcional para cenários out-of-band |
 
 ## Filas RabbitMQ
 
@@ -108,20 +106,24 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 
 ## Discovery
 
-- **Estático**: Colly segue links e formulários em HTML tradicional.
-- **Dinâmico** (Rod, quando `DISCOVERY_ROD_ENABLED=true`): após o seed, faz **click/explore** — clica botões/links da UI, observa mudança de URL e XHR same-origin, e monta vetores. Prioriza ações CRUD (criar/editar/…); ignora logout/mailto/javascript e URLs da blocklist (`/cdn-cgi/`, analytics, assets).
-- **BFS estático / budgets**: `depth` (`quick`/`full`) ajusta `MaxDepth`/`MaxPages` e desliga Rod no `quick`. `start_path` define a semente; `max_routes` sobrescreve `MaxPages`. Clique limitado por `DISCOVERY_MAX_CLICKS` (default 80); settle pós-clique em `DISCOVERY_EXPLORE_SETTLE` (default `1500ms`).
-- Com `start_path` presente, o composite dispara Rod mesmo se o Colly já tiver vetores suficientes (explore focado na feature).
+- **Dinâmico (principal)**: Rod/Chromium, quando `DISCOVERY_ROD_ENABLED=true`. Abre o seed, espera o JavaScript (`WaitLoad` + settle), clica botões/`role=button`/`onclick`, preenche formulários com dados fictícios e observa o tráfego de rede. URLs entram numa **fila de prioridade** (score): rotas com `api`/`admin`/`estoque`/CRUD sobem; `blog`/`faq`/paginação descem.
+- **Rede**: observação passiva (`NetworkRequestWillBeSent`). POST/PUT/PATCH/DELETE no mesmo registrable domain (REST e GraphQL, inclusive `api.`) viram vetores. Sem hijack de `fetch`. Rotas XHR gravadas pela extensão entram no mapa mesmo se o Chromium headless cair no login.
+- **Sessão**: replay estruturado — cookies com domain/path/SameSite/HttpOnly/partition, `Authorization`, `auth.storage` (local/session por origem) e User-Agent da captura. Injeta na origem antes do seed. Redirect para `/login` **não aborta** o crawl: segue rotas gravadas. Se não houver Bearer, sintetiza a partir de chaves no storage (`access_token`, `jwt`, …) para a fase HTTP.
+- **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless. `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair com o mesmo IP da sessão capturada.
+- **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML; também visita rotas gravadas.
+- **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
 
 ### Variáveis úteis (discovery)
 
 | Env | Default | Papel |
 |-----|---------|--------|
-| `DISCOVERY_ROD_ENABLED` | `false` | Liga Chromium/Rod |
+| `DISCOVERY_ROD_ENABLED` | `false` | Liga Chromium/Rod (principal) |
 | `DISCOVERY_MAX_PAGES` | `50` | Páginas/estados no crawl |
 | `DISCOVERY_MAX_CLICKS` | `80` | Cliques no explore Rod |
-| `DISCOVERY_EXPLORE_SETTLE` | `1500ms` | Espera após navigate/click |
-| `DISCOVERY_MIN_VECTORS_FOR_ROD` | `2` | Sem `start_path`, Rod só se Colly achar poucos vetores |
+| `DISCOVERY_MAX_FORM_SUBMITS` | `8` | Submits de formulário por job |
+| `DISCOVERY_EXPLORE_SETTLE` | `1500ms` | Espera após navigate/click/submit |
+| `DISCOVERY_CDP_URL` | vazio | Anexa a um Chrome existente; se a porta estiver fechada, lança o Chromium do container |
+| `DISCOVERY_PROXY` | vazio | `proxy-server` do Chromium (SOCKS/HTTP) para o mesmo IP da captura |
 
 ## Execução de ataques
 
@@ -132,4 +134,4 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 ## Relação com a API e o alvo
 
 - A API publica o batch após validar o aceite de responsabilidade no dispatch ([ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md)) e a policy do sistema.
-- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já autorizado pela API no dispatch. Alvo de lab: [vulnerable-target](shingeki-vulnerable-target.md).
+- O worker não autentica no Sanctum; confia no `target_url` e no conteúdo já autorizado pela API no dispatch. Alvo de lab: [vulnerable-target](shingeki-vulnerable-target.md). Treino: [Juice Shop](shingeki-juice-shop.md).

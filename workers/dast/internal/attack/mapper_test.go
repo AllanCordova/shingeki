@@ -94,3 +94,51 @@ func TestMapVectorsToJobsExpandsPayloadValues(t *testing.T) {
 		t.Fatalf("expected both path payloads, got %v", got)
 	}
 }
+
+func TestMapVectorsToJobsJSONBodyMatchesAPIEndpoint(t *testing.T) {
+	vectors := []contracts.AttackVector{
+		{
+			Route:          "https://shop.example/rest/user/login",
+			Method:         "POST",
+			TargetLocation: "API_ENDPOINT",
+			Params:         map[string]string{"email": "", "password": ""},
+		},
+	}
+	attacks := []contracts.AttackItem{
+		{
+			AttackID:       "atk-sql-json",
+			Category:       "SQL_INJECTION",
+			TargetLocation: "JSON_BODY",
+			Payload:        json.RawMessage(`{"value":"' OR 1=1 --","values":["' OR 1=1 --"]}`),
+		},
+	}
+
+	jobs := attack.MapVectorsToJobs(vectors, attacks)
+	if len(jobs) != 2 {
+		t.Fatalf("expected 2 jobs (email+password), got %d", len(jobs))
+	}
+}
+
+func TestMapVectorsToJobsWithoutFieldExpandsParams(t *testing.T) {
+	vectors := []contracts.AttackVector{
+		{
+			Route:          "https://example.com/login",
+			Method:         "POST",
+			TargetLocation: "FORM",
+			Params:         map[string]string{"email": "", "password": ""},
+		},
+	}
+	attacks := []contracts.AttackItem{
+		{
+			AttackID:       "atk-sql",
+			Category:       "SQL_INJECTION",
+			TargetLocation: "FORM",
+			Payload:        json.RawMessage(`{"value":"' OR 1=1 --"}`),
+		},
+	}
+
+	jobs := attack.MapVectorsToJobs(vectors, attacks)
+	if len(jobs) != 2 {
+		t.Fatalf("expected jobs for every form field, got %d", len(jobs))
+	}
+}

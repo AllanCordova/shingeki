@@ -3,7 +3,6 @@
 import {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
   type PointerEvent,
@@ -12,6 +11,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { useObjectUrl } from "@/lib/cover/use-object-url";
 import { cn } from "@/lib/utils";
 
 const OUTPUT_SIZE = 512;
@@ -59,25 +59,22 @@ function AvatarCropWorkspace({
   onCancel,
   onConfirm,
 }: AvatarCropDialogProps) {
-  const imageUrl = useMemo(() => {
-    if (!open || !file) return null;
-    return URL.createObjectURL(file);
-  }, [open, file]);
+  const objectUrl = useObjectUrl(open ? file : null);
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const imageUrl = dataUrl ?? objectUrl;
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
   const [naturalSize, setNaturalSize] = useState<Point | null>(null);
   const [viewportSize, setViewportSize] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const dragStartRef = useRef<{
     pointer: Point;
     offset: Point;
   } | null>(null);
-
-  useEffect(() => {
-    if (!imageUrl) return;
-    return () => URL.revokeObjectURL(imageUrl);
-  }, [imageUrl]);
 
   const clampOffset = useCallback(
     (next: Point, nextZoom: number, size: Point, viewport: number) => {
@@ -95,6 +92,32 @@ function AvatarCropWorkspace({
     [],
   );
 
+  useEffect(() => {
+    setDataUrl(null);
+  }, [objectUrl]);
+
+  useEffect(() => {
+    const node = viewportRef.current;
+    if (!open || !node) return;
+
+    const updateSize = () => {
+      const size = Math.round(node.getBoundingClientRect().width);
+      if (size > 0) setViewportSize(size);
+    };
+
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [open, imageUrl]);
+
+  useEffect(() => {
+    if (!naturalSize || viewportSize <= 0) return;
+    setOffset((current) =>
+      clampOffset(current, zoom, naturalSize, viewportSize),
+    );
+  }, [clampOffset, naturalSize, viewportSize, zoom]);
+
   const applyZoom = (nextZoom: number) => {
     if (!naturalSize || viewportSize <= 0) {
       setZoom(clamp(nextZoom, MIN_ZOOM, MAX_ZOOM));
@@ -108,18 +131,43 @@ function AvatarCropWorkspace({
     );
   };
 
-  const handleViewportRef = (node: HTMLDivElement | null) => {
-    if (!node) return;
-    setViewportSize(node.clientWidth);
-  };
-
   const handleImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
     const img = event.currentTarget;
     const size = { x: img.naturalWidth, y: img.naturalHeight };
-    setNaturalSize(size);
-    if (viewportSize > 0) {
-      setOffset(clampOffset({ x: 0, y: 0 }, zoom, size, viewportSize));
+    if (size.x <= 0 || size.y <= 0) {
+      setLoadError(
+        "Não foi possível carregar a imagem. Tente um arquivo JPG, PNG ou WebP.",
+      );
+      return;
     }
+
+    setLoadError(null);
+    setNaturalSize(size);
+  };
+
+  const handleImageError = () => {
+    if (file && !dataUrl) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setDataUrl(reader.result);
+          setLoadError(null);
+        }
+      };
+      reader.onerror = () => {
+        setNaturalSize(null);
+        setLoadError(
+          "Não foi possível carregar a imagem. No iPhone, escolha JPG, PNG ou WebP — fotos HEIC podem falhar.",
+        );
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    setNaturalSize(null);
+    setLoadError(
+      "Não foi possível carregar a imagem. No iPhone, escolha JPG, PNG ou WebP — fotos HEIC podem falhar.",
+    );
   };
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
@@ -165,20 +213,28 @@ function AvatarCropWorkspace({
   };
 
   const handleConfirm = async () => {
-    if (!imageUrl || !naturalSize || !file || viewportSize <= 0) return;
+    const img = imageRef.current;
+    const viewport =
+      viewportSize ||
+      Math.round(viewportRef.current?.getBoundingClientRect().width ?? 0);
+
+    if (!img || !naturalSize || !file || viewport <= 0) {
+      setLoadError("Não foi possível enquadrar a foto. Tente novamente.");
+      return;
+    }
 
     setIsSaving(true);
+    setLoadError(null);
     try {
-      const img = await loadImageElement(imageUrl);
       const coverScale = Math.max(
-        viewportSize / naturalSize.x,
-        viewportSize / naturalSize.y,
+        viewport / naturalSize.x,
+        viewport / naturalSize.y,
       );
       const scale = coverScale * zoom;
       const sourceScale = 1 / scale;
       const centerX = naturalSize.x / 2 - offset.x * sourceScale;
       const centerY = naturalSize.y / 2 - offset.y * sourceScale;
-      const sourceSize = viewportSize * sourceScale;
+      const sourceSize = viewport * sourceScale;
       const sx = centerX - sourceSize / 2;
       const sy = centerY - sourceSize / 2;
 
@@ -202,17 +258,17 @@ function AvatarCropWorkspace({
         OUTPUT_SIZE,
       );
 
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((result) => {
-          if (result) resolve(result);
-          else reject(new Error("Falha ao gerar a imagem."));
-        }, "image/png");
-      });
-
+      const blob = await canvasToPngBlob(canvas);
       const baseName = file.name.replace(/\.[^.]+$/, "") || "avatar";
       onConfirm(
         new File([blob], `${baseName}-avatar.png`, { type: "image/png" }),
       );
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Não foi possível gerar a imagem recortada.";
+      setLoadError(message);
     } finally {
       setIsSaving(false);
     }
@@ -249,7 +305,7 @@ function AvatarCropWorkspace({
           <Button
             type="button"
             isLoading={isSaving}
-            disabled={!naturalSize}
+            disabled={!naturalSize || Boolean(loadError)}
             onClick={() => void handleConfirm()}
           >
             Usar esta foto
@@ -259,7 +315,7 @@ function AvatarCropWorkspace({
     >
       <div className="flex flex-col gap-4">
         <div
-          ref={handleViewportRef}
+          ref={viewportRef}
           className={cn(
             "relative mx-auto aspect-square w-full max-w-sm touch-none overflow-hidden rounded-full border border-border bg-muted",
             isDragging ? "cursor-grabbing" : "cursor-grab",
@@ -274,10 +330,12 @@ function AvatarCropWorkspace({
             // Object URL preview for crop; next/image is not suited for blob transforms.
             // eslint-disable-next-line @next/next/no-img-element
             <img
+              ref={imageRef}
               src={imageUrl}
               alt="Enquadramento do avatar"
               draggable={false}
               onLoad={handleImageLoad}
+              onError={handleImageError}
               className="pointer-events-none absolute left-1/2 top-1/2 max-w-none select-none"
               style={{
                 width: displayWidth,
@@ -287,6 +345,10 @@ function AvatarCropWorkspace({
             />
           ) : null}
         </div>
+
+        {loadError ? (
+          <p className="text-center text-sm text-danger">{loadError}</p>
+        ) : null}
 
         <div className="flex items-center gap-3">
           <Button
@@ -328,12 +390,34 @@ function AvatarCropWorkspace({
   );
 }
 
-function loadImageElement(src: string): Promise<HTMLImageElement> {
+function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = () =>
-      reject(new Error("Não foi possível carregar a imagem."));
-    img.src = src;
+    canvas.toBlob((result) => {
+      if (result) {
+        resolve(result);
+        return;
+      }
+
+      try {
+        const dataUrl = canvas.toDataURL("image/png");
+        resolve(dataUrlToBlob(dataUrl));
+      } catch {
+        reject(new Error("Falha ao gerar a imagem."));
+      }
+    }, "image/png");
   });
+}
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [header, data] = dataUrl.split(",");
+  if (!data) throw new Error("Falha ao gerar a imagem.");
+
+  const mime = header.match(/data:(.*?);/)?.[1] ?? "image/png";
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+
+  return new Blob([bytes], { type: mime });
 }

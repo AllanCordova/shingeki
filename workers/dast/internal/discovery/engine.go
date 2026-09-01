@@ -10,7 +10,16 @@ type Engine interface {
 	Discover(
 		ctx context.Context,
 		targetURL string,
-		authHeaders map[string]string,
+		auth *contracts.TargetAuth,
 		opts Options,
+	) ([]contracts.AttackVector, error)
+}
+
+type crawlEngine interface {
+	Discover(
+		ctx context.Context,
+		targetURL string,
+		auth *contracts.TargetAuth,
+		seedURL string,
 	) ([]contracts.AttackVector, error)
 }

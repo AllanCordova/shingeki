@@ -36,7 +36,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
   {
     id: "spa-backend",
     name: "SPA + backend",
-    description: "Frontend React/Next.js com API separada.",
+    description: "Frontend React/Angular/Next.js com API separada.",
     project: {
       name: "Produto web",
       description: "Aplicacao com frontend e backend integrados.",
@@ -46,7 +46,7 @@ export const PROJECT_TEMPLATES: ProjectTemplate[] = [
       target_url: "https://app.exemplo.com",
       login_url: "https://app.exemplo.com/login",
       repository_url: "https://github.com/org/spa-backend",
-      stackSlugs: ["react", "nextjs", "express"],
+      stackSlugs: ["react", "angular", "nextjs", "express"],
     },
     suggestedScan: "dast",
   },

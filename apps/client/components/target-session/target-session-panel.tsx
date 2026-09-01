@@ -296,9 +296,25 @@ export function TargetSessionPanel({
                   {name}
                 </Badge>
               ))}
+              {session.replay && session.replay.cookie_count > 0 ? (
+                <Badge tone="neutral">
+                  {session.replay.cookie_count} cookie(s)
+                </Badge>
+              ) : null}
+              {session.replay && session.replay.route_count > 0 ? (
+                <Badge tone="neutral">
+                  {session.replay.route_count} rota(s)
+                </Badge>
+              ) : null}
+              {session.replay?.has_storage ? (
+                <Badge tone="neutral">storage</Badge>
+              ) : null}
             </div>
             <p className="text-sm text-muted-foreground">
               Os próximos scans utilizarão esta sessão automaticamente.
+              {session.replay && session.replay.route_count === 0
+                ? " Recapture logado e navegue no alvo antes de Capturar para gravar XHR."
+                : ""}
             </p>
             <div className="flex flex-wrap gap-2">
               <Button

@@ -79,6 +79,92 @@ test('completes capture from ticket with cookie header', function () {
         ->assertJsonPath('auth_type', 'cookie');
 });
 
+test('completes capture with browser storage maps', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->for($user)->create();
+    $system = System::factory()->for($project)->create();
+
+    $start = app(TargetSessionCaptureService::class)->start(
+        $user,
+        $system,
+        'http://localhost:3000',
+    );
+
+    $this->postJson('/api/target-session/capture/'.$start['ticket'], [
+        'cookie' => 'PHPSESSID=abc123',
+        'local_storage' => ['access_token' => 'header.payload.signature'],
+        'session_storage' => ['spa_tab' => '1'],
+    ])->assertOk();
+
+    $session = SystemTargetSession::query()->first();
+    expect($session->storage)->toBe([
+        'local' => ['access_token' => 'header.payload.signature'],
+        'session' => ['spa_tab' => '1'],
+    ]);
+
+    $auth = app(\App\Services\TargetSession\TargetSessionService::class)
+        ->resolveQueueAuth($user, $system);
+
+    expect($auth['storage'])->toBe([
+        'local' => ['access_token' => 'header.payload.signature'],
+        'session' => ['spa_tab' => '1'],
+    ]);
+});
+
+test('completes capture with structured cookies routes and user agent', function () {
+    $user = User::factory()->create();
+    $project = Project::factory()->for($user)->create();
+    $system = System::factory()->for($project)->create();
+
+    $start = app(TargetSessionCaptureService::class)->start(
+        $user,
+        $system,
+        'http://localhost:3000',
+    );
+
+    $this->postJson('/api/target-session/capture/'.$start['ticket'], [
+        'cookies' => [
+            [
+                'name' => 'PHPSESSID',
+                'value' => 'abc123',
+                'domain' => '.example.com',
+                'path' => '/',
+                'secure' => true,
+                'httpOnly' => true,
+                'sameSite' => 'lax',
+                'hostOnly' => false,
+            ],
+        ],
+        'user_agent' => 'Mozilla/5.0 TestAgent',
+        'routes' => [
+            ['method' => 'GET', 'url' => 'https://www.example.com/api/items', 'type' => 'xmlhttprequest'],
+            ['method' => 'GET', 'url' => 'https://www.example.com/api/items', 'type' => 'xmlhttprequest'],
+        ],
+        'origins' => [
+            [
+                'origin' => 'https://www.example.com',
+                'local' => ['access_token' => 'header.payload.signature'],
+                'session' => [],
+            ],
+        ],
+    ])
+        ->assertOk()
+        ->assertJsonPath('replay.cookie_count', 1)
+        ->assertJsonPath('replay.route_count', 1)
+        ->assertJsonPath('replay.has_storage', true)
+        ->assertJsonPath('replay.has_user_agent', true);
+
+    $auth = app(\App\Services\TargetSession\TargetSessionService::class)
+        ->resolveQueueAuth($user, $system);
+
+    expect($auth['headers']['Cookie'])->toBe('PHPSESSID=abc123')
+        ->and($auth['cookies'][0]['domain'])->toBe('.example.com')
+        ->and($auth['cookies'][0]['httpOnly'])->toBeTrue()
+        ->and($auth['user_agent'])->toBe('Mozilla/5.0 TestAgent')
+        ->and($auth['routes'])->toHaveCount(1)
+        ->and($auth['storage']['origins'][0]['origin'])->toBe('https://www.example.com');
+});
+
 test('rejects platform sanctum token as target capture credential', function () {
     $user = User::factory()->create();
     $project = Project::factory()->for($user)->create();

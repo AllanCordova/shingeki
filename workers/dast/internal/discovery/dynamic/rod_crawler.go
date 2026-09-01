@@ -2,26 +2,24 @@ package dynamic
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/launcher"
 	"github.com/go-rod/rod/lib/proto"
 
 	"github.com/shingeki/dast-worker/internal/config"
 	"github.com/shingeki/dast-worker/internal/contracts"
 	"github.com/shingeki/dast-worker/internal/discovery/bfs"
+	"github.com/shingeki/dast-worker/pkg/httputil"
 )
 
-const clickableSelector = `a[href], button, [role="button"], [role="link"]`
+const clickableSelector = `a[href], button, [role="button"], [role="link"], [onclick], input[type="submit"], input[type="button"]`
 
-// Prefer a desktop Chrome UA so headless Chromium does not advertise HeadlessChrome.
 const stealthUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 type RodCrawler struct {
@@ -40,7 +38,7 @@ func NewRodCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.AttackC
 func (r *RodCrawler) Discover(
 	ctx context.Context,
 	targetURL string,
-	authHeaders map[string]string,
+	auth *contracts.TargetAuth,
 	seedURL string,
 ) ([]contracts.AttackVector, error) {
 	if !r.cfg.RodEnabled {
@@ -53,11 +51,12 @@ func (r *RodCrawler) Discover(
 	launchCtx, launchCancel := context.WithTimeout(ctx, r.cfg.BrowserLaunchTimeout)
 	defer launchCancel()
 
-	browser, cleanup, err := r.launchBrowser(launchCtx)
+	connected, err := connectBrowser(launchCtx, r.cfg, r.logger)
 	if err != nil {
 		return nil, err
 	}
-	defer cleanup()
+	browser := connected.browser
+	defer connected.cleanup()
 
 	exploreTimeout := r.exploreBudget()
 	exploreCtx, exploreCancel := context.WithTimeout(ctx, exploreTimeout)
@@ -69,20 +68,26 @@ func (r *RodCrawler) Discover(
 	}
 	defer page.Close()
 
-	if err := r.applyStealth(page); err != nil {
+	userAgent := ""
+	if auth != nil {
+		userAgent = auth.UserAgent
+	}
+	if err := applyStealth(page, userAgent); err != nil {
 		r.logger.Warn("stealth profile incomplete", "error", err)
 	}
 
+	var mu sync.Mutex
 	vectors := make(map[string]contracts.AttackVector)
 	record := func(vector contracts.AttackVector) {
 		if !bfs.IsAttackableDiscoveryURL(targetURL, vector.Route) {
 			return
 		}
 		key := vector.Method + " " + vector.Route + " " + vector.TargetLocation
+		mu.Lock()
 		vectors[key] = vector
+		mu.Unlock()
 	}
 
-	// Passive network observation only. Fetch hijacking broke authenticated SaaS sessions.
 	if err := (proto.NetworkEnable{}).Call(page); err != nil {
 		return nil, fmt.Errorf("enable network domain: %w", err)
 	}
@@ -90,78 +95,52 @@ func (r *RodCrawler) Discover(
 		if e == nil || e.Request == nil {
 			return
 		}
-		method := strings.ToUpper(e.Request.Method)
-		route := e.Request.URL
-		contentType := ""
-		if e.Request.Headers != nil {
-			if v, ok := e.Request.Headers["Content-Type"]; ok {
-				contentType = v.String()
-			} else if v, ok := e.Request.Headers["content-type"]; ok {
-				contentType = v.String()
-			}
+		contentType := headerFromNetwork(e.Request.Headers, "Content-Type")
+		vector, ok := networkVector(targetURL, e.Request.Method, e.Request.URL, contentType, e.Request.PostData)
+		if ok {
+			record(vector)
 		}
-		vector := contracts.NewAttackVector(route, method, classifyTargetLocation(method, contentType))
-		if body := e.Request.PostData; body != "" {
-			vector.Body = body
-			mergeJSONParams(vector, body)
-		}
-		if u, err := url.Parse(route); err == nil {
-			for key, values := range u.Query() {
-				if len(values) > 0 {
-					vector.Params[key] = values[0]
-				}
-			}
-		}
-		record(vector)
 	})()
 
-	cookies := cookieParamsFromAuth(seedURL, authHeaders)
-
-	if len(cookies) > 0 {
-		// Set on the browser before any navigation. Warm-up to "/" triggered hcaptcha
-		// and is unnecessary once URL-scoped cookies work.
-		if err := browser.SetCookies(cookies); err != nil {
-			r.logger.Warn("browser set auth cookies failed", "error", err, "count", len(cookies))
-			if err := page.SetCookies(cookies); err != nil {
-				r.logger.Warn("set auth cookies failed", "error", err, "count", len(cookies))
-			}
-		} else {
-			r.logger.Info("applied auth cookies for dynamic discovery",
-				"count", len(cookies),
-				"has_cookie_header", true,
-			)
+	authHeaders := contracts.EffectiveAuthHeaders(auth)
+	if err := injectBrowserAuth(browser, page, targetURL, seedURL, auth); err != nil {
+		r.logger.Warn("browser auth injection incomplete", "error", err)
+	} else if hasSessionAuth(auth) {
+		storage := (*contracts.TargetStorage)(nil)
+		if auth != nil {
+			storage = auth.Storage
 		}
-
-		cookieHeader := cookieHeaderValue(authHeaders)
-		if cookieHeader != "" {
-			if _, err := page.SetExtraHeaders([]string{"Cookie", cookieHeader}); err != nil {
-				r.logger.Warn("set cookie extra header failed", "error", err)
-			}
-		}
-	} else if len(authHeaders) == 0 {
-		r.logger.Warn("dynamic discovery running without auth headers; authenticated SPA routes may redirect to login")
-	}
-
-	if err := page.Navigate(seedURL); err != nil {
-		return nil, fmt.Errorf("navigate %q: %w", seedURL, err)
-	}
-	_ = page.WaitLoad()
-	r.settle(exploreCtx)
-
-	if landed := pageURL(page); looksLikeLoginURL(landed) {
-		r.logger.Warn("seed landed on login page; auth cookies may be missing or invalid — skipping click explore",
-			"seed", seedURL,
-			"landed", landed,
-			"has_cookie_header", hasCookieAuth(authHeaders),
+		r.logger.Info("applied target session for dynamic discovery",
+			"has_cookie_header", hasCookieAuth(auth),
+			"has_authorization", headerValue(authHeaders, "Authorization") != "",
+			"has_storage", storage != nil && (len(storage.Local) > 0 || len(storage.Session) > 0 || len(storage.Origins) > 0),
+			"structured_cookies", auth != nil && len(auth.Cookies) > 0,
+			"recorded_routes", auth != nil && len(auth.Routes) > 0,
+			"has_user_agent", userAgent != "",
 		)
-		record(contracts.NewAttackVector(landed, "GET", "URL_PATH"))
-		return finalizeVectors(vectors, r, seedURL, targetURL, 1, 0), nil
+	} else {
+		r.logger.Warn("dynamic discovery running without auth; authenticated SPA routes may redirect to login")
 	}
 
-	visitedPages := make(map[string]struct{})
+	queue := bfs.NewQueue()
+	queue.Enqueue(seedURL, 0)
+	if auth != nil {
+		for _, route := range auth.Routes {
+			rawURL := strings.TrimSpace(route.URL)
+			if rawURL == "" || !bfs.IsAttackableDiscoveryURL(targetURL, rawURL) {
+				continue
+			}
+			queue.Enqueue(rawURL, 0)
+		}
+	}
+
 	clicked := make(map[string]struct{})
+	submitted := make(map[string]struct{})
 	pagesVisited := 0
 	clicks := 0
+	formSubmits := 0
+	hasSession := hasSessionAuth(auth)
+
 	maxPages := r.cfg.MaxPages
 	if maxPages <= 0 {
 		maxPages = 50
@@ -170,102 +149,168 @@ func (r *RodCrawler) Discover(
 	if maxClicks <= 0 {
 		maxClicks = 80
 	}
+	maxForms := r.cfg.MaxFormSubmits
+	if maxForms <= 0 {
+		maxForms = 8
+	}
 
 	for {
 		if err := exploreCtx.Err(); err != nil {
 			break
 		}
-		if pagesVisited >= maxPages || clicks >= maxClicks {
+		if pagesVisited >= maxPages {
 			break
 		}
 
-		currentURL := pageURL(page)
-		if currentURL == "" {
+		item, ok := queue.Dequeue()
+		if !ok {
 			break
 		}
-		if !bfs.IsAttackableDiscoveryURL(targetURL, currentURL) {
-			_ = page.Navigate(seedURL)
-			_ = page.WaitLoad()
-			r.settle(exploreCtx)
+		if item.Depth > r.cfg.MaxDepth {
 			continue
 		}
 
-		norm, ok := bfs.NormalizeURL(currentURL)
-		if !ok {
-			norm = currentURL
-		}
-		if _, seen := visitedPages[norm]; !seen {
-			visitedPages[norm] = struct{}{}
-			pagesVisited++
-			record(contracts.NewAttackVector(currentURL, "GET", "URL_PATH"))
-		}
-
-		candidates, err := r.collectClickables(page, currentURL)
-		if err != nil {
-			r.logger.Warn("collect clickables failed", "url", currentURL, "error", err)
-			break
-		}
-
-		var next *clickCandidate
-		for i := range candidates {
-			c := &candidates[i]
-			if _, done := clicked[c.Key]; done {
-				continue
-			}
-			next = c
-			break
-		}
-		if next == nil {
-			break
-		}
-
-		clicked[next.Key] = struct{}{}
-		clicks++
-
-		beforeURL := currentURL
-		if err := r.clickCandidate(page, *next); err != nil {
-			r.logger.Warn("click failed", "text", next.Text, "href", next.Href, "error", err)
+		if err := page.Navigate(item.URL); err != nil {
+			r.logger.Warn("navigate failed", "url", item.URL, "error", err)
 			continue
 		}
 		_ = page.WaitLoad()
 		r.settle(exploreCtx)
 
-		afterURL := pageURL(page)
-		if afterURL == "" {
+		currentURL := pageURL(page)
+		if currentURL == "" {
 			continue
 		}
-		if looksLikeLoginURL(afterURL) {
-			r.logger.Warn("click reached login page; stopping explore",
-				"from", beforeURL,
-				"to", afterURL,
+		if looksLikeLoginURL(currentURL) && hasSession {
+			r.logger.Warn("page looks like login; session replay may have been rejected — continuing with recorded routes",
+				"seed", item.URL,
+				"landed", currentURL,
 			)
-			break
+			record(contracts.NewAttackVector(currentURL, "GET", "URL_PATH"))
+			continue
 		}
-		if !bfs.IsAttackableDiscoveryURL(targetURL, afterURL) {
-			r.logger.Info("click left attackable origin; returning to seed",
-				"from", beforeURL,
-				"to", afterURL,
-			)
-			_ = page.Navigate(seedURL)
+		if !bfs.IsAttackableDiscoveryURL(targetURL, currentURL) {
+			continue
+		}
+
+		pagesVisited++
+		record(contracts.NewAttackVector(currentURL, "GET", "URL_PATH"))
+
+		for _, link := range r.collectLinks(page, currentURL) {
+			if bfs.IsAttackableDiscoveryURL(targetURL, link) {
+				queue.Enqueue(link, item.Depth+1)
+			}
+		}
+
+		candidates, err := r.collectClickables(page, currentURL)
+		if err != nil {
+			r.logger.Warn("collect clickables failed", "url", currentURL, "error", err)
+		} else {
+			for _, candidate := range candidates {
+				if exploreCtx.Err() != nil || clicks >= maxClicks {
+					break
+				}
+				if _, done := clicked[candidate.Key]; done {
+					continue
+				}
+				clicked[candidate.Key] = struct{}{}
+				clicks++
+
+				if href := strings.TrimSpace(candidate.Href); href != "" && !hasPrefixFold(href, "#") {
+					if resolved, ok := bfs.ResolveReference(currentURL, href); ok {
+						if bfs.IsAttackableDiscoveryURL(targetURL, resolved) {
+							queue.Enqueue(resolved, item.Depth+1)
+						}
+					}
+				}
+
+				if err := r.clickCandidate(page, candidate); err != nil {
+					r.logger.Warn("click failed", "text", candidate.Text, "href", candidate.Href, "error", err)
+					_ = page.Navigate(currentURL)
+					_ = page.WaitLoad()
+					r.settle(exploreCtx)
+					continue
+				}
+				_ = page.WaitLoad()
+				r.settle(exploreCtx)
+
+				afterURL := pageURL(page)
+				if afterURL == "" {
+					continue
+				}
+				if looksLikeLoginURL(afterURL) && hasSession {
+					r.logger.Warn("click reached login page; returning to previous page",
+						"from", currentURL,
+						"to", afterURL,
+					)
+					record(contracts.NewAttackVector(afterURL, "GET", "URL_PATH"))
+					_ = page.Navigate(currentURL)
+					_ = page.WaitLoad()
+					r.settle(exploreCtx)
+					continue
+				}
+				if bfs.IsAttackableDiscoveryURL(targetURL, afterURL) {
+					queue.Enqueue(afterURL, item.Depth+1)
+				}
+				if afterURL != currentURL {
+					_ = page.Navigate(currentURL)
+					_ = page.WaitLoad()
+					r.settle(exploreCtx)
+				}
+			}
+		}
+
+		forms, err := r.collectForms(page)
+		if err != nil {
+			r.logger.Warn("collect forms failed", "url", currentURL, "error", err)
+			continue
+		}
+		for _, form := range forms {
+			if exploreCtx.Err() != nil || formSubmits >= maxForms {
+				break
+			}
+			key := formKey(form)
+			if _, done := submitted[key]; done {
+				continue
+			}
+			if shouldSkipForm(form, hasSession) {
+				continue
+			}
+			submitted[key] = struct{}{}
+			formSubmits++
+			if err := r.submitForm(page, form); err != nil {
+				r.logger.Warn("form submit failed", "action", form.Action, "error", err)
+			}
 			_ = page.WaitLoad()
 			r.settle(exploreCtx)
-			continue
+			afterURL := pageURL(page)
+			if afterURL != "" && bfs.IsAttackableDiscoveryURL(targetURL, afterURL) {
+				queue.Enqueue(afterURL, item.Depth+1)
+			}
+			if afterURL != currentURL {
+				_ = page.Navigate(currentURL)
+				_ = page.WaitLoad()
+				r.settle(exploreCtx)
+			}
 		}
 	}
 
-	return finalizeVectors(vectors, r, seedURL, targetURL, pagesVisited, clicks), nil
+	return finalizeVectors(vectors, &mu, r, seedURL, targetURL, pagesVisited, clicks), nil
 }
 
 func finalizeVectors(
 	vectors map[string]contracts.AttackVector,
+	mu *sync.Mutex,
 	r *RodCrawler,
 	seedURL, targetURL string,
 	pagesVisited, clicks int,
 ) []contracts.AttackVector {
+	mu.Lock()
 	result := make([]contracts.AttackVector, 0, len(vectors))
 	for _, v := range vectors {
 		result = append(result, v)
 	}
+	mu.Unlock()
 
 	r.logger.Info("dynamic discovery complete",
 		"vectors", len(result),
@@ -308,6 +353,30 @@ func (r *RodCrawler) settle(ctx context.Context) {
 	}
 }
 
+func (r *RodCrawler) collectLinks(page *rod.Page, currentURL string) []string {
+	elements, err := page.Elements("a[href]")
+	if err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(elements))
+	limit := len(elements)
+	if limit > 100 {
+		limit = 100
+	}
+	for i := 0; i < limit; i++ {
+		href := elementAttr(elements[i], "href")
+		if href == "" || hasPrefixFold(href, "javascript:") || hasPrefixFold(href, "#") {
+			continue
+		}
+		resolved, ok := bfs.ResolveReference(currentURL, href)
+		if !ok {
+			continue
+		}
+		out = append(out, resolved)
+	}
+	return out
+}
+
 func (r *RodCrawler) collectClickables(page *rod.Page, currentURL string) ([]clickCandidate, error) {
 	elements, err := page.Elements(clickableSelector)
 	if err != nil {
@@ -320,20 +389,89 @@ func (r *RodCrawler) collectClickables(page *rod.Page, currentURL string) ([]cli
 	}
 	for i := 0; i < limit; i++ {
 		el := elements[i]
-		tag := elementTag(el)
-		text := elementText(el)
-		href := elementAttr(el, "href")
-		role := elementAttr(el, "role")
-
 		raw = append(raw, clickCandidate{
 			Index: i,
-			Tag:   tag,
-			Text:  truncate(text, 80),
-			Href:  href,
-			Role:  role,
+			Tag:   elementTag(el),
+			Text:  truncate(elementText(el), 80),
+			Href:  elementAttr(el, "href"),
+			Role:  elementAttr(el, "role"),
 		})
 	}
 	return rankClickCandidates(currentURL, raw), nil
+}
+
+func (r *RodCrawler) collectForms(page *rod.Page) ([]formCandidate, error) {
+	res, err := page.Eval(`() => {
+		return [...document.querySelectorAll('form')].slice(0, 20).map((form, index) => ({
+			index,
+			action: form.getAttribute('action') || form.action || '',
+			method: (form.getAttribute('method') || form.method || 'GET'),
+			text: [form.getAttribute('aria-label'), form.id, form.getAttribute('name')].filter(Boolean).join(' '),
+			hasPassword: Boolean(form.querySelector('input[type="password"]')),
+			fields: [...form.querySelectorAll('input, textarea, select')].map((el) => ({
+				name: el.getAttribute('name') || el.id || '',
+				type: (el.getAttribute('type') || el.tagName || '').toLowerCase(),
+				autocomplete: el.getAttribute('autocomplete') || '',
+				tag: el.tagName.toLowerCase(),
+			}))
+		}));
+	}`)
+	if err != nil || res == nil {
+		return nil, err
+	}
+
+	var forms []formCandidate
+	if err := res.Value.Unmarshal(&forms); err != nil {
+		return nil, err
+	}
+	return forms, nil
+}
+
+func (r *RodCrawler) submitForm(page *rod.Page, form formCandidate) error {
+	values := map[string]string{}
+	for _, field := range form.Fields {
+		value, ok := fillValueForField(field)
+		if !ok || strings.TrimSpace(field.Name) == "" {
+			continue
+		}
+		values[field.Name] = value
+	}
+
+	_, err := page.Eval(`(index, values) => {
+		const form = document.querySelectorAll('form')[index];
+		if (!form) throw new Error('form not found');
+		for (const [name, value] of Object.entries(values || {})) {
+			const el = form.querySelector('[name="' + CSS.escape(name) + '"]');
+			if (!el) continue;
+			const tag = (el.tagName || '').toLowerCase();
+			const type = (el.getAttribute('type') || '').toLowerCase();
+			if (tag === 'select') {
+				if (el.options && el.options.length) {
+					el.selectedIndex = el.options[0].value === '' && el.options.length > 1 ? 1 : 0;
+				}
+				el.dispatchEvent(new Event('change', { bubbles: true }));
+				continue;
+			}
+			if (type === 'checkbox' || type === 'radio') {
+				el.checked = true;
+				el.dispatchEvent(new Event('change', { bubbles: true }));
+				continue;
+			}
+			el.value = value;
+			el.dispatchEvent(new Event('input', { bubbles: true }));
+			el.dispatchEvent(new Event('change', { bubbles: true }));
+		}
+		if (typeof form.requestSubmit === 'function') {
+			form.requestSubmit();
+		} else {
+			form.submit();
+		}
+	}`, form.Index, values)
+	return err
+}
+
+func formKey(form formCandidate) string {
+	return fmt.Sprintf("%s|%s|%s|%d", form.Method, form.Action, form.Text, form.Index)
 }
 
 func elementTag(el *rod.Element) string {
@@ -361,23 +499,30 @@ func elementAttr(el *rod.Element, name string) string {
 }
 
 func truncate(s string, n int) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= n {
-		return s
-	}
-	return s[:n]
+	return httputil.Truncate(strings.TrimSpace(s), n)
 }
 
 func (r *RodCrawler) clickCandidate(page *rod.Page, candidate clickCandidate) error {
+	currentURL := pageURL(page)
+	live, err := r.collectClickables(page, currentURL)
+	if err != nil {
+		return err
+	}
+	idx := candidate.Index
+	for _, item := range live {
+		if item.Key == candidate.Key {
+			idx = item.Index
+			break
+		}
+	}
 	elements, err := page.Elements(clickableSelector)
 	if err != nil {
 		return err
 	}
-	if candidate.Index < 0 || candidate.Index >= len(elements) {
-		return fmt.Errorf("click index %d out of range", candidate.Index)
+	if idx < 0 || idx >= len(elements) {
+		return fmt.Errorf("click target %q not found", candidate.Key)
 	}
-	el := elements[candidate.Index]
-	return el.Click(proto.InputMouseButtonLeft, 1)
+	return elements[idx].Click(proto.InputMouseButtonLeft, 1)
 }
 
 func pageURL(page *rod.Page) string {
@@ -393,92 +538,36 @@ func looksLikeLoginURL(raw string) bool {
 	if err != nil {
 		return false
 	}
-	path := strings.ToLower(parsed.Path)
-	return strings.Contains(path, "login") ||
-		strings.Contains(path, "signin") ||
-		strings.Contains(path, "sign-in") ||
-		strings.Contains(path, "/auth") ||
-		strings.HasSuffix(path, "/auth") ||
-		strings.Contains(path, "inscricao")
+	path := strings.ToLower(strings.Trim(parsed.Path, "/"))
+	if path == "" {
+		return false
+	}
+	segments := strings.Split(path, "/")
+	last := segments[len(segments)-1]
+	last = strings.TrimSuffix(last, ".php")
+	last = strings.TrimSuffix(last, ".html")
+	last = strings.TrimSuffix(last, ".htm")
+	switch last {
+	case "login", "signin", "sign-in", "log-in", "inscricao":
+		return true
+	default:
+		return false
+	}
 }
 
-func (r *RodCrawler) applyStealth(page *rod.Page) error {
-	if err := (proto.NetworkSetUserAgentOverride{
-		UserAgent:      stealthUserAgent,
-		AcceptLanguage: "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-		Platform:       "Windows",
-	}).Call(page); err != nil {
-		return err
+func headerFromNetwork(headers proto.NetworkHeaders, name string) string {
+	if headers == nil {
+		return ""
 	}
-	_, err := page.Eval(`() => {
-		Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-		Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
-		Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-	}`)
-	return err
+	if v, ok := headers[name]; ok {
+		return v.String()
+	}
+	if v, ok := headers[strings.ToLower(name)]; ok {
+		return v.String()
+	}
+	return ""
 }
 
-func (r *RodCrawler) launchBrowser(ctx context.Context) (*rod.Browser, func(), error) {
-	l := launcher.New().
-		Set("disable-blink-features", "AutomationControlled").
-		Set("disable-infobars", "true").
-		Set("no-first-run", "true").
-		Set("no-default-browser-check", "true")
-
-	if r.cfg.RodHeadless {
-		// Prefer new headless; classic headless advertises HeadlessChrome in UA.
-		l = l.Set("headless", "new")
-	} else {
-		l = l.Headless(false)
-	}
-
-	if r.cfg.ChromePath != "" {
-		l = l.Bin(r.cfg.ChromePath)
-		r.logger.Info("using system browser for rod", "path", r.cfg.ChromePath)
-	}
-
-	if r.cfg.RodNoSandbox {
-		l = l.NoSandbox(true)
-	}
-
-	controlURL, err := l.Context(ctx).Launch()
-	if err != nil {
-		return nil, nil, fmt.Errorf("launch browser: %w", err)
-	}
-
-	browser := rod.New().ControlURL(controlURL)
-	if err := browser.Connect(); err != nil {
-		return nil, nil, fmt.Errorf("connect browser: %w", err)
-	}
-
-	cleanup := func() {
-		_ = browser.Close()
-		l.Cleanup()
-	}
-	return browser, cleanup, nil
-}
-
-func classifyTargetLocation(method, contentType string) string {
-	lowerType := strings.ToLower(contentType)
-	if strings.Contains(lowerType, "application/json") {
-		return "JSON_BODY"
-	}
-	if method == http.MethodGet {
-		return "QUERY_PARAMETER"
-	}
-	if strings.Contains(lowerType, "application/x-www-form-urlencoded") ||
-		strings.Contains(lowerType, "multipart/form-data") {
-		return "FORM"
-	}
-	return "API_ENDPOINT"
-}
-
-func mergeJSONParams(vector contracts.AttackVector, body string) {
-	var payload map[string]any
-	if err := json.Unmarshal([]byte(body), &payload); err != nil {
-		return
-	}
-	for key := range payload {
-		vector.Params[key] = fmt.Sprintf("%v", payload[key])
-	}
+func hasPrefixFold(s, prefix string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(s)), strings.ToLower(prefix))
 }

@@ -15,6 +15,7 @@ import (
 type Publisher struct {
 	cfg    config.RabbitMQConfig
 	logger *slog.Logger
+	url    string
 
 	mu   sync.Mutex
 	conn *amqp.Connection
@@ -31,12 +32,29 @@ func NewPublisher(cfg config.RabbitMQConfig, logger *slog.Logger) *Publisher {
 func (p *Publisher) Connect(url string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.url = url
+	return p.connectLocked()
+}
 
+func (p *Publisher) connectLocked() error {
 	if p.conn != nil && !p.conn.IsClosed() {
 		return nil
 	}
 
-	conn, err := amqp.Dial(url)
+	if p.ch != nil {
+		_ = p.ch.Close()
+		p.ch = nil
+	}
+	if p.conn != nil {
+		_ = p.conn.Close()
+		p.conn = nil
+	}
+
+	if p.url == "" {
+		return fmt.Errorf("publisher not connected")
+	}
+
+	conn, err := amqp.Dial(p.url)
 	if err != nil {
 		return fmt.Errorf("connect rabbitmq: %w", err)
 	}
@@ -76,16 +94,16 @@ func (p *Publisher) Close() error {
 	return err
 }
 
-func (p *Publisher) PublishResult(_ context.Context, result contracts.ResultMessage) error {
-	return p.publishJSON(result.MarshalJSONBytes, "published result",
+func (p *Publisher) PublishResult(ctx context.Context, result contracts.ResultMessage) error {
+	return p.publishJSON(ctx, result.MarshalJSONBytes, "published result",
 		"attack_id", result.AttackID,
 		"system_id", result.SystemID,
 		"route", result.VulnerableRoute,
 	)
 }
 
-func (p *Publisher) PublishCompletion(_ context.Context, completion contracts.DispatchCompletionMessage) error {
-	return p.publishJSON(completion.MarshalJSONBytes, "published dispatch completion",
+func (p *Publisher) PublishCompletion(ctx context.Context, completion contracts.DispatchCompletionMessage) error {
+	return p.publishJSON(ctx, completion.MarshalJSONBytes, "published dispatch completion",
 		"dispatch_id", completion.DispatchID,
 		"system_id", completion.SystemID,
 		"findings_count", completion.FindingsCount,
@@ -93,6 +111,7 @@ func (p *Publisher) PublishCompletion(_ context.Context, completion contracts.Di
 }
 
 func (p *Publisher) publishJSON(
+	ctx context.Context,
 	marshal func() ([]byte, error),
 	logMessage string,
 	logArgs ...any,
@@ -106,11 +125,17 @@ func (p *Publisher) publishJSON(
 	defer p.mu.Unlock()
 
 	if p.ch == nil || p.conn == nil || p.conn.IsClosed() {
-		return fmt.Errorf("publisher not connected")
+		if err := p.connectLocked(); err != nil {
+			return fmt.Errorf("publisher not connected: %w", err)
+		}
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
 	}
 
 	err = p.ch.PublishWithContext(
-		context.Background(),
+		ctx,
 		"",
 		p.cfg.ResultsQueue,
 		false,

@@ -27,6 +27,8 @@ var blockedHostSuffixes = []string{
 var blockedPathPrefixes = []string{
 	"/cdn-cgi/",
 	"/locales/",
+	"/assets/i18n/",
+	"/socket.io",
 	"/wp-includes/",
 	"/wp-content/uploads/",
 	"/wp-content/themes/",
@@ -69,6 +71,9 @@ func IsBlockedDiscoveryURL(rawURL string) bool {
 		if strings.HasPrefix(path, prefix) {
 			return true
 		}
+	}
+	if strings.Contains(path, "/socket.io") {
+		return true
 	}
 
 	return IsSkippableAsset(rawURL)

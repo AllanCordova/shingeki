@@ -34,6 +34,8 @@ class AttackDispatchCompletionProcessor
         $probesCount = $payload['probes_count'] ?? 0;
         $vectorsDiscovered = $payload['vectors_discovered'] ?? null;
         $jobsPlanned = $payload['jobs_planned'] ?? null;
+        $status = is_string($payload['status'] ?? null) ? $payload['status'] : 'completed';
+        $error = is_string($payload['error'] ?? null) ? trim($payload['error']) : '';
 
         if (! is_string($dispatchId) || ! is_string($systemId)) {
             throw new InvalidArgumentException('dispatch_id and system_id are required.');
@@ -66,8 +68,16 @@ class AttackDispatchCompletionProcessor
             throw new ModelNotFoundException('Attack dispatch or system not found for completion payload.');
         }
 
+        $failed = $status === 'failed';
+        $reason = null;
+        if ($failed) {
+            $reason = $error === '' ? 'Scan failed' : mb_substr($error, 0, 2000);
+        }
+
         $dispatch->update([
             'completed_at' => now(),
+            'failed_at' => $failed ? now() : null,
+            'failure_reason' => $reason,
             'duration_ms' => (int) $durationMs,
             'findings_count' => (int) $findingsCount,
             'probes_count' => (int) $probesCount,

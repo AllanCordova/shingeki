@@ -36,6 +36,7 @@ class TargetSessionController extends Controller
             'connected' => true,
             'auth_type' => $session->auth_type->value,
             'header_names' => $session->headerNames(),
+            'replay' => $session->replayMeta(),
             'expires_at' => $session->expires_at,
             'updated_at' => $session->updated_at,
         ]);
@@ -64,6 +65,7 @@ class TargetSessionController extends Controller
             'connected' => true,
             'auth_type' => $session->auth_type->value,
             'header_names' => $session->headerNames(),
+            'replay' => $session->replayMeta(),
             'expires_at' => $session->expires_at,
             'updated_at' => $session->updated_at,
         ], 201);
