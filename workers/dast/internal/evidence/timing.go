@@ -3,6 +3,7 @@ package evidence
 import (
 	"context"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
@@ -20,6 +21,9 @@ func NewTimingValidator(cfg config.EvidenceConfig) *TimingValidator {
 }
 
 func (v *TimingValidator) Analyze(_ context.Context, response types.Response) *Finding {
+	if !allowsTimingConfirmation(response.Job.Attack.Category) {
+		return nil
+	}
 	matches := sleepPattern.FindStringSubmatch(response.PayloadUsed)
 	if len(matches) < 2 {
 		return nil
@@ -29,13 +33,30 @@ func (v *TimingValidator) Analyze(_ context.Context, response types.Response) *F
 	if err != nil {
 		return nil
 	}
+	if expectedSeconds <= v.tolerance {
+		return nil
+	}
 
 	delta := time.Duration(response.AttackMs-response.BaselineMs) * time.Millisecond
+	if response.TimedOut && expectedSeconds >= v.tolerance {
+		if delta >= expectedSeconds-v.tolerance {
+			return newFinding(response, "time-based delay matched expected sleep payload duration")
+		}
+	}
+
 	lower := expectedSeconds - v.tolerance
+	if lower < 0 {
+		lower = 0
+	}
 	upper := expectedSeconds + v.tolerance
 	if delta >= lower && delta <= upper {
 		return newFinding(response, "time-based delay matched expected sleep payload duration")
 	}
 
 	return nil
+}
+
+func allowsTimingConfirmation(category string) bool {
+	upper := strings.ToUpper(category)
+	return strings.Contains(upper, "SQL") || strings.Contains(upper, "TIME") || strings.Contains(upper, "SLEEP")
 }

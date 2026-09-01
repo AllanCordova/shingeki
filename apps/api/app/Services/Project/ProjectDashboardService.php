@@ -91,7 +91,7 @@ class ProjectDashboardService
             'system_id' => $dispatch->system_id,
             'system_name' => $dispatch->system?->name,
             'scan_type' => $dispatch->scan_type->value,
-            'status' => $dispatch->completed_at === null ? 'pending' : 'completed',
+            'status' => $dispatch->scanStatus(),
             'dispatched_at' => $dispatch->dispatched_at,
             'findings_count' => $dispatch->findings_count,
             'attacks_count' => $dispatch->attacks_count,

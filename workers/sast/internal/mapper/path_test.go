@@ -20,3 +20,14 @@ func TestRelativizePathFromRepoSegment(t *testing.T) {
 		t.Fatalf("unexpected path: %s", got)
 	}
 }
+
+func TestRelativizePathDoesNotStripSiblingPrefix(t *testing.T) {
+	got := relativizePath(
+		"/tmp/foo-extra/secret.php",
+		"/tmp/foo",
+	)
+
+	if got == "extra/secret.php" || got == "-extra/secret.php" {
+		t.Fatalf("sibling prefix was stripped: %s", got)
+	}
+}

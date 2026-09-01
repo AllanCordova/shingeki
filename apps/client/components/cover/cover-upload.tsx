@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { coverStockImageToFile } from "@/lib/cover/cover-stock-image";
 import { resolveCoverSrc } from "@/lib/cover/cover-image";
+import { useObjectUrl } from "@/lib/cover/use-object-url";
 import type { ApiError } from "@/lib/api/error-handler";
 import type { CoverStockImage } from "@/lib/contracts/cover/cover-stock-image";
 import type { CoverUpload } from "@/lib/contracts/cover/cover-upload";
@@ -96,15 +97,7 @@ export function CoverUpload({
     ? resolveCoverSrc(selectedUpload.path)
     : null;
 
-  const filePreviewUrl = useMemo(() => {
-    if (!value) return null;
-    return URL.createObjectURL(value);
-  }, [value]);
-
-  useEffect(() => {
-    if (!filePreviewUrl) return;
-    return () => URL.revokeObjectURL(filePreviewUrl);
-  }, [filePreviewUrl]);
+  const filePreviewUrl = useObjectUrl(value);
 
   const existingSrc =
     !value && !selectedUploadId ? resolveCoverSrc(currentCoverPath) : null;
@@ -322,7 +315,7 @@ export function CoverUpload({
                 ref={inputRef}
                 id={inputId}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
                 className="sr-only"
                 disabled={(libraryAtLimit && !value) || isPickingStock}
                 onChange={(event) => {

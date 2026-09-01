@@ -1,25 +1,30 @@
 package bfs
 
 import (
+	"container/heap"
 	"net/url"
 	"sort"
 	"strings"
 )
 
 type Queue struct {
-	items []Item
+	items itemHeap
 	seen  map[string]struct{}
 }
 
 type Item struct {
 	URL   string
 	Depth int
+	Score int
+	index int
 }
 
 func NewQueue() *Queue {
-	return &Queue{
+	q := &Queue{
 		seen: make(map[string]struct{}),
 	}
+	heap.Init(&q.items)
+	return q
 }
 
 func (q *Queue) Enqueue(rawURL string, depth int) bool {
@@ -31,25 +36,66 @@ func (q *Queue) Enqueue(rawURL string, depth int) bool {
 		return false
 	}
 	q.seen[normalized] = struct{}{}
-	q.items = append(q.items, Item{URL: rawURL, Depth: depth})
+	heap.Push(&q.items, Item{
+		URL:   rawURL,
+		Depth: depth,
+		Score: ScoreURL(rawURL),
+	})
 	return true
 }
 
 func (q *Queue) Dequeue() (Item, bool) {
-	if len(q.items) == 0 {
+	if q.items.Len() == 0 {
 		return Item{}, false
 	}
-	item := q.items[0]
-	q.items = q.items[1:]
+	item, ok := heap.Pop(&q.items).(Item)
+	if !ok {
+		return Item{}, false
+	}
 	return item, true
 }
 
 func (q *Queue) Len() int {
-	return len(q.items)
+	return q.items.Len()
 }
 
 func (q *Queue) SeenCount() int {
 	return len(q.seen)
+}
+
+type itemHeap []Item
+
+func (h itemHeap) Len() int { return len(h) }
+
+func (h itemHeap) Less(i, j int) bool {
+	if h[i].Score != h[j].Score {
+		return h[i].Score > h[j].Score
+	}
+	if h[i].Depth != h[j].Depth {
+		return h[i].Depth < h[j].Depth
+	}
+	return h[i].URL < h[j].URL
+}
+
+func (h itemHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+	h[i].index = i
+	h[j].index = j
+}
+
+func (h *itemHeap) Push(x any) {
+	item := x.(Item)
+	item.index = len(*h)
+	*h = append(*h, item)
+}
+
+func (h *itemHeap) Pop() any {
+	old := *h
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = Item{}
+	*h = old[0 : n-1]
+	return item
 }
 
 func NormalizeURL(raw string) (string, bool) {
@@ -98,15 +144,15 @@ func SameOrigin(base, candidate string) bool {
 }
 
 func hostsEquivalent(a, b string) bool {
-	a = strings.ToLower(strings.TrimSpace(a))
-	b = strings.ToLower(strings.TrimSpace(b))
+	a = stripWWW(strings.ToLower(strings.TrimSpace(a)))
+	b = stripWWW(strings.ToLower(strings.TrimSpace(b)))
 	if a == "" || b == "" {
 		return false
 	}
 	if a == b {
 		return true
 	}
-	return stripWWW(a) == stripWWW(b)
+	return strings.HasSuffix(a, "."+b) || strings.HasSuffix(b, "."+a)
 }
 
 func stripWWW(host string) string {

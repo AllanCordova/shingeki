@@ -2,13 +2,16 @@ package queue
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/shingeki/sast-worker/internal/config"
 	"github.com/shingeki/sast-worker/internal/contracts"
+	"github.com/shingeki/sast-worker/internal/repository"
 )
 
 type Handler func(ctx context.Context, batch contracts.DispatchBatch) error
@@ -27,6 +30,24 @@ func NewConsumer(cfg config.RabbitMQConfig, handler Handler, logger *slog.Logger
 }
 
 func (c *Consumer) Run(ctx context.Context, url string) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		err := c.consumeOnce(ctx, url)
+		if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
+		c.logger.Error("consumer connection lost, reconnecting", "error", err)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(2 * time.Second):
+		}
+	}
+}
+
+func (c *Consumer) consumeOnce(ctx context.Context, url string) error {
 	conn, err := dialRabbitMQ(ctx, url)
 	if err != nil {
 		return err
@@ -85,7 +106,7 @@ func (c *Consumer) handleDelivery(ctx context.Context, delivery amqp.Delivery) {
 
 	c.logger.Info("processing dispatch batch",
 		"system_id", batch.SystemID,
-		"repository_url", batch.RepositoryURL,
+		"repository_url", repository.RedactedURL(batch.RepositoryURL),
 		"attacks", len(batch.Attacks),
 	)
 

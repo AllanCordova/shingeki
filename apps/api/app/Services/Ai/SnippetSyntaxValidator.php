@@ -16,7 +16,7 @@ class SnippetSyntaxValidator
 
         return match ($stack->slug) {
             'vanilla_php', 'laravel' => $this->validatePhp($code),
-            'express', 'react' => $this->validateJavaScript($code),
+            'express', 'react', 'angular', 'nextjs' => $this->validateJavaScript($code),
             default => true,
         };
     }

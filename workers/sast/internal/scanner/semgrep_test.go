@@ -33,3 +33,16 @@ func TestParseSemgrepOutput(t *testing.T) {
 		t.Fatalf("unexpected line: %d", findings[0].Line)
 	}
 }
+
+func TestParseSemgrepOutputIgnoresLeadingNoise(t *testing.T) {
+	raw := []byte(`Some warning
+{"results": []}`)
+
+	findings, err := scanner.ParseSemgrepOutput(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 findings, got %d", len(findings))
+	}
+}

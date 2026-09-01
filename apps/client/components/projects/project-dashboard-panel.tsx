@@ -53,7 +53,11 @@ export function ProjectDashboardPanel({ projectId }: { projectId: string }) {
               <Badge tone="neutral">{dashboard.last_dispatch.scan_type}</Badge>
               {dashboard.last_dispatch.status === "pending" ? (
                 <Badge tone="warning">Processando</Badge>
-              ) : null}
+              ) : dashboard.last_dispatch.status === "failed" ? (
+                <Badge tone="danger">Falhou</Badge>
+              ) : (
+                <Badge tone="success">Concluido</Badge>
+              )}
             </div>
           ) : (
             <span className="text-xs text-muted-foreground">Dispare um scan em um sistema.</span>

@@ -10,18 +10,23 @@ import (
 
 func TestApplyDepthQuickOverridesLimits(t *testing.T) {
 	base := config.DiscoveryConfig{
-		MaxDepth:   3,
-		MaxPages:   50,
-		RodEnabled: true,
+		MaxDepth:       3,
+		MaxPages:       50,
+		MaxClicks:      80,
+		MaxFormSubmits: 8,
+		RodEnabled:     true,
 	}
 
 	quick := discovery.ApplyDepth(base, contracts.DepthQuick)
 	if quick.MaxDepth != 1 || quick.MaxPages != 12 || quick.RodEnabled {
 		t.Fatalf("unexpected quick config: %+v", quick)
 	}
+	if quick.MaxClicks != 20 || quick.MaxFormSubmits != 3 {
+		t.Fatalf("quick should reduce click/form budgets: %+v", quick)
+	}
 
 	full := discovery.ApplyDepth(base, contracts.DepthFull)
-	if full != base {
+	if full.MaxDepth != base.MaxDepth || full.MaxPages != base.MaxPages || !full.RodEnabled {
 		t.Fatalf("full should keep defaults: %+v", full)
 	}
 }
@@ -61,7 +66,15 @@ func TestCapVectorsQuick(t *testing.T) {
 		MaxRoutes: 50,
 	})
 	if len(scoped) != 25 {
-		t.Fatalf("scoped quick should not vector-cap, got %d", len(scoped))
+		t.Fatalf("max_routes 50 should keep 25 vectors, got %d", len(scoped))
+	}
+
+	quickStart := discovery.CapVectors(vectors, discovery.Options{
+		Depth:     contracts.DepthQuick,
+		StartPath: "/products",
+	})
+	if len(quickStart) != 20 {
+		t.Fatalf("quick with start_path should still cap, got %d", len(quickStart))
 	}
 }
 

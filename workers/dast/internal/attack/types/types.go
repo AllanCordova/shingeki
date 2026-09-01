@@ -30,5 +30,6 @@ type Response struct {
 	AttackMs       int64
 	RawRequest     string
 	PayloadUsed    string
+	TimedOut       bool
 	Error          error
 }

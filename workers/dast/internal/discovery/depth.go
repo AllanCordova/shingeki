@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"strings"
+	"time"
 
 	"github.com/shingeki/dast-worker/internal/config"
 	"github.com/shingeki/dast-worker/internal/contracts"
@@ -16,6 +17,9 @@ func ApplyDepth(base config.DiscoveryConfig, depth string) config.DiscoveryConfi
 		cfg := base
 		cfg.MaxDepth = 1
 		cfg.MaxPages = 12
+		cfg.MaxClicks = 20
+		cfg.MaxFormSubmits = 3
+		cfg.ExploreSettle = 800 * time.Millisecond
 		cfg.RodEnabled = false
 		return cfg
 	default:
@@ -24,16 +28,16 @@ func ApplyDepth(base config.DiscoveryConfig, depth string) config.DiscoveryConfi
 }
 
 func CapVectors(vectors []contracts.AttackVector, opts Options) []contracts.AttackVector {
-	if opts.HasMaxRoutes() || opts.HasStartPath() {
+	limit := 0
+	if opts.HasMaxRoutes() {
+		limit = opts.MaxRoutes
+	} else if normalizeDepth(opts.Depth) == contracts.DepthQuick {
+		limit = quickMaxVectors
+	}
+	if limit <= 0 || len(vectors) <= limit {
 		return vectors
 	}
-	if normalizeDepth(opts.Depth) != contracts.DepthQuick {
-		return vectors
-	}
-	if len(vectors) <= quickMaxVectors {
-		return vectors
-	}
-	return vectors[:quickMaxVectors]
+	return vectors[:limit]
 }
 
 func FilterAttackable(targetURL string, vectors []contracts.AttackVector) []contracts.AttackVector {

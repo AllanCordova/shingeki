@@ -14,6 +14,7 @@ var (
 		regexp.MustCompile(`(?i)href=["'][^"']*logout`),
 		regexp.MustCompile(`(?i)>(\s*)(log\s*out|sign\s*out|sair)(\s*)<`),
 	}
+	jwtPattern = regexp.MustCompile(`eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`)
 )
 
 type SQLAuthBypassValidator struct{}
@@ -29,16 +30,42 @@ func (v *SQLAuthBypassValidator) Analyze(_ context.Context, response types.Respo
 	if !looksLikeSQLInjectionPayload(response.PayloadUsed) {
 		return nil
 	}
+	if htmlFormLoginBypass(response) {
+		return newFinding(response, "SQL payload bypassed login form into an authenticated page")
+	}
+	if jsonLoginBypass(response) {
+		return newFinding(response, "SQL payload bypassed JSON login and returned an auth token")
+	}
+	return nil
+}
+
+func htmlFormLoginBypass(response types.Response) bool {
 	if !passwordInputPattern.MatchString(response.BaselineBody) {
-		return nil
+		return false
 	}
 	if passwordInputPattern.MatchString(response.AttackBody) {
-		return nil
+		return false
 	}
-	if !hasAuthSuccessMarker(response.AttackBody) {
-		return nil
+	return hasAuthSuccessMarker(response.AttackBody)
+}
+
+func jsonLoginBypass(response types.Response) bool {
+	if response.AttackStatus >= 400 {
+		return false
 	}
-	return newFinding(response, "SQL payload bypassed login form into an authenticated page")
+	if jwtPattern.MatchString(response.AttackBody) && !jwtPattern.MatchString(response.BaselineBody) {
+		return true
+	}
+	return jsonHasAuthToken(response.AttackBody) && !jsonHasAuthToken(response.BaselineBody)
+}
+
+func jsonHasAuthToken(body string) bool {
+	lower := strings.ToLower(body)
+	if !strings.Contains(lower, `"token"`) && !strings.Contains(lower, `"access_token"`) {
+		return false
+	}
+	return strings.Contains(lower, `"authentication"`) ||
+		strings.Contains(lower, `"access_token"`)
 }
 
 func looksLikeSQLInjectionPayload(payload string) bool {

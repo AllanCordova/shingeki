@@ -16,6 +16,7 @@ func TestDispatchCompletionMessageValidate(t *testing.T) {
 		ProbesCount:       12,
 		VectorsDiscovered: 4,
 		JobsPlanned:       12,
+		Status:            contracts.CompletionStatusCompleted,
 	}
 
 	if err := msg.Validate(); err != nil {

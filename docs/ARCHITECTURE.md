@@ -17,12 +17,14 @@ flowchart TB
   DastWorker["workers/dast\nGo"]
   SastWorker["workers/sast\nGo"]
   Target["labs/vulnerable-target\nPHP lab"]
+  Juice["OWASP Juice Shop\ntreino DAST"]
   Web --> API
   Ext --> API
   API --> Queue
   Queue --> DastWorker
   Queue --> SastWorker
   DastWorker --> Target
+  DastWorker --> Juice
   DastWorker --> Queue
   SastWorker --> Queue
   Queue --> API
@@ -38,6 +40,7 @@ O browser fala só com o BFF (`apps/client/app/api/*`). O token Sanctum fica em 
 | `workers/dast` | [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md) |
 | `workers/sast` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
 | `labs/vulnerable-target` | [architecture/shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |
+| Juice Shop (treino) | [architecture/shingeki-juice-shop.md](architecture/shingeki-juice-shop.md) |
 
 ## Fluxo de um disparo DAST
 

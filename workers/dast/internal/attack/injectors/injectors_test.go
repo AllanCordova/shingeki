@@ -79,6 +79,48 @@ func TestBuildCookieMergesExistingHeader(t *testing.T) {
 	}
 }
 
+func TestBuildCookieReplacesSameName(t *testing.T) {
+	job := types.Job{
+		Attack: contracts.AttackItem{TargetLocation: "COOKIE"},
+		Vector: contracts.AttackVector{
+			Route:          "https://example.com/app",
+			Method:         "GET",
+			TargetLocation: "COOKIE",
+			Headers:        map[string]string{"Cookie": "session=abc"},
+		},
+		ParamKey: "session",
+		Payload:  types.PayloadSpec{Value: "injected"},
+	}
+
+	spec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if spec.Headers["Cookie"] != "session=injected" {
+		t.Fatalf("expected replaced session cookie, got %q", spec.Headers["Cookie"])
+	}
+}
+
+func TestBuildHeaderUsesParamKey(t *testing.T) {
+	job := types.Job{
+		Attack: contracts.AttackItem{TargetLocation: "HEADER"},
+		Vector: contracts.AttackVector{
+			Route:          "https://example.com/app",
+			Method:         "GET",
+			TargetLocation: "HEADER",
+		},
+		ParamKey: "X-Custom",
+		Payload:  types.PayloadSpec{Value: "payload"},
+	}
+	spec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if spec.Headers["X-Custom"] != "payload" {
+		t.Fatalf("expected ParamKey header, got %+v", spec.Headers)
+	}
+}
+
 func TestBuildPathReplacesLastSegmentAndEncodesDotDot(t *testing.T) {
 	job := types.Job{
 		Attack: contracts.AttackItem{TargetLocation: "URL_PATH"},

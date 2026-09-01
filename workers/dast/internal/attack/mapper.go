@@ -3,6 +3,8 @@ package attack
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
 	"github.com/shingeki/dast-worker/internal/contracts"
@@ -47,8 +49,14 @@ func jobsForVector(attackItem contracts.AttackItem, vector contracts.AttackVecto
 		}}
 	}
 
-	jobs := make([]types.Job, 0, len(vector.Params))
+	keys := make([]string, 0, len(vector.Params))
 	for paramKey := range vector.Params {
+		keys = append(keys, paramKey)
+	}
+	sort.Strings(keys)
+
+	jobs := make([]types.Job, 0, len(keys))
+	for _, paramKey := range keys {
 		jobs = append(jobs, types.Job{
 			Attack:   attackItem,
 			Vector:   vector,
@@ -93,7 +101,50 @@ func locationCompatible(vectorLocation, attackLocation string) bool {
 	if attackLocation == "API_ENDPOINT" && (vectorLocation == "JSON_BODY" || vectorLocation == "FORM") {
 		return true
 	}
+	if attackLocation == "JSON_BODY" && vectorLocation == "API_ENDPOINT" {
+		return true
+	}
 	return false
+}
+
+func ApplyAuth(jobs []types.Job, auth *contracts.TargetAuth) []types.Job {
+	if auth == nil {
+		return jobs
+	}
+	headers := contracts.EffectiveAuthHeaders(auth)
+	if len(auth.Cookies) == 0 {
+		return ApplyGlobalHeaders(jobs, headers)
+	}
+
+	global := make(map[string]string, len(headers))
+	for key, value := range headers {
+		if strings.EqualFold(key, "Cookie") {
+			continue
+		}
+		global[key] = value
+	}
+	jobs = ApplyGlobalHeaders(jobs, global)
+	fallbackCookie := ""
+	for key, value := range auth.Headers {
+		if strings.EqualFold(key, "Cookie") {
+			fallbackCookie = value
+			break
+		}
+	}
+	for i := range jobs {
+		cookie := contracts.CookieHeaderForURL(auth.Cookies, jobs[i].Vector.Route)
+		if cookie == "" {
+			cookie = fallbackCookie
+		}
+		if cookie == "" {
+			continue
+		}
+		if jobs[i].Vector.Headers == nil {
+			jobs[i].Vector.Headers = map[string]string{}
+		}
+		jobs[i].Vector.Headers["Cookie"] = cookie
+	}
+	return jobs
 }
 
 func ApplyGlobalHeaders(jobs []types.Job, global map[string]string) []types.Job {
@@ -134,9 +185,7 @@ func parsePayload(raw json.RawMessage) (types.PayloadSpec, error) {
 		}
 	}
 	if spec.Value == "" && len(spec.Values) == 0 {
-		if encoded, err := json.Marshal(generic); err == nil {
-			spec.Value = string(encoded)
-		}
+		return types.PayloadSpec{}, fmt.Errorf("payload missing value")
 	}
 	return spec, nil
 }

@@ -3,6 +3,8 @@ package dynamic
 import (
 	"net/url"
 	"strings"
+
+	"github.com/shingeki/dast-worker/internal/discovery/bfs"
 )
 
 type clickCandidate struct {
@@ -32,7 +34,7 @@ func shouldSkipClickLabel(text, href string) bool {
 		"delete account", "excluir conta", "apagar conta",
 		"inscri", "cadastro", "cadastrar", "sign up", "signup",
 		"criar conta", "registre-se", "register",
-		"/login", "/signin", "/sign-in", "/inscricao",
+		"/inscricao",
 	}
 	for _, word := range dangerous {
 		if strings.Contains(combined, word) {
@@ -53,20 +55,16 @@ func shouldSkipClickLabel(text, href string) bool {
 	return false
 }
 
-func clickPriority(text, href string) int {
-	combined := strings.ToLower(strings.TrimSpace(text + " " + href))
-	score := 0
-	boosts := []string{
-		"criar", "novo", "nova", "new", "add", "adicionar",
-		"editar", "edit", "alterar", "atualizar", "update",
-		"mostrar", "show", "detalhe", "detail", "ver ", "view",
-		"salvar", "save", "cadastr",
-	}
-	for _, word := range boosts {
-		if strings.Contains(combined, word) {
-			score += 10
+func clickPriority(pageURL, text, href string) int {
+	resolved := strings.TrimSpace(href)
+	if resolved != "" && !strings.HasPrefix(strings.ToLower(resolved), "#") {
+		if abs, ok := bfs.ResolveReference(pageURL, resolved); ok {
+			resolved = abs
 		}
+	} else {
+		resolved = pageURL
 	}
+	score := bfs.Score(resolved, text)
 	if strings.TrimSpace(href) != "" && !strings.HasPrefix(strings.ToLower(href), "#") {
 		score += 2
 	}
@@ -76,7 +74,7 @@ func clickPriority(text, href string) int {
 func isUsefulHref(pageURL, href string) bool {
 	href = strings.TrimSpace(href)
 	if href == "" || href == "#" || strings.HasPrefix(href, "#") {
-		return true // buttons / in-page handlers still worth trying once
+		return true
 	}
 	if shouldSkipClickLabel("", href) {
 		return false
@@ -111,7 +109,7 @@ func rankClickCandidates(pageURL string, raw []clickCandidate) []clickCandidate 
 			continue
 		}
 		seen[c.Key] = struct{}{}
-		c.Priority = clickPriority(c.Text, c.Href)
+		c.Priority = clickPriority(pageURL, c.Text, c.Href)
 		out = append(out, c)
 	}
 

@@ -36,6 +36,8 @@ class AttackDispatch extends Model
         'attacks_count',
         'dispatched_at',
         'completed_at',
+        'failed_at',
+        'failure_reason',
         'duration_ms',
         'findings_count',
         'probes_count',
@@ -54,6 +56,7 @@ class AttackDispatch extends Model
             'max_routes' => 'integer',
             'dispatched_at' => 'datetime',
             'completed_at' => 'datetime',
+            'failed_at' => 'datetime',
             'duration_ms' => 'integer',
             'findings_count' => 'integer',
             'probes_count' => 'integer',
@@ -98,5 +101,18 @@ class AttackDispatch extends Model
             ->where($field ?? $this->getRouteKeyName(), $value)
             ->where('system_id', $system->id)
             ->first();
+    }
+
+    public function scanStatus(): string
+    {
+        if ($this->failed_at !== null) {
+            return 'failed';
+        }
+
+        if ($this->completed_at !== null) {
+            return 'completed';
+        }
+
+        return 'pending';
     }
 }

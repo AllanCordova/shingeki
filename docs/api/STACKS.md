@@ -64,9 +64,10 @@ Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID.
 | `vanilla_php` | PHP | `php` |
 | `express` | Express | `javascript` |
 | `react` | React | `typescript`, `javascript` |
+| `angular` | Angular | `typescript`, `javascript` |
 | `nextjs` | Next.js | `typescript`, `javascript` |
 
-O alvo de laboratório (**Vulnerable PHP Target**) é associado somente à stack `vanilla_php` pelo `VulnerableTargetSeeder`.
+O alvo de laboratório (**Vulnerable PHP Target**) é associado somente à stack `vanilla_php` pelo `VulnerableTargetSeeder`. O alvo de treino (**OWASP Juice Shop**) usa `express` + `angular` (`JuiceShopSeeder`) — [shingeki-juice-shop.md](../architecture/shingeki-juice-shop.md).
 
 ## Uso na remediação
 

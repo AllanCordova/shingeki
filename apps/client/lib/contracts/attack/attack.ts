@@ -31,7 +31,21 @@ export interface Attack extends Timestamps {
   payload: Record<string, unknown> | null;
 }
 
-export type DispatchStatus = "pending" | "completed";
+export type DispatchStatus = "pending" | "completed" | "failed";
+
+export function dispatchStatusLabel(status: DispatchStatus): string {
+  if (status === "completed") return "Concluido";
+  if (status === "failed") return "Falhou";
+  return "Processando";
+}
+
+export function dispatchStatusTone(
+  status: DispatchStatus,
+): "success" | "danger" | "warning" {
+  if (status === "completed") return "success";
+  if (status === "failed") return "danger";
+  return "warning";
+}
 
 export interface AttackDispatch extends Timestamps {
   id: string;
@@ -49,6 +63,8 @@ export interface AttackDispatch extends Timestamps {
   probes_count: number | null;
   vectors_discovered: number | null;
   jobs_planned: number | null;
+  failed_at?: string | null;
+  failure_reason?: string | null;
   status: DispatchStatus;
   probe_counts?: {
     all: number;

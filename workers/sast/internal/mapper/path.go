@@ -6,18 +6,20 @@ import (
 )
 
 func relativizePath(path, repoRoot string) string {
-	path = filepath.ToSlash(path)
-	repoRoot = filepath.ToSlash(repoRoot)
+	path = filepath.Clean(path)
+	repoRoot = filepath.Clean(repoRoot)
 
-	if repoRoot != "" && strings.HasPrefix(path, repoRoot) {
-		relative := strings.TrimPrefix(path, repoRoot)
-
-		return strings.TrimPrefix(relative, "/")
+	if repoRoot != "" && repoRoot != "." {
+		rel, err := filepath.Rel(repoRoot, path)
+		if err == nil && rel != "." && !strings.HasPrefix(rel, "..") {
+			return filepath.ToSlash(rel)
+		}
 	}
 
-	if index := strings.Index(path, "/repo/"); index >= 0 {
-		return strings.TrimPrefix(path[index+len("/repo/"):], "/")
+	slashPath := filepath.ToSlash(path)
+	if index := strings.Index(slashPath, "/repo/"); index >= 0 {
+		return strings.TrimPrefix(slashPath[index+len("/repo/"):], "/")
 	}
 
-	return strings.TrimPrefix(path, "/")
+	return strings.TrimPrefix(slashPath, "/")
 }

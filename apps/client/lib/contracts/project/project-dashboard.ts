@@ -5,7 +5,7 @@ export interface ProjectDashboardDispatchSummary {
   system_id: string;
   system_name: string | null;
   scan_type: string;
-  status: "pending" | "completed";
+  status: "pending" | "completed" | "failed";
   dispatched_at: string | null;
   findings_count: number | null;
   attacks_count: number;

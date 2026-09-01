@@ -127,6 +127,8 @@ services:
       CHROME_PATH: /usr/bin/chromium
       DISCOVERY_ROD_NO_SANDBOX: "true"
       DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
+      DISCOVERY_CDP_URL: ${DISCOVERY_CDP_URL:-}
+      DISCOVERY_PROXY: ${DISCOVERY_PROXY:-}
       TARGET_LOCALHOST_REWRITE: host.docker.internal
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -137,6 +139,28 @@ services:
         condition: service_healthy
     networks:
       - shingeki
+
+  juice-shop:
+    profiles: ["stack"]
+    image: bkimminich/juice-shop
+    container_name: shingeki-juice-shop
+    restart: unless-stopped
+    ports:
+      - "${JUICE_SHOP_PORT:-3001}:3000"
+    networks:
+      - shingeki
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
 
   vulnerable-target:
     profiles: ["stack"]

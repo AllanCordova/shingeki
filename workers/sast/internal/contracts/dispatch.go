@@ -3,6 +3,7 @@ package contracts
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -21,6 +22,7 @@ type DispatchBatch struct {
 	UserID        string       `json:"user_id"`
 	TargetURL     string       `json:"target_url"`
 	RepositoryURL string       `json:"repository_url"`
+	RepositoryRef string       `json:"repository_ref,omitempty"`
 	Attacks       []AttackItem `json:"attacks"`
 	DispatchedAt  string       `json:"dispatched_at"`
 }
@@ -31,6 +33,12 @@ type AttackItem struct {
 	TargetLocation string          `json:"target_location"`
 	RiskLevel      string          `json:"risk_level"`
 	Payload        json.RawMessage `json:"payload"`
+}
+
+type attackPayload struct {
+	Languages []string `json:"languages"`
+	Ref       string   `json:"ref"`
+	Branch    string   `json:"branch"`
 }
 
 func ParseDispatchBatch(data []byte) (DispatchBatch, error) {
@@ -46,7 +54,7 @@ func ParseDispatchBatch(data []byte) (DispatchBatch, error) {
 
 func (b DispatchBatch) EffectiveScanType() string {
 	if b.ScanType == "" {
-		return ScanTypeDast
+		return ScanTypeSast
 	}
 	return b.ScanType
 }
@@ -70,9 +78,6 @@ func (b DispatchBatch) Validate() error {
 	}
 	if scanType != ScanTypeSast {
 		return fmt.Errorf("sast worker only accepts scan_type %q, got %q", ScanTypeSast, scanType)
-	}
-	if b.RepositoryURL == "" {
-		return fmt.Errorf("repository_url is required")
 	}
 	if len(b.Attacks) == 0 {
 		return fmt.Errorf("attacks must not be empty")
@@ -117,4 +122,49 @@ func (b DispatchBatch) PrimaryAttackID() string {
 		return ""
 	}
 	return b.Attacks[0].AttackID
+}
+
+func (b DispatchBatch) PayloadLanguages() []string {
+	seen := map[string]struct{}{}
+	languages := make([]string, 0)
+	for _, attack := range b.Attacks {
+		for _, lang := range attack.parsedPayload().Languages {
+			lang = strings.ToLower(strings.TrimSpace(lang))
+			if lang == "" {
+				continue
+			}
+			if _, ok := seen[lang]; ok {
+				continue
+			}
+			seen[lang] = struct{}{}
+			languages = append(languages, lang)
+		}
+	}
+	return languages
+}
+
+func (b DispatchBatch) EffectiveRepositoryRef() string {
+	if ref := strings.TrimSpace(b.RepositoryRef); ref != "" {
+		return ref
+	}
+	for _, attack := range b.Attacks {
+		payload := attack.parsedPayload()
+		if ref := strings.TrimSpace(payload.Ref); ref != "" {
+			return ref
+		}
+		if branch := strings.TrimSpace(payload.Branch); branch != "" {
+			return branch
+		}
+	}
+	return ""
+}
+
+func (a AttackItem) parsedPayload() attackPayload {
+	var payload attackPayload
+	_ = json.Unmarshal(a.Payload, &payload)
+	return payload
+}
+
+func (a AttackItem) PayloadLanguages() []string {
+	return a.parsedPayload().Languages
 }

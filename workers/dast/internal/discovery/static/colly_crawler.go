@@ -31,15 +31,25 @@ func NewCollyCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.Attac
 func (c *CollyCrawler) Discover(
 	ctx context.Context,
 	targetURL string,
-	authHeaders map[string]string,
+	auth *contracts.TargetAuth,
 	seedURL string,
 ) ([]contracts.AttackVector, error) {
 	if strings.TrimSpace(seedURL) == "" {
 		seedURL = targetURL
 	}
 
+	authHeaders := contracts.EffectiveAuthHeaders(auth)
 	queue := bfs.NewQueue()
 	queue.Enqueue(seedURL, 0)
+	if auth != nil {
+		for _, route := range auth.Routes {
+			rawURL := strings.TrimSpace(route.URL)
+			if rawURL == "" || !bfs.IsAttackableDiscoveryURL(targetURL, rawURL) {
+				continue
+			}
+			queue.Enqueue(rawURL, 0)
+		}
+	}
 
 	var vectors []contracts.AttackVector
 	pagesVisited := 0
