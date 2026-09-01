@@ -18,6 +18,7 @@ class StackCatalogSeeder extends Seeder
         ['slug' => 'vanilla_php', 'name' => 'PHP', 'languages' => ['php']],
         ['slug' => 'express', 'name' => 'Express', 'languages' => ['javascript']],
         ['slug' => 'react', 'name' => 'React', 'languages' => ['typescript', 'javascript']],
+        ['slug' => 'angular', 'name' => 'Angular', 'languages' => ['typescript', 'javascript']],
         ['slug' => 'nextjs', 'name' => 'Next.js', 'languages' => ['typescript', 'javascript']],
     ];
 

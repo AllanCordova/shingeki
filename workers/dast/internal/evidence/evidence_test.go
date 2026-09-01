@@ -73,6 +73,44 @@ func TestRegexValidatorXSSDetectsReflectedPayload(t *testing.T) {
 	}
 }
 
+func TestRegexValidatorXSSIgnoresHTMLEncodedPayload(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "<script>alert(1)</script>"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "XSS",
+			},
+			Vector: contracts.AttackVector{Route: "/search"},
+		},
+		PayloadUsed: payload,
+		AttackBody:  "<html><p>&lt;script&gt;alert(1)&lt;/script&gt;</p></html>",
+		RawRequest:  "GET /search",
+	}
+
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("encoded reflection must not confirm XSS: %+v", finding)
+	}
+}
+
+func TestTimingValidatorIgnoresSleepShorterThanTolerance(t *testing.T) {
+	validator := evidence.NewTimingValidator(config.EvidenceConfig{TimingTolerance: 2 * time.Second})
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
+			Vector: contracts.AttackVector{Route: "/api"},
+		},
+		PayloadUsed: "SLEEP(1)",
+		BaselineMs:  100,
+		AttackMs:    400,
+		RawRequest:  "POST /api",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("sleep shorter than tolerance must not confirm: %+v", finding)
+	}
+}
+
 func TestDiffValidatorSkipsPathTraversal(t *testing.T) {
 	validator := evidence.NewDiffValidator(config.EvidenceConfig{BodyDiffThreshold: 100})
 	resp := types.Response{
@@ -97,7 +135,7 @@ func TestDiffValidatorSkipsPathTraversal(t *testing.T) {
 	}
 }
 
-func TestDiffValidatorStillFlagsGenericStatusChange(t *testing.T) {
+func TestDiffValidatorRequiresBodyLengthChange(t *testing.T) {
 	validator := evidence.NewDiffValidator(config.EvidenceConfig{BodyDiffThreshold: 100})
 	resp := types.Response{
 		Job: types.Job{
@@ -109,13 +147,19 @@ func TestDiffValidatorStillFlagsGenericStatusChange(t *testing.T) {
 		},
 		BaselineStatus: 200,
 		AttackStatus:   500,
+		BaselineBody:   "same",
+		AttackBody:     "same",
 		PayloadUsed:    "test",
 		RawRequest:     "GET /api",
 	}
 
-	finding := validator.Analyze(context.Background(), resp)
-	if finding == nil {
-		t.Fatal("expected finding on status change for generic category")
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("status-only change must not confirm, got %q", finding.Evidence)
+	}
+
+	resp.AttackBody = stringsRepeat("x", 250)
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected finding when body length exceeds threshold")
 	}
 }
 
@@ -162,7 +206,7 @@ func TestTimingValidatorSleep(t *testing.T) {
 	validator := evidence.NewTimingValidator(config.EvidenceConfig{TimingTolerance: 2 * time.Second})
 	resp := types.Response{
 		Job: types.Job{
-			Attack: contracts.AttackItem{AttackID: "atk-1"},
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
 			Vector: contracts.AttackVector{Route: "/api"},
 		},
 		PayloadUsed: "'; SELECT SLEEP(5)--",
@@ -194,6 +238,63 @@ func TestRegexValidatorSQLDetectsSQLiteError(t *testing.T) {
 
 	if finding := validator.Analyze(context.Background(), resp); finding == nil {
 		t.Fatal("expected finding for SQLite SQLSTATE error")
+	}
+}
+
+func TestRegexValidatorSQLDetectsJuiceShopSQLITEErrorHTML(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
+			Vector: contracts.AttackVector{Route: "/rest/products/search"},
+		},
+		PayloadUsed:    "' OR 1=1 --",
+		BaselineStatus: 200,
+		BaselineBody:   `{"status":"success","data":[{"id":1}]}`,
+		AttackStatus:   500,
+		AttackBody:     "<html><head><title>Error: SQLITE_ERROR: incomplete input</title></head></html>",
+		RawRequest:     "GET /rest/products/search",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected finding for Juice Shop SQLITE_ERROR HTML")
+	}
+}
+
+func TestRegexValidatorSQLConfirms500AgainstHealthyBaseline(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
+			Vector: contracts.AttackVector{Route: "/api"},
+		},
+		PayloadUsed:    "' OR 1=1 --",
+		BaselineStatus: 200,
+		BaselineBody:   `{"ok":true}`,
+		AttackStatus:   500,
+		AttackBody:     "Internal Server Error",
+		RawRequest:     "GET /api",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected finding for 500 vs 200 with SQLi payload")
+	}
+}
+
+func TestSQLBooleanDetectsLargerSuccessBody(t *testing.T) {
+	validator := evidence.NewSQLBooleanValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
+			Vector: contracts.AttackVector{Route: "/rest/products/search"},
+		},
+		PayloadUsed:    "')) OR 1=1--",
+		BaselineStatus: 200,
+		BaselineBody:   `{"status":"success","data":[{"id":1}]}`,
+		AttackStatus:   200,
+		AttackBody:     `{"status":"success","data":[` + stringsRepeat(`{"id":1,"name":"Apple Juice"},`, 30) + `{"id":2}]}`,
+		RawRequest:     "GET /rest/products/search",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected boolean SQLi finding")
 	}
 }
 
@@ -236,6 +337,51 @@ func TestSQLAuthBypassIgnoresDashboardMentionOnLoginPage(t *testing.T) {
 
 	if finding := validator.Analyze(context.Background(), resp); finding != nil {
 		t.Fatalf("login page must not confirm bypass: %q", finding.Evidence)
+	}
+}
+
+func TestSQLAuthBypassDetectsJSONToken(t *testing.T) {
+	validator := evidence.NewSQLAuthBypassValidator()
+	jwt := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.signaturepad"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "SQL_INJECTION",
+			},
+			Vector: contracts.AttackVector{Route: "/rest/user/login"},
+		},
+		PayloadUsed:  "' or 1=1--",
+		BaselineBody: `{"error":{"message":"Invalid email or password.","status":401}}`,
+		AttackBody:   `{"authentication":{"token":"` + jwt + `","bid":1,"umail":"admin@juice-sh.op"}}`,
+		AttackStatus: 200,
+		RawRequest:   "POST /rest/user/login",
+	}
+
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected JSON login bypass finding")
+	}
+}
+
+func TestSQLAuthBypassIgnoresJSON401(t *testing.T) {
+	validator := evidence.NewSQLAuthBypassValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "SQL_INJECTION",
+			},
+			Vector: contracts.AttackVector{Route: "/rest/user/login"},
+		},
+		PayloadUsed:  "' OR 1=1 --",
+		BaselineBody: `{"error":{"message":"Invalid email or password.","status":401}}`,
+		AttackBody:   `{"error":{"message":"Invalid email or password.","status":401}}`,
+		AttackStatus: 401,
+		RawRequest:   "POST /rest/user/login",
+	}
+
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("401 JSON login must not confirm bypass: %q", finding.Evidence)
 	}
 }
 

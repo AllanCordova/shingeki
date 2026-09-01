@@ -16,6 +16,7 @@ Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](d
 | [`workers/dast/`](workers/dast/) | Worker Go DAST (discovery, ataques, evidências) |
 | [`workers/sast/`](workers/sast/) | Worker Go SAST (clone + Semgrep) |
 | [`labs/vulnerable-target/`](labs/vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
+| Juice Shop (Docker) | Treino DAST — [docs/architecture/shingeki-juice-shop.md](docs/architecture/shingeki-juice-shop.md) |
 
 ## Documentação
 

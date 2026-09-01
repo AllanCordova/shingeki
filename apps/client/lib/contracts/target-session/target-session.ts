@@ -1,9 +1,17 @@
 export type TargetAuthType = "cookie" | "bearer";
 
+export interface TargetSessionReplayMeta {
+  cookie_count: number;
+  route_count: number;
+  has_storage: boolean;
+  has_user_agent: boolean;
+}
+
 export interface TargetSessionStatus {
   connected: boolean;
   auth_type?: TargetAuthType;
   header_names?: string[];
+  replay?: TargetSessionReplayMeta;
   expires_at?: string | null;
   updated_at?: string;
 }

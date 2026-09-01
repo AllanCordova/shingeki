@@ -38,6 +38,18 @@ func TestDumpRequestRedactsSensitiveHeaders(t *testing.T) {
 	}
 }
 
+func TestDumpRequestRedactsBodyAndQuerySecrets(t *testing.T) {
+	dump := httputil.DumpRequest("POST", "https://example.com/login?token=secret", map[string]string{
+		"Content-Type": "application/json",
+	}, `{"email":"test","password":"hunter2"}`)
+	if strings.Contains(dump, "secret") || strings.Contains(dump, "hunter2") {
+		t.Fatalf("secrets leaked: %s", dump)
+	}
+	if !strings.Contains(dump, "[REDACTED]") {
+		t.Fatalf("expected redacted secrets, got %s", dump)
+	}
+}
+
 func TestTruncateSplitsOnUTF8Boundary(t *testing.T) {
 	got := httputil.Truncate("éé", 2)
 	if !utf8.ValidString(got) {

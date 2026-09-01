@@ -84,7 +84,7 @@ class TargetSessionCaptureService
         ];
     }
 
-    public function completeFromTicket(string $ticketId, array $headers): SystemTargetSession
+    public function completeFromTicket(string $ticketId, array $headers, ?array $storage = null): SystemTargetSession
     {
         $ticket = $this->resolveTicket($ticketId);
 
@@ -92,12 +92,12 @@ class TargetSessionCaptureService
             throw new RuntimeException('No session headers were provided for capture.');
         }
 
-        $authType = isset($headers['Authorization'])
-            ? TargetAuthType::Bearer
-            : TargetAuthType::Cookie;
+        $authType = isset($headers['Cookie'])
+            ? TargetAuthType::Cookie
+            : TargetAuthType::Bearer;
 
         $credential = $authType === TargetAuthType::Bearer
-            ? $headers['Authorization']
+            ? ($headers['Authorization'] ?? '')
             : ($headers['Cookie'] ?? '');
 
         if (trim($credential) === '') {
@@ -109,6 +109,8 @@ class TargetSessionCaptureService
             $ticket->system,
             $authType,
             $credential,
+            storage: $storage,
+            extraHeaders: $headers,
         );
 
         $ticket->update(['consumed_at' => now()]);

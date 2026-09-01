@@ -77,7 +77,15 @@ Rota publica (sem Sanctum). Finaliza a captura usando o ticket de curta duracao 
 
 Usada pelo lab (`shingeki-capture.php`), pela pagina `/conectar-alvo` e pela **extensao**.
 
-**Body (JSON):** `cookie` ou `authorization`.
+**Body (JSON):** `cookie` **ou** `authorization` **ou** `cookies[]`. Campos opcionais da extensão:
+
+| Campo | Papel |
+|-------|--------|
+| `cookies` | Lista estruturada (`name`, `value`, `domain`, `path`, `secure`, `httpOnly`, `sameSite`, `hostOnly`, `partitionKey`) — replay CDP fiel |
+| `local_storage` / `session_storage` | Mapas string→string (até 50 chaves, 8 KiB) |
+| `origins` | Storage por origem (iframes / hosts do SPA) |
+| `routes` | Superfície XHR/fetch gravada enquanto o ticket está armado (até 200) |
+| `user_agent` | UA do Chrome que capturou, reaplicado no Rod |
 
 CORS: origins de lab + padroes `chrome-extension://…` e localhost (ver `config/cors.php`).
 
@@ -100,12 +108,18 @@ Retorna se existe sessao ativa importada pelo usuario autenticado.
   "connected": true,
   "auth_type": "cookie",
   "header_names": ["Cookie"],
+  "replay": {
+    "cookie_count": 8,
+    "route_count": 12,
+    "has_storage": true,
+    "has_user_agent": true
+  },
   "expires_at": null,
   "updated_at": "..."
 }
 ```
 
-Os valores dos headers **nunca** sao retornados na API.
+Os valores dos headers **nunca** sao retornados na API. `replay` so tem contagens.
 
 ## POST .../target-session
 
@@ -150,14 +164,44 @@ Quando existe sessao ativa, o batch publicado em `attacks.dispatch` inclui:
     "type": "cookie",
     "headers": {
       "Cookie": "laravel_session=..."
-    }
+    },
+    "storage": {
+      "local": {
+        "access_token": "..."
+      },
+      "session": {},
+      "origins": [
+        {
+          "origin": "https://www.example.com",
+          "local": { "access_token": "..." },
+          "session": {}
+        }
+      ]
+    },
+    "cookies": [
+      {
+        "name": "PHPSESSID",
+        "value": "...",
+        "domain": ".example.com",
+        "path": "/",
+        "secure": true,
+        "httpOnly": true,
+        "sameSite": "lax"
+      }
+    ],
+    "user_agent": "Mozilla/5.0 ...",
+    "routes": [
+      { "method": "POST", "url": "https://www.example.com/utils/requestMethods.php", "type": "xmlhttprequest" }
+    ]
   }
 }
 ```
 
-O worker repassa esses headers no discovery (Colly/Rod) e em todas as requisicoes de ataque.
+`storage`, `cookies`, `user_agent` e `routes` são omitidos quando a captura não os trouxe.
 
-A resposta do dispatch inclui `target_session_connected: true|false`.
+O worker injeta cookies **estruturados** (domain/path/SameSite/partition), `Authorization`, storage por origem e o User-Agent da captura. Rotas gravadas pela extensão entram no mapa mesmo se o Chromium headless for redirecionado ao login. Na fase de ataque HTTP, se não houver Bearer, sintetiza a partir de chaves conhecidas no storage (`access_token`, `jwt`, `token`, …).
+
+A resposta do dispatch inclui `target_session_connected: true|false`. O GET da sessão inclui `replay` só com contagens (nunca valores).
 
 ## Client web
 

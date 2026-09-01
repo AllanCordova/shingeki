@@ -12,7 +12,8 @@ func TestShouldSkipClickLabel(t *testing.T) {
 		{"Logout", "/sair", true},
 		{"Sair da conta", "", true},
 		{"Inscreva-se", "/inscricao", true},
-		{"Entrar", "/login?r=/", true},
+		{"Entrar", "/login?r=/", false},
+		{"Account", "#/login", false},
 		{"Editar", "javascript:void(0)", true},
 		{"Ajuda", "mailto:a@b.com", true},
 		{"Detalhes", "/produtos/1", false},
@@ -26,8 +27,9 @@ func TestShouldSkipClickLabel(t *testing.T) {
 }
 
 func TestClickPriorityPrefersCRUD(t *testing.T) {
-	create := clickPriority("Criar produto", "/produtos/novo")
-	plain := clickPriority("Home", "/")
+	pageURL := "https://app.example/produtos"
+	create := clickPriority(pageURL, "Criar produto", "/produtos/novo")
+	plain := clickPriority(pageURL, "Home", "/")
 	if create <= plain {
 		t.Fatalf("expected create priority %d > plain %d", create, plain)
 	}

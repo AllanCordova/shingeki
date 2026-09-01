@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack"
+	"github.com/shingeki/dast-worker/internal/attack/types"
 	"github.com/shingeki/dast-worker/internal/contracts"
 	"github.com/shingeki/dast-worker/internal/discovery"
 	"github.com/shingeki/dast-worker/internal/evidence"
 	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
+
+const publishTimeout = 10 * time.Second
 
 type resultPublisher interface {
 	PublishProbe(ctx context.Context, probe contracts.ProbeMessage) error
@@ -46,7 +49,7 @@ func NewPipeline(
 	}
 }
 
-func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error {
+func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err error) {
 	start := time.Now()
 	findingsPublished := 0
 	probesPublished := 0
@@ -54,10 +57,18 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	jobsPlanned := 0
 
 	defer func() {
+		status := contracts.CompletionStatusCompleted
+		errText := ""
+		if err != nil {
+			status = contracts.CompletionStatusFailed
+			errText = err.Error()
+		}
 		completion := contracts.DispatchCompletionMessage{
 			Event:             contracts.EventDispatchCompleted,
 			DispatchID:        batch.DispatchID,
 			SystemID:          batch.SystemID,
+			Status:            status,
+			Error:             errText,
 			DurationMs:        time.Since(start).Milliseconds(),
 			FindingsCount:     findingsPublished,
 			ProbesCount:       probesPublished,
@@ -65,10 +76,10 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 			JobsPlanned:       jobsPlanned,
 		}
 
-		completeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		completeCtx, cancel := context.WithTimeout(context.Background(), publishTimeout)
 		defer cancel()
-		if err := p.publisher.PublishCompletion(completeCtx, completion); err != nil {
-			p.logger.Error("failed to publish dispatch completion", "error", err, "dispatch_id", batch.DispatchID)
+		if pubErr := p.publisher.PublishCompletion(completeCtx, completion); pubErr != nil {
+			p.logger.Error("failed to publish dispatch completion", "error", pubErr, "dispatch_id", batch.DispatchID)
 		}
 	}()
 
@@ -81,15 +92,15 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	)
 
 	targetURL := targeturl.Normalize(batch.TargetURL)
-	if err := targeturl.AssertHTTP(targetURL); err != nil {
+	if err = targeturl.AssertHTTP(targetURL); err != nil {
 		return fmt.Errorf("target url: %w", err)
 	}
 	if targetURL != batch.TargetURL {
 		p.logger.Info("normalized target url for worker reachability", "from", batch.TargetURL, "to", targetURL)
 	}
 
-	authHeaders := batch.AuthHeaders()
-	vectors, err := p.discovery.Discover(ctx, targetURL, authHeaders, discovery.OptionsFromBatch(batch))
+	var vectors []contracts.AttackVector
+	vectors, err = p.discovery.Discover(ctx, targetURL, batch.Auth, discovery.OptionsFromBatch(batch))
 	if err != nil {
 		return fmt.Errorf("discovery: %w", err)
 	}
@@ -97,39 +108,34 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	p.logger.Info("discovery finished", "vectors", vectorsDiscovered)
 
 	jobs := p.attack.MapVectorsToJobs(vectors, batch.Attacks)
-	jobs = attack.ApplyGlobalHeaders(jobs, authHeaders)
+	jobs = attack.ApplyAuth(jobs, batch.Auth)
 	jobsPlanned = len(jobs)
 	p.logger.Info("mapped attack jobs", "jobs", jobsPlanned)
 
 	responses := p.attack.ExecutePool(ctx, jobs)
 	for _, response := range responses {
-		if response.Error != nil {
+		if response.Error != nil && !response.TimedOut {
 			p.logger.Warn("attack job failed",
 				"attack_id", response.Job.Attack.AttackID,
 				"route", response.Job.Vector.Route,
 				"error", response.Error,
 			)
-
-			probe := contracts.ProbeMessage{
-				Event:        contracts.EventAttackProbe,
-				DispatchID:   batch.DispatchID,
-				SystemID:     batch.SystemID,
-				AttackID:     response.Job.Attack.AttackID,
-				Route:        response.Job.Vector.Route,
-				PayloadUsed:  response.PayloadUsed,
-				HTTPRequest:  response.RawRequest,
-				Outcome:      "error",
-				Evidence:     "Falha ao executar teste",
-				ErrorMessage: response.Error.Error(),
-			}
-			if err := p.publisher.PublishProbe(ctx, probe); err != nil {
-				return fmt.Errorf("publish probe: %w", err)
+			if err = p.publishProbe(errorProbe(batch, response)); err != nil {
+				return err
 			}
 			probesPublished++
 			continue
 		}
 
 		finding := p.evidence.Analyze(ctx, response)
+		if response.Error != nil && finding == nil {
+			if err = p.publishProbe(errorProbe(batch, response)); err != nil {
+				return err
+			}
+			probesPublished++
+			continue
+		}
+
 		outcome := "clean"
 		evidenceText := fmt.Sprintf("HTTP %d · nenhum indicador detectado", response.AttackStatus)
 
@@ -138,8 +144,8 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 			evidenceText = finding.Evidence
 
 			result := finding.ToResultMessage(batch.DispatchID, batch.SystemID)
-			if err := p.publisher.PublishResult(ctx, result); err != nil {
-				return fmt.Errorf("publish result: %w", err)
+			if err = p.publishResult(result); err != nil {
+				return err
 			}
 			findingsPublished++
 		}
@@ -155,8 +161,8 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 			Outcome:     outcome,
 			Evidence:    evidenceText,
 		}
-		if err := p.publisher.PublishProbe(ctx, probe); err != nil {
-			return fmt.Errorf("publish probe: %w", err)
+		if err = p.publishProbe(probe); err != nil {
+			return err
 		}
 		probesPublished++
 	}
@@ -169,4 +175,41 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 	)
 
 	return nil
+}
+
+func (p *Pipeline) publishProbe(probe contracts.ProbeMessage) error {
+	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
+	defer cancel()
+	if err := p.publisher.PublishProbe(ctx, probe); err != nil {
+		return fmt.Errorf("publish probe: %w", err)
+	}
+	return nil
+}
+
+func (p *Pipeline) publishResult(result contracts.ResultMessage) error {
+	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
+	defer cancel()
+	if err := p.publisher.PublishResult(ctx, result); err != nil {
+		return fmt.Errorf("publish result: %w", err)
+	}
+	return nil
+}
+
+func errorProbe(batch contracts.DispatchBatch, response types.Response) contracts.ProbeMessage {
+	errText := ""
+	if response.Error != nil {
+		errText = response.Error.Error()
+	}
+	return contracts.ProbeMessage{
+		Event:        contracts.EventAttackProbe,
+		DispatchID:   batch.DispatchID,
+		SystemID:     batch.SystemID,
+		AttackID:     response.Job.Attack.AttackID,
+		Route:        response.Job.Vector.Route,
+		PayloadUsed:  response.PayloadUsed,
+		HTTPRequest:  response.RawRequest,
+		Outcome:      "error",
+		Evidence:     "Falha ao executar teste",
+		ErrorMessage: errText,
+	}
 }

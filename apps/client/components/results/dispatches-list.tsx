@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 import { useDispatches } from "@/lib/hooks/results/use-results";
 import { formatDate } from "@/lib/utils";
+import {
+  dispatchStatusLabel,
+  dispatchStatusTone,
+} from "@/lib/contracts";
 import { DeleteAllDispatchesModal } from "@/components/results/delete-all-dispatches-modal";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
@@ -103,16 +107,8 @@ export function DispatchesList({
                                 : "Completo"}
                             </Badge>
                           ) : null}
-                          <Badge
-                            tone={
-                              dispatch.status === "completed"
-                                ? "success"
-                                : "warning"
-                            }
-                          >
-                            {dispatch.status === "completed"
-                              ? "Concluido"
-                              : "Processando"}
+                          <Badge tone={dispatchStatusTone(dispatch.status)}>
+                            {dispatchStatusLabel(dispatch.status)}
                           </Badge>
                         </div>
                         <span className="text-xs text-muted-foreground">

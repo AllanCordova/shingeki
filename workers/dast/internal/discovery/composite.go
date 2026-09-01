@@ -11,8 +11,10 @@ import (
 )
 
 type CompositeEngine struct {
-	cfg    config.Config
-	logger *slog.Logger
+	cfg     config.Config
+	logger  *slog.Logger
+	static  crawlEngine
+	dynamic crawlEngine
 }
 
 func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine {
@@ -28,7 +30,7 @@ func NewCompositeEngine(cfg config.Config, logger *slog.Logger) *CompositeEngine
 func (e *CompositeEngine) Discover(
 	ctx context.Context,
 	targetURL string,
-	authHeaders map[string]string,
+	auth *contracts.TargetAuth,
 	opts Options,
 ) ([]contracts.AttackVector, error) {
 	discCfg := ApplyDepthAndScope(e.cfg.Discovery, opts)
@@ -44,27 +46,60 @@ func (e *CompositeEngine) Discover(
 		)
 	}
 
-	staticEngine := static.NewCollyCrawler(discCfg, e.cfg.Attack, e.logger)
-	dynamicEngine := dynamic.NewRodCrawler(discCfg, e.cfg.Attack, e.logger)
-
-	vectors, err := staticEngine.Discover(ctx, targetURL, authHeaders, seedURL)
-	if err != nil {
-		return nil, err
+	staticEngine := e.static
+	if staticEngine == nil {
+		staticEngine = static.NewCollyCrawler(discCfg, e.cfg.Attack, e.logger)
+	}
+	dynamicEngine := e.dynamic
+	if dynamicEngine == nil {
+		dynamicEngine = dynamic.NewRodCrawler(discCfg, e.cfg.Attack, e.logger)
 	}
 
-	if discCfg.RodEnabled && (opts.HasStartPath() || len(vectors) < discCfg.MinVectorsForRod) {
-		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, authHeaders, seedURL)
+	var vectors []contracts.AttackVector
+
+	if discCfg.RodEnabled {
+		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, auth, seedURL)
 		if rodErr != nil {
-			e.logger.Warn("dynamic discovery failed", "error", rodErr)
+			e.logger.Warn("dynamic discovery failed; falling back to static crawl", "error", rodErr)
+			staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
+			if staticErr != nil {
+				return nil, staticErr
+			}
+			vectors = staticVectors
+		} else if len(dynamicVectors) < discCfg.MinVectorsForRod {
+			e.logger.Warn("dynamic discovery below threshold; merging static crawl",
+				"dynamic", len(dynamicVectors),
+				"min", discCfg.MinVectorsForRod,
+			)
+			staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
+			if staticErr != nil && len(dynamicVectors) == 0 {
+				return nil, staticErr
+			}
+			vectors = mergeAttackVectors(dynamicVectors, staticVectors)
 		} else {
-			vectors = mergeVectors(vectors, dynamicVectors)
+			vectors = dynamicVectors
 		}
+	} else {
+		staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
+		if staticErr != nil {
+			return nil, staticErr
+		}
+		vectors = staticVectors
+	}
+
+	beforeRecorded := len(vectors)
+	vectors = AppendRecordedRoutes(targetURL, vectors, auth)
+	if len(vectors) > beforeRecorded {
+		e.logger.Info("merged captured network routes into discovery",
+			"added", len(vectors)-beforeRecorded,
+			"total", len(vectors),
+		)
 	}
 
 	if len(vectors) == 0 {
 		vectors = fallbackVectors(seedURL)
 		e.logger.Warn(
-			"discovery produced no vectors; using built-in fallback routes",
+			"discovery produced no vectors; using seed as fallback route",
 			"target", seedURL,
 			"fallback_count", len(vectors),
 		)
@@ -82,32 +117,27 @@ func (e *CompositeEngine) Discover(
 	beforeCap := len(vectors)
 	vectors = CapVectors(vectors, opts)
 	if len(vectors) < beforeCap {
-		e.logger.Info("capped discovery vectors for quick depth",
+		e.logger.Info("capped discovery vectors",
 			"before", beforeCap,
 			"after", len(vectors),
 			"depth", opts.Depth,
+			"max_routes", opts.MaxRoutes,
 		)
 	}
 
 	return vectors, nil
 }
 
-func mergeVectors(base, extra []contracts.AttackVector) []contracts.AttackVector {
-	seen := make(map[string]struct{}, len(base))
-	for _, v := range base {
-		seen[vectorKey(v)] = struct{}{}
-	}
-	for _, v := range extra {
-		key := vectorKey(v)
-		if _, ok := seen[key]; ok {
+func mergeAttackVectors(primary, extra []contracts.AttackVector) []contracts.AttackVector {
+	seen := make(map[string]struct{}, len(primary)+len(extra))
+	out := make([]contracts.AttackVector, 0, len(primary)+len(extra))
+	for _, vector := range append(primary, extra...) {
+		key := vector.Method + " " + vector.Route + " " + vector.TargetLocation
+		if _, exists := seen[key]; exists {
 			continue
 		}
 		seen[key] = struct{}{}
-		base = append(base, v)
+		out = append(out, vector)
 	}
-	return base
-}
-
-func vectorKey(v contracts.AttackVector) string {
-	return v.Method + " " + v.Route + " " + v.TargetLocation
+	return out
 }

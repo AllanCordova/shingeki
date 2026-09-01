@@ -1,6 +1,7 @@
 package mapper_test
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -37,5 +38,30 @@ func TestToResultMessage(t *testing.T) {
 	}
 	if !strings.Contains(result.Evidence, "Possible SQL injection") {
 		t.Fatalf("unexpected evidence: %s", result.Evidence)
+	}
+}
+
+func TestAttackIDForFindingMatchesCategoryAndLanguage(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "xss-1",
+				Category: "XSS",
+				Payload:  json.RawMessage(`{"languages":["javascript"]}`),
+			},
+			{
+				AttackID: "sqli-1",
+				Category: "SQL_INJECTION",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "php.lang.security.sql-injection",
+		Path:    "app/Models/User.php",
+	})
+	if got != "sqli-1" {
+		t.Fatalf("expected sqli-1, got %s", got)
 	}
 }

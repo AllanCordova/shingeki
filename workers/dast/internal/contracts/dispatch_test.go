@@ -98,3 +98,43 @@ func TestResultMessageValidate(t *testing.T) {
 		t.Fatalf("expected valid message: %v", err)
 	}
 }
+
+func TestParseDispatchBatchAcceptsPHPEmptySessionArray(t *testing.T) {
+	raw := []byte(`{
+		"event": "attack.dispatch.batch",
+		"dispatch_id": "dispatch-1",
+		"system_id": "sys-1",
+		"user_id": "user-1",
+		"target_url": "https://example.com",
+		"attacks": [{
+			"attack_id": "atk-1",
+			"category": "SQL_INJECTION",
+			"target_location": "JSON_BODY",
+			"risk_level": "HIGH",
+			"payload": {"value":"' or 1=1--"}
+		}],
+		"auth": {
+			"type": "COOKIE",
+			"headers": {},
+			"storage": {
+				"local": {"token": "aaa.bbb.ccc"},
+				"session": []
+			}
+		},
+		"dispatched_at": "2026-05-28T12:00:00Z"
+	}`)
+
+	batch, err := contracts.ParseDispatchBatch(raw)
+	if err != nil {
+		t.Fatalf("empty PHP session array must parse: %v", err)
+	}
+	if batch.Auth == nil || batch.Auth.Storage == nil {
+		t.Fatal("expected storage")
+	}
+	if batch.Auth.Storage.Local["token"] != "aaa.bbb.ccc" {
+		t.Fatalf("local=%v", batch.Auth.Storage.Local)
+	}
+	if len(batch.Auth.Storage.Session) != 0 {
+		t.Fatalf("session should be empty, got %v", batch.Auth.Storage.Session)
+	}
+}

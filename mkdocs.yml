@@ -65,6 +65,7 @@ nav:
     - DAST worker: architecture/shingeki-dast-worker.md
     - SAST worker: architecture/shingeki-sast-worker.md
     - Lab (alvo vulnerável): architecture/shingeki-vulnerable-target.md
+    - Treino (Juice Shop): architecture/shingeki-juice-shop.md
   - API:
     - Visão geral: API.md
     - Conta e recursos:

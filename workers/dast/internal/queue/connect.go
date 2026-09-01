@@ -13,7 +13,7 @@ const defaultDialAttempts = 15
 func dialRabbitMQ(ctx context.Context, url string) (*amqp.Connection, error) {
 	var lastErr error
 	for attempt := 1; attempt <= defaultDialAttempts; attempt++ {
-		conn, err := amqp.Dial(url)
+		conn, err := amqp.DialConfig(url, amqp.Config{Dial: amqp.DefaultDial(10 * time.Second)})
 		if err == nil {
 			return conn, nil
 		}

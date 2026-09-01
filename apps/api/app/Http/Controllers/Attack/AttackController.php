@@ -129,7 +129,8 @@ class AttackController extends Controller
             'completed_at' => $dispatch->completed_at,
             'duration_ms' => $dispatch->duration_ms,
             'findings_count' => $dispatch->findings_count,
-            'status' => $dispatch->completed_at === null ? 'pending' : 'completed',
+            'failed_at' => $dispatch->failed_at,
+            'status' => $dispatch->scanStatus(),
             'created_at' => $dispatch->created_at,
             'updated_at' => $dispatch->updated_at,
         ];

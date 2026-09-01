@@ -36,6 +36,7 @@ type DiscoveryConfig struct {
 	MaxDepth             int
 	MaxPages             int
 	MaxClicks            int
+	MaxFormSubmits       int
 	PageTimeout          time.Duration
 	BrowserLaunchTimeout time.Duration
 	ExploreSettle        time.Duration
@@ -43,6 +44,8 @@ type DiscoveryConfig struct {
 	RodHeadless          bool
 	RodNoSandbox         bool
 	ChromePath           string
+	CDPURL               string
+	Proxy                string
 	MinVectorsForRod     int
 }
 
@@ -51,6 +54,7 @@ type AttackConfig struct {
 	RequestTimeout time.Duration
 	RateLimitRPS   float64
 	MaxBodyBytes   int
+	MaxJobs        int
 	UserAgent      string
 }
 
@@ -90,6 +94,11 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_MAX_CLICKS: %w", err)
 	}
 
+	maxFormSubmits, err := strconv.Atoi(getEnv("DISCOVERY_MAX_FORM_SUBMITS", "8"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid DISCOVERY_MAX_FORM_SUBMITS: %w", err)
+	}
+
 	concurrency, err := strconv.Atoi(getEnv("WORKER_ATTACK_CONCURRENCY", "5"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid WORKER_ATTACK_CONCURRENCY: %w", err)
@@ -103,6 +112,11 @@ func Load() (Config, error) {
 	maxBody, err := strconv.Atoi(getEnv("ATTACK_MAX_BODY_BYTES", "1048576"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid ATTACK_MAX_BODY_BYTES: %w", err)
+	}
+
+	maxJobs, err := strconv.Atoi(getEnv("ATTACK_MAX_JOBS", "2500"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid ATTACK_MAX_JOBS: %w", err)
 	}
 
 	bodyDiff, err := strconv.Atoi(getEnv("EVIDENCE_BODY_DIFF_THRESHOLD", "100"))
@@ -158,6 +172,7 @@ func Load() (Config, error) {
 			MaxDepth:             maxDepth,
 			MaxPages:             maxPages,
 			MaxClicks:            maxClicks,
+			MaxFormSubmits:       maxFormSubmits,
 			PageTimeout:          pageTimeout,
 			BrowserLaunchTimeout: browserLaunchTimeout,
 			ExploreSettle:        exploreSettle,
@@ -165,6 +180,8 @@ func Load() (Config, error) {
 			RodHeadless:          getEnv("DISCOVERY_ROD_HEADLESS", "true") == "true",
 			RodNoSandbox:         getEnv("DISCOVERY_ROD_NO_SANDBOX", "false") == "true",
 			ChromePath:           getEnv("CHROME_PATH", ""),
+			CDPURL:               getEnv("DISCOVERY_CDP_URL", ""),
+			Proxy:                getEnv("DISCOVERY_PROXY", ""),
 			MinVectorsForRod:     minVectorsRod,
 		},
 		Attack: AttackConfig{
@@ -172,6 +189,7 @@ func Load() (Config, error) {
 			RequestTimeout: reqTimeout,
 			RateLimitRPS:   rateLimit,
 			MaxBodyBytes:   maxBody,
+			MaxJobs:        maxJobs,
 			UserAgent:      getEnv("ATTACK_USER_AGENT", "Shingeki-DAST-Worker/1.0"),
 		},
 		Evidence: EvidenceConfig{
@@ -198,6 +216,9 @@ func Load() (Config, error) {
 	if cfg.Discovery.MaxPages < 1 {
 		return Config{}, fmt.Errorf("DISCOVERY_MAX_PAGES must be >= 1")
 	}
+	if cfg.Discovery.MaxFormSubmits < 0 {
+		return Config{}, fmt.Errorf("DISCOVERY_MAX_FORM_SUBMITS must be >= 0")
+	}
 	if cfg.Discovery.MinVectorsForRod < 0 {
 		return Config{}, fmt.Errorf("DISCOVERY_MIN_VECTORS_FOR_ROD must be >= 0")
 	}
@@ -207,11 +228,14 @@ func Load() (Config, error) {
 	if cfg.Attack.RateLimitRPS < 0 {
 		return Config{}, fmt.Errorf("ATTACK_RATE_LIMIT_RPS must be >= 0")
 	}
-	if cfg.Attack.MaxBodyBytes < 0 {
-		return Config{}, fmt.Errorf("ATTACK_MAX_BODY_BYTES must be >= 0")
+	if cfg.Attack.MaxBodyBytes < 1 {
+		return Config{}, fmt.Errorf("ATTACK_MAX_BODY_BYTES must be >= 1")
 	}
-	if cfg.Evidence.BodyDiffThreshold < 0 {
-		return Config{}, fmt.Errorf("EVIDENCE_BODY_DIFF_THRESHOLD must be >= 0")
+	if cfg.Attack.MaxJobs < 1 {
+		return Config{}, fmt.Errorf("ATTACK_MAX_JOBS must be >= 1")
+	}
+	if cfg.Evidence.BodyDiffThreshold < 1 {
+		return Config{}, fmt.Errorf("EVIDENCE_BODY_DIFF_THRESHOLD must be >= 1")
 	}
 
 	return cfg, nil

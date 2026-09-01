@@ -52,21 +52,27 @@ class UserNotificationService
         $durationLabel = $durationMs >= 1000
             ? round($durationMs / 1000, 1).' s'
             : $durationMs.' ms';
+        $failed = $dispatch->failed_at !== null;
 
         $notification->update([
-            'status' => UserNotificationStatus::Completed,
-            'title' => "Scan {$scanLabel} finalizado",
-            'body' => sprintf(
-                '%s — %d achado(s) em %s',
-                $dispatch->system?->name ?? 'Sistema',
-                $findings,
-                $durationLabel,
-            ),
+            'status' => $failed ? UserNotificationStatus::Failed : UserNotificationStatus::Completed,
+            'title' => $failed
+                ? "Scan {$scanLabel} falhou"
+                : "Scan {$scanLabel} finalizado",
+            'body' => $failed
+                ? sprintf('%s — não foi possível concluir o scan', $dispatch->system?->name ?? 'Sistema')
+                : sprintf(
+                    '%s — %d achado(s) em %s',
+                    $dispatch->system?->name ?? 'Sistema',
+                    $findings,
+                    $durationLabel,
+                ),
             'read_at' => null,
             'payload' => [
                 ...($notification->payload ?? []),
                 'findings_count' => $findings,
                 'duration_ms' => $durationMs,
+                'failed' => $failed,
             ],
         ]);
 

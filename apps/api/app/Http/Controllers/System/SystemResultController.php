@@ -186,7 +186,9 @@ class SystemResultController extends Controller
             'probes_count' => $dispatch->probes_count,
             'vectors_discovered' => $dispatch->vectors_discovered,
             'jobs_planned' => $dispatch->jobs_planned,
-            'status' => $dispatch->completed_at === null ? 'pending' : 'completed',
+            'failed_at' => $dispatch->failed_at,
+            'failure_reason' => $dispatch->failure_reason,
+            'status' => $dispatch->scanStatus(),
             'created_at' => $dispatch->created_at,
             'updated_at' => $dispatch->updated_at,
         ];

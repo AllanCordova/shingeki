@@ -42,6 +42,7 @@ func main() {
 		evidence.NewPathTraversalValidator(),
 		evidence.NewRegexValidator(),
 		evidence.NewSQLAuthBypassValidator(),
+		evidence.NewSQLBooleanValidator(),
 		evidence.NewDiffValidator(cfg.Evidence),
 		evidence.NewTimingValidator(cfg.Evidence),
 	)

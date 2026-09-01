@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -17,6 +18,7 @@ type Publisher struct {
 	logger *slog.Logger
 
 	mu   sync.Mutex
+	url  string
 	conn *amqp.Connection
 	ch   *amqp.Channel
 }
@@ -31,12 +33,17 @@ func NewPublisher(cfg config.RabbitMQConfig, logger *slog.Logger) *Publisher {
 func (p *Publisher) Connect(url string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	p.url = url
+	return p.connectLocked()
+}
 
-	if p.conn != nil && !p.conn.IsClosed() {
+func (p *Publisher) connectLocked() error {
+	if p.conn != nil && !p.conn.IsClosed() && p.ch != nil {
 		return nil
 	}
+	p.closeLocked()
 
-	conn, err := amqp.Dial(url)
+	conn, err := amqp.DialConfig(p.url, amqp.Config{Dial: amqp.DefaultDial(10 * time.Second)})
 	if err != nil {
 		return fmt.Errorf("connect rabbitmq: %w", err)
 	}
@@ -61,7 +68,10 @@ func (p *Publisher) Connect(url string) error {
 func (p *Publisher) Close() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	return p.closeLocked()
+}
 
+func (p *Publisher) closeLocked() error {
 	var err error
 	if p.ch != nil {
 		err = p.ch.Close()
@@ -97,6 +107,7 @@ func (p *Publisher) PublishCompletion(ctx context.Context, completion contracts.
 	return p.publishJSON(ctx, completion.MarshalJSONBytes, "published dispatch completion",
 		"dispatch_id", completion.DispatchID,
 		"system_id", completion.SystemID,
+		"status", completion.Status,
 		"findings_count", completion.FindingsCount,
 	)
 }
@@ -115,12 +126,12 @@ func (p *Publisher) publishJSON(
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	if p.ch == nil || p.conn == nil || p.conn.IsClosed() {
-		return fmt.Errorf("publisher not connected")
-	}
-
 	if ctx == nil {
 		ctx = context.Background()
+	}
+
+	if err := p.ensureChannelLocked(); err != nil {
+		return err
 	}
 
 	err = p.ch.PublishWithContext(
@@ -136,7 +147,24 @@ func (p *Publisher) publishJSON(
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("publish message: %w", err)
+		if recErr := p.connectLocked(); recErr != nil {
+			return fmt.Errorf("publish message: %w", err)
+		}
+		err = p.ch.PublishWithContext(
+			ctx,
+			"",
+			p.cfg.ResultsQueue,
+			false,
+			false,
+			amqp.Publishing{
+				ContentType:  "application/json",
+				DeliveryMode: amqp.Persistent,
+				Body:         data,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf("publish message: %w", err)
+		}
 	}
 
 	if len(logArgs) > 0 {
@@ -144,4 +172,14 @@ func (p *Publisher) publishJSON(
 	}
 
 	return nil
+}
+
+func (p *Publisher) ensureChannelLocked() error {
+	if p.ch != nil && p.conn != nil && !p.conn.IsClosed() {
+		return nil
+	}
+	if p.url == "" {
+		return fmt.Errorf("publisher not connected")
+	}
+	return p.connectLocked()
 }

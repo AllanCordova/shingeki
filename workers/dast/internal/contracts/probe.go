@@ -8,16 +8,16 @@ import (
 const EventAttackProbe = "attack.probe"
 
 type ProbeMessage struct {
-	Event          string `json:"event"`
-	DispatchID     string `json:"dispatch_id"`
-	SystemID       string `json:"system_id"`
-	AttackID       string `json:"attack_id"`
-	Route          string `json:"route"`
-	PayloadUsed    string `json:"payload_used"`
-	HTTPRequest    string `json:"http_request,omitempty"`
-	Outcome        string `json:"outcome"`
-	Evidence       string `json:"evidence"`
-	ErrorMessage   string `json:"error_message,omitempty"`
+	Event        string `json:"event"`
+	DispatchID   string `json:"dispatch_id"`
+	SystemID     string `json:"system_id"`
+	AttackID     string `json:"attack_id"`
+	Route        string `json:"route"`
+	PayloadUsed  string `json:"payload_used"`
+	HTTPRequest  string `json:"http_request,omitempty"`
+	Outcome      string `json:"outcome"`
+	Evidence     string `json:"evidence"`
+	ErrorMessage string `json:"error_message,omitempty"`
 }
 
 func (p ProbeMessage) Validate() error {

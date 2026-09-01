@@ -21,7 +21,7 @@ type stubDiscovery struct {
 func (s stubDiscovery) Discover(
 	_ context.Context,
 	_ string,
-	_ map[string]string,
+	_ *contracts.TargetAuth,
 	_ discovery.Options,
 ) ([]contracts.AttackVector, error) {
 	return s.vectors, s.err
@@ -129,6 +129,9 @@ func TestPipelinePublishesFindingProbeAndCompletion(t *testing.T) {
 	if len(publisher.completions) != 1 || publisher.completions[0].FindingsCount != 1 {
 		t.Fatalf("expected completion with 1 finding, got %+v", publisher.completions)
 	}
+	if publisher.completions[0].Status != contracts.CompletionStatusCompleted {
+		t.Fatalf("expected completed status, got %q", publisher.completions[0].Status)
+	}
 }
 
 func TestPipelinePublishesCompletionWhenDiscoveryFails(t *testing.T) {
@@ -148,6 +151,12 @@ func TestPipelinePublishesCompletionWhenDiscoveryFails(t *testing.T) {
 	}
 	if len(publisher.completions) != 1 {
 		t.Fatalf("expected completion after discovery failure, got %d", len(publisher.completions))
+	}
+	if publisher.completions[0].Status != contracts.CompletionStatusFailed {
+		t.Fatalf("expected failed status, got %q", publisher.completions[0].Status)
+	}
+	if publisher.completions[0].Error == "" {
+		t.Fatal("expected failure error on completion")
 	}
 }
 
