@@ -37,6 +37,17 @@ func connectBrowser(ctx context.Context, cfg config.DiscoveryConfig, logger inte
 	return launchChromium(ctx, cfg, logger)
 }
 
+func ConnectBrowser(ctx context.Context, cfg config.DiscoveryConfig, logger interface {
+	Info(string, ...any)
+	Warn(string, ...any)
+}) (*rod.Browser, func(), error) {
+	connected, err := connectBrowser(ctx, cfg, logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	return connected.browser, connected.cleanup, nil
+}
+
 func attachCDP(ctx context.Context, cdpURL string, logger interface {
 	Info(string, ...any)
 }) (*connectedBrowser, error) {

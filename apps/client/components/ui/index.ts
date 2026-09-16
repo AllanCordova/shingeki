@@ -16,6 +16,7 @@ export {
   MapIcon,
   LayoutTemplateIcon,
   CheckCheckIcon,
+  CopyIcon,
 } from "./icons";
 export { UserAvatar } from "./user-avatar";
 export { UserAvatarLink } from "./user-avatar-link";

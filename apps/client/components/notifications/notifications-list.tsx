@@ -215,6 +215,7 @@ function NotificationRow({
   onMarkRead: () => void;
 }) {
   const unread = notification.read_at === null && notification.status !== "pending";
+  const href = notification.action_url;
 
   const content = (
     <div
@@ -234,9 +235,9 @@ function NotificationRow({
 
   return (
     <div className="flex items-stretch gap-2">
-      {notification.action_url && notification.status !== "pending" ? (
+      {href ? (
         <Link
-          href={notification.action_url}
+          href={href}
           onClick={onMarkRead}
           className="min-w-0 flex-1 transition-colors hover:bg-surface-muted"
         >

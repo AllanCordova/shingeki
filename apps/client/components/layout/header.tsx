@@ -47,7 +47,8 @@ export function Header({ showMenuButton = false }: { showMenuButton?: boolean })
             </button>
           ) : null}
           <Link
-            href="/projetos"
+            href="/"
+            title="Início"
             className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-foreground"
           >
             <img

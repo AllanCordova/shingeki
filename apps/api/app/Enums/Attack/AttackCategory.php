@@ -14,4 +14,7 @@ enum AttackCategory: string
     case LdapInjection = 'LDAP_INJECTION';
     case NosqlInjection = 'NOSQL_INJECTION';
     case Idor = 'IDOR';
+    case OpenRedirect = 'OPEN_REDIRECT';
+    case Ssti = 'SSTI';
+    case JwtConfusion = 'JWT_CONFUSION';
 }

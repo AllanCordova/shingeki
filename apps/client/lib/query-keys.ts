@@ -69,6 +69,20 @@ export const queryKeys = {
     ["projects", projectId, "systems", systemId, "dispatches"] as const,
   attackAcknowledgment: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId, "attack-acknowledgment"] as const,
+  dispatchCatalog: (
+    projectId: string,
+    systemId: string,
+    scanType: "DAST" | "SAST",
+  ) =>
+    [
+      "projects",
+      projectId,
+      "systems",
+      systemId,
+      "attacks",
+      "catalog",
+      scanType,
+    ] as const,
   results: (
     projectId: string,
     systemId: string,

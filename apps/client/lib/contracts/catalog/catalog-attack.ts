@@ -54,6 +54,9 @@ export const ATTACK_CATEGORIES = [
   "LDAP_INJECTION",
   "NOSQL_INJECTION",
   "IDOR",
+  "OPEN_REDIRECT",
+  "SSTI",
+  "JWT_CONFUSION",
 ] as const;
 
 export const ATTACK_TARGET_LOCATIONS = [

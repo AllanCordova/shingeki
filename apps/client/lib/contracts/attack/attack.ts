@@ -9,7 +9,20 @@ export type AttackDiscoveryScope = {
 
 export type AttackDispatchInput = {
   depth?: AttackDepth;
+  attack_ids?: string[];
 } & AttackDiscoveryScope;
+
+export type DispatchCatalogAttack = {
+  id: string;
+  scan_type: AttackScanTypeValue;
+  category: AttackCategory;
+  target_location: string;
+  risk_level: AttackRiskLevel;
+};
+
+export type DispatchCatalogResponse = {
+  attacks: DispatchCatalogAttack[];
+};
 
 export type AttackCategory =
   | "SQL_INJECTION"

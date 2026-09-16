@@ -16,6 +16,8 @@ var pathTraversalMarkers = []string{
 	"[extensions]",
 	"[fonts]",
 	"for 16-bit app support",
+	"this document is confidential!",
+	"planned acquisitions",
 }
 
 type PathTraversalValidator struct{}

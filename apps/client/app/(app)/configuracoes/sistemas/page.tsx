@@ -28,7 +28,7 @@ export default function ConfiguraçõesSistemasPage() {
           Sistemas
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          Escolha um sistema para ajustar o escopo dos scans DAST.
+          Defina o escopo do DAST e os ataques do catálogo usados no disparo.
         </p>
       </div>
 
@@ -40,7 +40,7 @@ export default function ConfiguraçõesSistemasPage() {
       {!isLoading && !isError && systems.length === 0 ? (
         <EmptyState
           title="Nenhum sistema cadastrado"
-          description="Cadastre um sistema em um projeto para configurar o escopo do DAST."
+          description="Cadastre um sistema em um projeto para configurar o disparo."
         />
       ) : null}
 

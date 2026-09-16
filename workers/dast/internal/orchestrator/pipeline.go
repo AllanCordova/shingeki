@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"time"
 
@@ -50,6 +51,10 @@ func NewPipeline(
 }
 
 func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err error) {
+	if closer, ok := p.evidence.(io.Closer); ok {
+		defer func() { _ = closer.Close() }()
+	}
+
 	start := time.Now()
 	findingsPublished := 0
 	probesPublished := 0

@@ -28,6 +28,24 @@ func TestAppendRecordedRoutesAddsXHR(t *testing.T) {
 	}
 }
 
+func TestAppendRecordedRoutesHashSearchBecomesQueryVector(t *testing.T) {
+	auth := &contracts.TargetAuth{
+		Routes: []contracts.CapturedRoute{
+			{Method: "GET", URL: "http://shop.test/#/search?q=apple", Type: "main_frame"},
+		},
+	}
+	got := AppendRecordedRoutes("http://shop.test/", nil, auth)
+	if len(got) != 1 {
+		t.Fatalf("expected hash search vector, got %#v", got)
+	}
+	if got[0].TargetLocation != "QUERY_PARAMETER" {
+		t.Fatalf("location=%s", got[0].TargetLocation)
+	}
+	if got[0].Params["q"] != "apple" {
+		t.Fatalf("params=%v", got[0].Params)
+	}
+}
+
 func TestAppendRecordedRoutesKeepsAPISubdomain(t *testing.T) {
 	auth := &contracts.TargetAuth{
 		Routes: []contracts.CapturedRoute{

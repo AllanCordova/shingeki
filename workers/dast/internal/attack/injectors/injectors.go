@@ -2,6 +2,7 @@ package injectors
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"mime/multipart"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
+	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
 type RequestSpec struct {
@@ -59,7 +61,19 @@ func buildQuery(job types.Job, inject bool) (RequestSpec, error) {
 	if err != nil {
 		return RequestSpec{}, err
 	}
+
+	useFragment := targeturl.UsesFragmentQuery(parsed)
 	values := parsed.Query()
+	fragPath := parsed.Fragment
+	if useFragment {
+		path, fragQuery, _ := targeturl.SplitFragment(parsed.Fragment)
+		fragPath = path
+		values = fragQuery
+	}
+	if values == nil {
+		values = url.Values{}
+	}
+
 	for key, val := range job.Vector.Params {
 		values.Set(key, val)
 	}
@@ -68,6 +82,27 @@ func buildQuery(job types.Job, inject bool) (RequestSpec, error) {
 			values.Set(key, job.Payload.Value)
 		}
 	}
+
+	if useFragment {
+		parsed.RawQuery = ""
+		parsed.Fragment = ""
+		parsed.RawFragment = ""
+		origin := targeturl.Origin(parsed.String())
+		path := fragPath
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		urlStr := strings.TrimRight(origin, "/") + "/#" + path
+		if encoded := values.Encode(); encoded != "" {
+			urlStr += "?" + encoded
+		}
+		return RequestSpec{
+			Method:  firstNonEmpty(job.Vector.Method, http.MethodGet),
+			URL:     urlStr,
+			Headers: cloneHeaders(job.Vector.Headers),
+		}, nil
+	}
+
 	parsed.RawQuery = values.Encode()
 	return RequestSpec{
 		Method:  firstNonEmpty(job.Vector.Method, http.MethodGet),
@@ -129,6 +164,19 @@ func encodeDotDotSegments(payload string) string {
 
 func buildHeader(job types.Job, inject bool) (RequestSpec, error) {
 	headers := cloneHeaders(job.Vector.Headers)
+	if isJWTConfusion(job) {
+		token := bearerToken(headers)
+		if inject {
+			headers["Authorization"] = "Bearer " + noneJWT(token, job.Payload.Value)
+		} else if token != "" {
+			headers["Authorization"] = "Bearer " + brokenJWT(token)
+		}
+		return RequestSpec{
+			Method:  firstNonEmpty(job.Vector.Method, http.MethodGet),
+			URL:     job.Vector.Route,
+			Headers: headers,
+		}, nil
+	}
 	if inject {
 		name := injectKey(job, "X-Forwarded-For")
 		headers[name] = job.Payload.Value
@@ -313,4 +361,46 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func isJWTConfusion(job types.Job) bool {
+	return strings.Contains(strings.ToUpper(job.Attack.Category), "JWT")
+}
+
+func bearerToken(headers map[string]string) string {
+	for key, value := range headers {
+		if !strings.EqualFold(key, "Authorization") {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		if strings.HasPrefix(strings.ToLower(value), "bearer ") {
+			return strings.TrimSpace(value[7:])
+		}
+		return value
+	}
+	return ""
+}
+
+func noneJWT(token, alg string) string {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return token
+	}
+	alg = strings.TrimSpace(alg)
+	if alg == "" {
+		alg = "none"
+	}
+	header, _ := json.Marshal(map[string]string{"alg": alg, "typ": "JWT"})
+	return base64.RawURLEncoding.EncodeToString(header) + "." + parts[1] + "."
+}
+
+func brokenJWT(token string) string {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		if token == "" {
+			return "invalid"
+		}
+		return token + ".invalid"
+	}
+	return parts[0] + "." + parts[1] + ".invalid-signature"
 }

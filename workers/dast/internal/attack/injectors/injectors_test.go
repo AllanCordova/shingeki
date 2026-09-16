@@ -33,6 +33,39 @@ func TestBuildQueryInjection(t *testing.T) {
 	}
 }
 
+func TestBuildQueryInjectionIntoHashFragment(t *testing.T) {
+	payload := `<iframe src="javascript:alert(` + "`xss`" + `)">`
+	job := types.Job{
+		Attack: contracts.AttackItem{TargetLocation: "QUERY_PARAMETER"},
+		Vector: contracts.AttackVector{
+			Route:          "http://shop.test/#/search?q=",
+			Method:         "GET",
+			TargetLocation: "QUERY_PARAMETER",
+			Params:         map[string]string{"q": ""},
+		},
+		ParamKey: "q",
+		Payload:  types.PayloadSpec{Value: payload},
+	}
+
+	spec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	parsed, err := url.Parse(spec.URL)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if parsed.RawQuery != "" {
+		t.Fatalf("hash-routed search must not put q on the HTTP query, got %q", spec.URL)
+	}
+	if strings.Contains(spec.URL, "%253C") {
+		t.Fatalf("iframe payload must not be double-encoded, got %q", spec.URL)
+	}
+	if !strings.Contains(spec.URL, "/#/search") || !strings.Contains(spec.URL, "%3Ciframe") {
+		t.Fatalf("expected single-encoded iframe in hash search URL, got %q fragment=%q", spec.URL, parsed.Fragment)
+	}
+}
+
 func TestBuildJSONInjection(t *testing.T) {
 	job := types.Job{
 		Attack: contracts.AttackItem{TargetLocation: "JSON_BODY"},
@@ -145,5 +178,33 @@ func TestBuildPathReplacesLastSegmentAndEncodesDotDot(t *testing.T) {
 	}
 	if strings.Contains(spec.URL, "/browse/welcome.txt/") {
 		t.Fatalf("payload must replace the file segment, got %s", spec.URL)
+	}
+}
+
+func TestBuildHeaderJWTNone(t *testing.T) {
+	token := "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxIn0.sig"
+	job := types.Job{
+		Attack: contracts.AttackItem{Category: "JWT_CONFUSION", TargetLocation: "HEADER"},
+		Vector: contracts.AttackVector{
+			Route:   "http://shop.test/api/Users/",
+			Method:  "GET",
+			Headers: map[string]string{"Authorization": "Bearer " + token},
+		},
+		Payload: types.PayloadSpec{Value: "none"},
+	}
+	attackSpec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	auth := attackSpec.Headers["Authorization"]
+	if !strings.HasPrefix(auth, "Bearer ") || !strings.HasSuffix(auth, ".") || strings.Contains(auth, "sig") {
+		t.Fatalf("expected none JWT, got %q", auth)
+	}
+	baseSpec, err := injectors.BuildBaseline(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(baseSpec.Headers["Authorization"], "invalid-signature") {
+		t.Fatalf("baseline must use a broken signature, got %q", baseSpec.Headers["Authorization"])
 	}
 }

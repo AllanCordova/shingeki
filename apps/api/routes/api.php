@@ -98,6 +98,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::get('projects/{project}/systems/{system}/attack-acknowledgment', [AttackAcknowledgmentController::class, 'show']);
+    Route::get('projects/{project}/systems/{system}/attacks/catalog', [AttackController::class, 'catalog']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);

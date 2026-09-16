@@ -21,15 +21,17 @@ type PayloadSpec struct {
 }
 
 type Response struct {
-	Job            Job
-	BaselineStatus int
-	BaselineBody   string
-	BaselineMs     int64
-	AttackStatus   int
-	AttackBody     string
-	AttackMs       int64
-	RawRequest     string
-	PayloadUsed    string
-	TimedOut       bool
-	Error          error
+	Job              Job
+	BaselineStatus   int
+	BaselineBody     string
+	BaselineMs       int64
+	AttackStatus     int
+	AttackBody       string
+	AttackMs         int64
+	AttackLocation   string
+	BaselineLocation string
+	RawRequest       string
+	PayloadUsed      string
+	TimedOut         bool
+	Error            error
 }
