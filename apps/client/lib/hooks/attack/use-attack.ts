@@ -10,11 +10,19 @@ import {
 import type {
   AttackDepth,
   AttackDiscoveryScope,
+  DispatchCatalogAttack,
+  DispatchCatalogResponse,
 } from "@/lib/contracts/attack/attack";
 import { queryKeys } from "@/lib/query-keys";
 import type { AttackDispatchResponse } from "@/lib/contracts";
 
 export type AttackScanType = "dast" | "sast";
+
+const EMPTY_CATALOG: DispatchCatalogAttack[] = [];
+
+function toApiScanType(scanType: AttackScanType): "DAST" | "SAST" {
+  return scanType === "sast" ? "SAST" : "DAST";
+}
 
 function dispatchPath(
   projectId: string,
@@ -40,6 +48,35 @@ export function useAttackAcknowledgment(projectId: string, systemId: string) {
     acknowledged: query.data?.acknowledged ?? false,
     acknowledgedAt: query.data?.acknowledged_at ?? null,
     terms: query.data?.terms,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: (query.error as ApiError | null) ?? null,
+    refetch: query.refetch,
+  };
+}
+
+export function useDispatchCatalog(
+  projectId: string,
+  systemId: string,
+  scanType: AttackScanType | null,
+  enabled = true,
+) {
+  const apiScanType = scanType ? toApiScanType(scanType) : "DAST";
+
+  const query = useQuery({
+    queryKey: queryKeys.dispatchCatalog(projectId, systemId, apiScanType),
+    queryFn: async () => {
+      const search = new URLSearchParams({ scan_type: apiScanType });
+      const { data } = await apiClient.get<DispatchCatalogResponse>(
+        `/projects/${projectId}/systems/${systemId}/attacks/catalog?${search.toString()}`,
+      );
+      return data.attacks;
+    },
+    enabled: enabled && scanType !== null,
+  });
+
+  return {
+    attacks: query.data ?? EMPTY_CATALOG,
     isLoading: query.isLoading,
     isError: query.isError,
     error: (query.error as ApiError | null) ?? null,

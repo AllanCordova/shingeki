@@ -7,8 +7,10 @@ import {
   useDispatchAttack,
   type AttackScanType,
 } from "@/lib/hooks/attack/use-attack";
-import { AttackDepthModal } from "@/components/attack/attack-depth-modal";
-import type { AttackDepthConfirm } from "@/components/attack/attack-depth-modal";
+import {
+  AttackDepthModal,
+  type AttackDepthConfirm,
+} from "@/components/attack/attack-depth-modal";
 import type { AttackDepth } from "@/lib/contracts/attack/attack";
 import { notify } from "@/lib/notify";
 import type { ApiError } from "@/lib/api/error-handler";

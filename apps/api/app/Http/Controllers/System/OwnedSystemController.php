@@ -2,14 +2,21 @@
 
 namespace App\Http\Controllers\System;
 
+use App\Enums\Attack\AttackScanType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\System\UpdateSystemDispatchSettings;
 use App\Models\System\System;
+use App\Services\Attack\AttackCatalogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use RuntimeException;
 
 class OwnedSystemController extends Controller
 {
+    public function __construct(
+        private readonly AttackCatalogService $attackCatalog,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $systems = System::query()
@@ -40,10 +47,34 @@ class OwnedSystemController extends Controller
     ): JsonResponse {
         $this->authorize('update', $system);
 
-        $system->update([
+        $dastAttackIds = $request->exists('dast_attack_ids') ? $request->dastAttackIds() : false;
+        $sastAttackIds = $request->exists('sast_attack_ids') ? $request->sastAttackIds() : false;
+
+        try {
+            if ($dastAttackIds !== false) {
+                $this->assertCatalogSelection(AttackScanType::Dast, $dastAttackIds);
+            }
+            if ($sastAttackIds !== false) {
+                $this->assertCatalogSelection(AttackScanType::Sast, $sastAttackIds);
+            }
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        $payload = [
             'dast_start_path' => $request->dastStartPath(),
             'dast_max_routes' => $request->dastMaxRoutes(),
-        ]);
+        ];
+        if ($dastAttackIds !== false) {
+            $payload['dast_attack_ids'] = $dastAttackIds;
+        }
+        if ($sastAttackIds !== false) {
+            $payload['sast_attack_ids'] = $sastAttackIds;
+        }
+
+        $system->update($payload);
 
         $system->load(['project', 'stacks']);
 
@@ -68,6 +99,8 @@ class OwnedSystemController extends Controller
             'repository_url' => $system->repository_url,
             'dast_max_routes' => $system->dast_max_routes,
             'dast_start_path' => $system->dast_start_path,
+            'dast_attack_ids' => $system->dast_attack_ids,
+            'sast_attack_ids' => $system->sast_attack_ids,
             'stacks' => $system->relationLoaded('stacks')
                 ? $system->stacks
                     ->map(fn ($stack) => [
@@ -88,5 +121,17 @@ class OwnedSystemController extends Controller
             'created_at' => $system->created_at,
             'updated_at' => $system->updated_at,
         ];
+    }
+
+    /**
+     * @param  list<string>|null  $ids
+     */
+    private function assertCatalogSelection(AttackScanType $scanType, ?array $ids): void
+    {
+        if ($ids === null) {
+            return;
+        }
+
+        $this->attackCatalog->catalogAttacksForDispatch($scanType, $ids);
     }
 }

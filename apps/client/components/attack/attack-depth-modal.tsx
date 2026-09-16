@@ -64,7 +64,6 @@ export function AttackDepthModal({
   }
 
   const label = scanType ? scanLabels[scanType] : "ataque";
-  const isDast = scanType === "dast";
   const settingsHref = `/configuracoes/sistemas/${systemId}/dispatch`;
 
   return (
@@ -75,7 +74,7 @@ export function AttackDepthModal({
       description={
         scanType === "sast"
           ? "Escolha a profundidade. No SAST o valor é registrado, mas não altera a análise estática."
-          : "Escolha a profundidade do scan. O ponto de partida e o limite de páginas ficam nas configurações do sistema."
+          : "Escolha a profundidade do scan."
       }
       footer={
         <>
@@ -93,22 +92,17 @@ export function AttackDepthModal({
       }
     >
       <div className="flex flex-col gap-4">
-        {isDast ? (
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">
-              Escopo do sistema: ponto de partida e limite de páginas.
-            </p>
-            <Link
-              href={settingsHref}
-              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-app border border-border bg-surface text-muted-foreground hover:bg-surface-muted hover:text-foreground"
-              aria-label="Abrir escopo do DAST deste sistema"
-              title="Escopo do DAST"
-              onClick={onClose}
-            >
-              <SettingsIcon className="h-4 w-4" />
-            </Link>
-          </div>
-        ) : null}
+        <div className="flex justify-end">
+          <Link
+            href={settingsHref}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-app border border-border bg-surface text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+            aria-label="Abrir configurações de disparo deste sistema"
+            title="Configurações de disparo"
+            onClick={onClose}
+          >
+            <SettingsIcon className="h-4 w-4" />
+          </Link>
+        </div>
 
         <div
           className="flex flex-col gap-2"

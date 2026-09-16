@@ -54,6 +54,8 @@ export function useUpdateSystemDispatchSettings(systemId: string) {
     mutationFn: async (input: {
       dast_start_path: string | null;
       dast_max_routes: number | null;
+      dast_attack_ids: string[] | null;
+      sast_attack_ids: string[] | null;
     }) => {
       const { data } = await apiClient.put<SystemResponse>(
         `/systems/${systemId}/dispatch-settings`,

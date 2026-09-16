@@ -143,6 +143,8 @@ class SystemController extends Controller
             'repository_url' => $system->repository_url,
             'dast_max_routes' => $system->dast_max_routes,
             'dast_start_path' => $system->dast_start_path,
+            'dast_attack_ids' => $system->dast_attack_ids,
+            'sast_attack_ids' => $system->sast_attack_ids,
             'stacks' => $system->relationLoaded('stacks')
                 ? $system->stacks
                     ->map(fn ($stack) => [
