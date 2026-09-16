@@ -38,14 +38,14 @@ func (v *DiffValidator) Analyze(_ context.Context, response types.Response) *Fin
 
 func allowsDiffConfirmation(category string) bool {
 	upper := strings.ToUpper(category)
-	if strings.Contains(upper, "PATH") {
-		return false
+	blocked := []string{
+		"PATH", "XSS", "SQL", "IDOR", "CSRF", "COMMAND", "SSRF", "XXE",
+		"LDAP", "SSTI", "JWT", "REDIRECT",
 	}
-	if strings.Contains(upper, "XSS") {
-		return false
-	}
-	if strings.Contains(upper, "SQL") {
-		return false
+	for _, needle := range blocked {
+		if strings.Contains(upper, needle) {
+			return false
+		}
 	}
 	return true
 }

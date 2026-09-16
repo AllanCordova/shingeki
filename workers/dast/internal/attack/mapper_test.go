@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/shingeki/dast-worker/internal/attack"
+	"github.com/shingeki/dast-worker/internal/attack/types"
 	"github.com/shingeki/dast-worker/internal/contracts"
 )
 
@@ -140,5 +141,45 @@ func TestMapVectorsToJobsWithoutFieldExpandsParams(t *testing.T) {
 	jobs := attack.MapVectorsToJobs(vectors, attacks)
 	if len(jobs) != 2 {
 		t.Fatalf("expected jobs for every form field, got %d", len(jobs))
+	}
+}
+
+func TestCapJobsRoundRobinKeepsLateVectors(t *testing.T) {
+	var jobs []types.Job
+	for i, route := range []string{"http://shop.test/", "http://shop.test/rest/products/search", "http://shop.test/ftp/"} {
+		for n := 0; n < 5; n++ {
+			jobs = append(jobs, types.Job{
+				Attack: contracts.AttackItem{AttackID: "atk", Category: "PATH_TRAVERSAL"},
+				Vector: contracts.AttackVector{
+					Route:          route,
+					Method:         "GET",
+					TargetLocation: "URL_PATH",
+				},
+				Payload: types.PayloadSpec{Value: route + "#" + string(rune('a'+n+i))},
+			})
+		}
+	}
+	got := attack.CapJobs(jobs, 6)
+	if len(got) != 6 {
+		t.Fatalf("expected 6 jobs, got %d", len(got))
+	}
+	ftp := 0
+	for _, job := range got {
+		if job.Vector.Route == "http://shop.test/ftp/" {
+			ftp++
+		}
+	}
+	if ftp != 2 {
+		t.Fatalf("expected 2 /ftp/ jobs after cap, got %d", ftp)
+	}
+}
+
+func TestCapJobsNoopWhenUnderMax(t *testing.T) {
+	jobs := []types.Job{{
+		Vector: contracts.AttackVector{Route: "http://shop.test/ftp/", Method: "GET", TargetLocation: "URL_PATH"},
+	}}
+	got := attack.CapJobs(jobs, 10)
+	if len(got) != 1 {
+		t.Fatalf("expected original slice, got %d", len(got))
 	}
 }

@@ -58,5 +58,8 @@ func (v *TimingValidator) Analyze(_ context.Context, response types.Response) *F
 
 func allowsTimingConfirmation(category string) bool {
 	upper := strings.ToUpper(category)
+	if strings.Contains(upper, "NOSQL") {
+		return false
+	}
 	return strings.Contains(upper, "SQL") || strings.Contains(upper, "TIME") || strings.Contains(upper, "SLEEP")
 }

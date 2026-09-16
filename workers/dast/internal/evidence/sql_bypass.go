@@ -24,7 +24,7 @@ func NewSQLAuthBypassValidator() *SQLAuthBypassValidator {
 }
 
 func (v *SQLAuthBypassValidator) Analyze(_ context.Context, response types.Response) *Finding {
-	if !strings.Contains(strings.ToUpper(response.Job.Attack.Category), "SQL") {
+	if !isClassicSQL(response.Job.Attack.Category) {
 		return nil
 	}
 	if !looksLikeSQLInjectionPayload(response.PayloadUsed) {

@@ -195,6 +195,14 @@ func (r *RodCrawler) Discover(
 
 		pagesVisited++
 		record(contracts.NewAttackVector(currentURL, "GET", "URL_PATH"))
+		if vector, ok := queryVectorFromPageURL(currentURL); ok {
+			record(vector)
+		}
+		if r.pageHasSearchInput(page) {
+			if vector, ok := hashSearchVector(targetURL); ok {
+				record(vector)
+			}
+		}
 
 		for _, link := range r.collectLinks(page, currentURL) {
 			if bfs.IsAttackableDiscoveryURL(targetURL, link) {
@@ -365,7 +373,10 @@ func (r *RodCrawler) collectLinks(page *rod.Page, currentURL string) []string {
 	}
 	for i := 0; i < limit; i++ {
 		href := elementAttr(elements[i], "href")
-		if href == "" || hasPrefixFold(href, "javascript:") || hasPrefixFold(href, "#") {
+		if href == "" || hasPrefixFold(href, "javascript:") {
+			continue
+		}
+		if hasPrefixFold(href, "#") && !hasPrefixFold(href, "#/") {
 			continue
 		}
 		resolved, ok := bfs.ResolveReference(currentURL, href)
