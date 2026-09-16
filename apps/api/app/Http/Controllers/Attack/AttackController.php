@@ -6,6 +6,7 @@ use App\Enums\Attack\AttackDepth;
 use App\Enums\Attack\AttackScanType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attack\AttackDispatch as AttackDispatchRequest;
+use App\Http\Requests\Attack\ListDispatchCatalog;
 use App\Models\Attack\Attack;
 use App\Models\Attack\AttackAcknowledgment;
 use App\Models\Attack\AttackDispatch;
@@ -44,6 +45,20 @@ class AttackController extends Controller
         return $this->dispatchScan($request, $project, $system, AttackScanType::Sast);
     }
 
+    public function catalog(ListDispatchCatalog $request, Project $project, System $system): JsonResponse
+    {
+        $this->authorize('create', [Attack::class, $system]);
+
+        $attacks = $this->attackCatalog->catalogAttacks($request->scanType());
+
+        return response()->json([
+            'attacks' => $attacks
+                ->map(fn (Attack $attack) => $this->formatCatalogAttack($attack))
+                ->values()
+                ->all(),
+        ]);
+    }
+
     private function dispatchScan(
         AttackDispatchRequest $request,
         Project $project,
@@ -53,7 +68,10 @@ class AttackController extends Controller
         $this->authorize('create', [Attack::class, $system]);
 
         try {
-            $attacks = $this->attackCatalog->catalogAttacksOrFail($scanType);
+            $ids = $request->attackIds() ?? $system->attackIdsFor($scanType);
+            $attacks = $ids === null
+                ? $this->attackCatalog->catalogAttacksOrFail($scanType)
+                : $this->attackCatalog->catalogAttacksForDispatch($scanType, $ids);
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
@@ -133,6 +151,20 @@ class AttackController extends Controller
             'status' => $dispatch->scanStatus(),
             'created_at' => $dispatch->created_at,
             'updated_at' => $dispatch->updated_at,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function formatCatalogAttack(Attack $attack): array
+    {
+        return [
+            'id' => $attack->id,
+            'scan_type' => $attack->scan_type->value,
+            'category' => $attack->category->value,
+            'target_location' => $attack->target_location->value,
+            'risk_level' => $attack->risk_level->value,
         ];
     }
 

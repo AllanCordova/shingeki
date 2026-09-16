@@ -179,7 +179,7 @@ describe('user notifications api', function () {
 describe('notification lifecycle integration', function () {
     test('attack dispatch creates pending notification and completion marks it done', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->count(2)->for($admin)->create();
+        $catalogAttacks = Attack::factory()->count(2)->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -193,6 +193,7 @@ describe('notification lifecycle integration', function () {
             'accepted_responsibility' => true,
             'accepted_legal_terms' => true,
             'terms_version' => AttackAcknowledgmentTerms::VERSION,
+            'attack_ids' => $catalogAttacks->pluck('id')->all(),
         ])
             ->assertAccepted();
 

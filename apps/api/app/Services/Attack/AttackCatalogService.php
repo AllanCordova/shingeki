@@ -40,4 +40,31 @@ class AttackCatalogService
 
         return $attacks;
     }
+
+    /**
+     * @param  list<string>  $ids
+     * @return Collection<int, Attack>
+     */
+    public function catalogAttacksForDispatch(AttackScanType $scanType, array $ids): Collection
+    {
+        $uniqueIds = array_values(array_unique($ids));
+
+        if ($uniqueIds === []) {
+            throw new RuntimeException('No catalog attacks are available for dispatch.');
+        }
+
+        $catalog = $this->catalogAttacks($scanType);
+
+        if ($catalog->isEmpty()) {
+            throw new RuntimeException('No catalog attacks are available for dispatch.');
+        }
+
+        $selected = $catalog->whereIn('id', $uniqueIds)->values();
+
+        if ($selected->count() !== count($uniqueIds)) {
+            throw new RuntimeException('One or more selected attacks are not available for this scan.');
+        }
+
+        return $selected;
+    }
 }

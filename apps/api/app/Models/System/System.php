@@ -2,6 +2,7 @@
 
 namespace App\Models\System;
 
+use App\Enums\Attack\AttackScanType;
 use App\Models\Attack\AttackDispatch;
 use App\Models\Project\Project;
 use App\Models\Signature\Signature;
@@ -35,6 +36,8 @@ class System extends Model
         'repository_url',
         'dast_max_routes',
         'dast_start_path',
+        'dast_attack_ids',
+        'sast_attack_ids',
     ];
 
     /**
@@ -44,12 +47,35 @@ class System extends Model
     {
         return [
             'dast_max_routes' => 'integer',
+            'dast_attack_ids' => 'array',
+            'sast_attack_ids' => 'array',
         ];
     }
 
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    public function attackIdsFor(AttackScanType $scanType): ?array
+    {
+        $ids = $scanType === AttackScanType::Sast
+            ? $this->sast_attack_ids
+            : $this->dast_attack_ids;
+
+        if (! is_array($ids) || $ids === []) {
+            return null;
+        }
+
+        $filtered = array_values(array_filter(
+            $ids,
+            fn (mixed $id): bool => is_string($id) && $id !== '',
+        ));
+
+        return $filtered === [] ? null : $filtered;
     }
 
     public function signatures(): HasMany

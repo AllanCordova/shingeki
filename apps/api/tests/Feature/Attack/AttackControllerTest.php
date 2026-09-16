@@ -11,6 +11,7 @@ use App\Models\User\User;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Support\AttackAcknowledgmentTerms;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\Sanctum;
 
 function attackDispatchUrl(Project $project, System $system): string
@@ -28,13 +29,28 @@ function attackAcknowledgmentUrl(Project $project, System $system): string
     return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attack-acknowledgment';
 }
 
-function validAttackDispatchPayload(): array
+function attackCatalogUrl(Project $project, System $system): string
 {
-    return [
+    return '/api/projects/'.$project->id.'/systems/'.$system->id.'/attacks/catalog';
+}
+
+/**
+ * @param  list<string>  $attackIds
+ * @return array<string, mixed>
+ */
+function validAttackDispatchPayload(array $attackIds = []): array
+{
+    $payload = [
         'accepted_responsibility' => true,
         'accepted_legal_terms' => true,
         'terms_version' => AttackAcknowledgmentTerms::VERSION,
     ];
+
+    if ($attackIds !== []) {
+        $payload['attack_ids'] = $attackIds;
+    }
+
+    return $payload;
 }
 
 describe('POST attacks/dispatch', function () {
@@ -69,7 +85,10 @@ describe('POST attacks/dispatch', function () {
                 null,
             );
 
-        $response = $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload());
+        $response = $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload($catalogAttacks->pluck('id')->all()),
+        );
 
         $response
             ->assertAccepted()
@@ -108,7 +127,7 @@ describe('POST attacks/dispatch', function () {
 
     test('dispatches with quick depth when requested', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->for($admin)->create();
+        $attack = Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -121,7 +140,7 @@ describe('POST attacks/dispatch', function () {
             ->once();
 
         $this->postJson(attackDispatchUrl($project, $system), [
-            ...validAttackDispatchPayload(),
+            ...validAttackDispatchPayload([$attack->id]),
             'depth' => 'quick',
         ])
             ->assertAccepted()
@@ -134,7 +153,7 @@ describe('POST attacks/dispatch', function () {
 
     test('dispatches with start_path and max_routes scope', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->for($admin)->create();
+        $attack = Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -147,7 +166,7 @@ describe('POST attacks/dispatch', function () {
             ->once();
 
         $this->postJson(attackDispatchUrl($project, $system), [
-            ...validAttackDispatchPayload(),
+            ...validAttackDispatchPayload([$attack->id]),
             'depth' => 'quick',
             'start_path' => 'products',
             'max_routes' => 50,
@@ -165,7 +184,7 @@ describe('POST attacks/dispatch', function () {
 
     test('omits max_routes when start_path is set without max_routes', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->for($admin)->create();
+        $attack = Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -178,7 +197,7 @@ describe('POST attacks/dispatch', function () {
             ->once();
 
         $this->postJson(attackDispatchUrl($project, $system), [
-            ...validAttackDispatchPayload(),
+            ...validAttackDispatchPayload([$attack->id]),
             'start_path' => '/products',
         ])
             ->assertAccepted()
@@ -188,7 +207,7 @@ describe('POST attacks/dispatch', function () {
 
     test('returns unprocessable for invalid depth', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->for($admin)->create();
+        $attack = Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -197,7 +216,7 @@ describe('POST attacks/dispatch', function () {
         Sanctum::actingAs($user);
 
         $this->postJson(attackDispatchUrl($project, $system), [
-            ...validAttackDispatchPayload(),
+            ...validAttackDispatchPayload([$attack->id]),
             'depth' => 'deep',
         ])
             ->assertUnprocessable()
@@ -230,9 +249,88 @@ describe('POST attacks/dispatch', function () {
 
         Sanctum::actingAs($user);
 
-        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
+        $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload(),
+        )
             ->assertUnprocessable()
             ->assertJsonPath('message', 'No catalog attacks are available for dispatch.');
+    });
+
+    test('dispatches the full catalog when attack_ids is omitted', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $catalogAttacks = Attack::factory()->count(2)->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once()
+            ->with(
+                Mockery::type(AttackDispatch::class),
+                Mockery::on(fn (System $queuedSystem) => $queuedSystem->is($system)),
+                Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
+                Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === $catalogAttacks->pluck('id')->all()),
+                AttackScanType::Dast,
+                null,
+            );
+
+        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
+            ->assertAccepted()
+            ->assertJsonPath('attacks_count', 2);
+    });
+
+    test('dispatches only the selected catalog attacks', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $selected = Attack::factory()->for($admin)->create();
+        Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once()
+            ->with(
+                Mockery::type(AttackDispatch::class),
+                Mockery::on(fn (System $queuedSystem) => $queuedSystem->is($system)),
+                Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
+                Mockery::on(fn (Collection $attacks) => $attacks->pluck('id')->all() === [$selected->id]),
+                AttackScanType::Dast,
+                null,
+            );
+
+        $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload([$selected->id]),
+        )
+            ->assertAccepted()
+            ->assertJsonPath('attacks_count', 1);
+    });
+
+    test('returns unprocessable when attack_ids are not in the catalog', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload([(string) Str::uuid()]),
+        )
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'One or more selected attacks are not available for this scan.');
     });
 
     test('returns not found for another users project', function () {
@@ -274,7 +372,10 @@ describe('POST attacks/dispatch/sast', function () {
                 null,
             );
 
-        $response = $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload());
+        $response = $this->postJson(
+            attackSastDispatchUrl($project, $system),
+            validAttackDispatchPayload([$sastAttack->id]),
+        );
 
         $response
             ->assertAccepted()
@@ -290,7 +391,7 @@ describe('POST attacks/dispatch/sast', function () {
 
     test('returns unprocessable when repository url is missing', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->sast()->for($admin)->create();
+        $sastAttack = Attack::factory()->sast()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -299,7 +400,10 @@ describe('POST attacks/dispatch/sast', function () {
 
         Sanctum::actingAs($user);
 
-        $this->postJson(attackSastDispatchUrl($project, $system), validAttackDispatchPayload())
+        $this->postJson(
+            attackSastDispatchUrl($project, $system),
+            validAttackDispatchPayload([$sastAttack->id]),
+        )
             ->assertUnprocessable()
             ->assertJsonPath('message', 'System repository_url is required for SAST dispatch.');
     });
@@ -322,7 +426,7 @@ describe('GET attack-acknowledgment', function () {
 
     test('returns acknowledged after dispatch with current terms', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
-        Attack::factory()->for($admin)->create();
+        $attack = Attack::factory()->for($admin)->create();
 
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -334,7 +438,10 @@ describe('GET attack-acknowledgment', function () {
             ->shouldReceive('publishDispatchBatch')
             ->once();
 
-        $this->postJson(attackDispatchUrl($project, $system), validAttackDispatchPayload())
+        $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload([$attack->id]),
+        )
             ->assertAccepted();
 
         $this->getJson(attackAcknowledgmentUrl($project, $system))
@@ -369,5 +476,86 @@ describe('GET attack-acknowledgment', function () {
         $this->getJson(attackAcknowledgmentUrl($project, $system))
             ->assertOk()
             ->assertJsonPath('acknowledged', false);
+    });
+});
+
+describe('GET attacks/catalog', function () {
+    test('requires authentication', function () {
+        $project = Project::factory()->create();
+        $system = System::factory()->for($project)->create();
+
+        $this->getJson(attackCatalogUrl($project, $system))
+            ->assertUnauthorized();
+    });
+
+    test('returns slim catalog attacks for the requested scan type', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $dastAttack = Attack::factory()->for($admin)->create();
+        Attack::factory()->sast()->for($admin)->create();
+        Attack::factory()->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(attackCatalogUrl($project, $system).'?scan_type=DAST')
+            ->assertOk()
+            ->assertJsonCount(1, 'attacks')
+            ->assertJsonPath('attacks.0.id', $dastAttack->id)
+            ->assertJsonPath('attacks.0.scan_type', 'DAST')
+            ->assertJsonPath('attacks.0.category', $dastAttack->category->value)
+            ->assertJsonPath('attacks.0.target_location', $dastAttack->target_location->value)
+            ->assertJsonPath('attacks.0.risk_level', $dastAttack->risk_level->value)
+            ->assertJsonMissingPath('attacks.0.payload')
+            ->assertJsonMissingPath('attacks.0.user_id');
+    });
+
+    test('defaults to DAST when scan_type is omitted', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $dastAttack = Attack::factory()->for($admin)->create();
+        Attack::factory()->sast()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(attackCatalogUrl($project, $system))
+            ->assertOk()
+            ->assertJsonCount(1, 'attacks')
+            ->assertJsonPath('attacks.0.id', $dastAttack->id);
+    });
+
+    test('filters catalog attacks by SAST scan type', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        Attack::factory()->for($admin)->create();
+        $sastAttack = Attack::factory()->sast()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(attackCatalogUrl($project, $system).'?scan_type=SAST')
+            ->assertOk()
+            ->assertJsonCount(1, 'attacks')
+            ->assertJsonPath('attacks.0.id', $sastAttack->id)
+            ->assertJsonPath('attacks.0.scan_type', 'SAST');
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->getJson(attackCatalogUrl($project, $system))
+            ->assertNotFound();
     });
 });
