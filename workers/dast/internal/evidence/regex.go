@@ -40,7 +40,7 @@ func (v *RegexValidator) Analyze(_ context.Context, response types.Response) *Fi
 	body := strings.ToLower(capBody(response.AttackBody))
 	category := response.Job.Attack.Category
 
-	if strings.Contains(strings.ToUpper(category), "SQL") {
+	if isClassicSQL(category) {
 		if sqlErrorIn(body) {
 			return newFinding(response, "SQL error signature detected in response body")
 		}
@@ -50,7 +50,7 @@ func (v *RegexValidator) Analyze(_ context.Context, response types.Response) *Fi
 	}
 
 	if strings.Contains(strings.ToUpper(category), "XSS") {
-		if unescapedReflection(response.AttackBody, response.PayloadUsed) {
+		if reflectedHTMLXSS(response.AttackBody, response.PayloadUsed) {
 			return newFinding(response, "unescaped payload reflected in response body")
 		}
 	}
@@ -92,6 +92,34 @@ func sqlErrorStatus(response types.Response) bool {
 		return false
 	}
 	return looksLikeSQLInjectionPayload(response.PayloadUsed)
+}
+
+func reflectedHTMLXSS(body, payload string) bool {
+	if !strings.Contains(payload, "<") {
+		return false
+	}
+	if looksLikeJSON(body) || !looksLikeHTML(body) {
+		return false
+	}
+	return unescapedReflection(body, payload)
+}
+
+func looksLikeJSON(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	if trimmed == "" {
+		return false
+	}
+	return strings.HasPrefix(trimmed, "{") || strings.HasPrefix(trimmed, "[")
+}
+
+func looksLikeHTML(body string) bool {
+	lower := strings.ToLower(body)
+	return strings.Contains(lower, "<html") ||
+		strings.Contains(lower, "<!doctype") ||
+		strings.Contains(lower, "<script") ||
+		strings.Contains(lower, "<body") ||
+		strings.Contains(lower, "<div") ||
+		strings.Contains(lower, "<p>")
 }
 
 func unescapedReflection(body, payload string) bool {

@@ -30,6 +30,53 @@ func MapVectorsToJobs(vectors []contracts.AttackVector, attacks []contracts.Atta
 	return jobs
 }
 
+func vectorJobKey(job types.Job) string {
+	return job.Vector.Route + "\x00" + job.Vector.Method + "\x00" + job.Vector.TargetLocation
+}
+
+// CapJobs keeps at most max jobs, round-robin across vectors so late-seeded
+// routes (e.g. /ftp/) are not dropped when the catalog×crawl product exceeds the cap.
+func CapJobs(jobs []types.Job, max int) []types.Job {
+	if max < 1 || len(jobs) <= max {
+		return jobs
+	}
+
+	type bucket struct {
+		jobs []types.Job
+		next int
+	}
+	index := map[string]int{}
+	var groups []bucket
+	for _, job := range jobs {
+		key := vectorJobKey(job)
+		if i, ok := index[key]; ok {
+			groups[i].jobs = append(groups[i].jobs, job)
+			continue
+		}
+		index[key] = len(groups)
+		groups = append(groups, bucket{jobs: []types.Job{job}})
+	}
+
+	out := make([]types.Job, 0, max)
+	progress := true
+	for progress && len(out) < max {
+		progress = false
+		for i := range groups {
+			g := &groups[i]
+			if g.next >= len(g.jobs) {
+				continue
+			}
+			out = append(out, g.jobs[g.next])
+			g.next++
+			progress = true
+			if len(out) >= max {
+				break
+			}
+		}
+	}
+	return out
+}
+
 func jobsForVector(attackItem contracts.AttackItem, vector contracts.AttackVector, spec types.PayloadSpec) []types.Job {
 	if spec.Field != "" {
 		return []types.Job{{
@@ -102,6 +149,9 @@ func locationCompatible(vectorLocation, attackLocation string) bool {
 		return true
 	}
 	if attackLocation == "JSON_BODY" && vectorLocation == "API_ENDPOINT" {
+		return true
+	}
+	if attackLocation == "HEADER" {
 		return true
 	}
 	return false

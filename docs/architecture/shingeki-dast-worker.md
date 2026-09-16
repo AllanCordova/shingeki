@@ -16,7 +16,7 @@ flowchart LR
 1. **Consumer** lê mensagem batch da fila de entrada.
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
 3. **Attack** aplica injectors conforme categoria e local do vetor.
-4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing; diff de corpo só para categorias sem validador específico).
+4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing, dialog/DOM XSS no Chromium; diff de corpo só para categorias sem validador específico).
 5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed` com `status` `completed` ou `failed`.
 
 ## Pacotes `internal/`
@@ -32,7 +32,7 @@ flowchart LR
 | `discovery/bfs` | Fila de prioridade de URLs (score) e filtros de origem/blocklist |
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
-| `evidence` | Motor de validação (regex, markers de path traversal, timing; diff genérico limitado) |
+| `evidence` | Motor de validação (regex, markers de path traversal, timing, DOM XSS via Rod; diff genérico limitado) |
 | `orchestrator` | Liga discovery → attack → evidence → publish |
 
 ## Filas RabbitMQ
@@ -108,6 +108,7 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 
 - **Dinâmico (principal)**: Rod/Chromium, quando `DISCOVERY_ROD_ENABLED=true`. Abre o seed, espera o JavaScript (`WaitLoad` + settle), clica botões/`role=button`/`onclick`, preenche formulários com dados fictícios e observa o tráfego de rede. URLs entram numa **fila de prioridade** (score): rotas com `api`/`admin`/`estoque`/CRUD sobem; `blog`/`faq`/paginação descem.
 - **Rede**: observação passiva (`NetworkRequestWillBeSent`). POST/PUT/PATCH/DELETE no mesmo registrable domain (REST e GraphQL, inclusive `api.`) viram vetores. Sem hijack de `fetch`. Rotas XHR gravadas pela extensão entram no mapa mesmo se o Chromium headless cair no login.
+- **SPA hash**: links `#/…` entram no crawl; se o app tem router hash **e** uma API de search (`q`), o discovery acrescenta `GET /#/search?q=` como `QUERY_PARAMETER` (sink DOM, não o JSON `/rest/.../search`). Inputs com cara de busca também geram esse vetor.
 - **Sessão**: replay estruturado — cookies com domain/path/SameSite/HttpOnly/partition, `Authorization`, `auth.storage` (local/session por origem) e User-Agent da captura. Injeta na origem antes do seed. Redirect para `/login` **não aborta** o crawl: segue rotas gravadas. Se não houver Bearer, sintetiza a partir de chaves no storage (`access_token`, `jwt`, …) para a fase HTTP.
 - **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless. `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair com o mesmo IP da sessão capturada.
 - **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML; também visita rotas gravadas.
@@ -129,7 +130,9 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 
 - Pool de workers Resty para requisições paralelas controladas.
 - `mapper` traduz `category` + `target_location` do catálogo para o injector correto.
+- QUERY_PARAMETER em URLs hash (`/#/search?q=`) injeta no fragmento, não na query HTTP.
 - Payloads vêm do batch; o worker não redefine catálogo — só executa o que a API enfileirou.
+- XSS que não reflete no HTTP pode ser revalidado no Chromium (`DOMXSSValidator`) quando Rod está ligado: dialog JS ou sink `iframe[src=javascript:]`. `depth: quick` desliga Rod e esse passo.
 
 ## Relação com a API e o alvo
 

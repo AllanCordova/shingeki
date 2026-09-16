@@ -38,14 +38,7 @@ func main() {
 
 	discoveryEngine := discovery.NewCompositeEngine(cfg, logger)
 	attackEngine := attack.NewRestyEngine(cfg.Attack, logger)
-	evidenceEngine := evidence.NewCompositeValidator(
-		evidence.NewPathTraversalValidator(),
-		evidence.NewRegexValidator(),
-		evidence.NewSQLAuthBypassValidator(),
-		evidence.NewSQLBooleanValidator(),
-		evidence.NewDiffValidator(cfg.Evidence),
-		evidence.NewTimingValidator(cfg.Evidence),
-	)
+	evidenceEngine := evidence.NewDefaultValidator(cfg, logger)
 
 	pipeline := orchestrator.NewPipeline(discoveryEngine, attackEngine, evidenceEngine, publisher, logger)
 

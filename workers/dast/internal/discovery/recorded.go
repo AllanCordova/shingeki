@@ -42,6 +42,15 @@ func AppendRecordedRoutes(targetURL string, vectors []contracts.AttackVector, au
 					vector.Params[name] = values[0]
 				}
 			}
+			if _, fragQuery, ok := targeturl.SplitFragment(parsed.Fragment); ok {
+				for name, values := range fragQuery {
+					if len(values) == 0 {
+						continue
+					}
+					vector.Params[name] = values[0]
+					vector.TargetLocation = "QUERY_PARAMETER"
+				}
+			}
 		}
 		seedLoginJSONParams(&vector)
 		out = append(out, vector)

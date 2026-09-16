@@ -32,6 +32,27 @@ func TestRegexValidatorSQL(t *testing.T) {
 	}
 }
 
+func TestRegexValidatorDoesNotTreatNoSQLAsSQL(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "NOSQL_INJECTION",
+			},
+			Vector: contracts.AttackVector{Route: "/api/Challenges/?name=Score Board"},
+		},
+		PayloadUsed:    `{"$gt":""}`,
+		BaselineStatus: 200,
+		AttackStatus:   500,
+		BaselineBody:   `{"status":"success","data":[]}`,
+		AttackBody:     `{"error":"Unexpected token $"}`,
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("NoSQL jobs must not confirm via SQL error heuristics: %q", finding.Evidence)
+	}
+}
+
 func TestRegexValidatorXSSRequiresPayloadReflection(t *testing.T) {
 	validator := evidence.NewRegexValidator()
 	resp := types.Response{
@@ -94,6 +115,38 @@ func TestRegexValidatorXSSIgnoresHTMLEncodedPayload(t *testing.T) {
 	}
 }
 
+func TestRegexValidatorXSSIgnoresJSONReflection(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "'-alert(1)-'"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/rest/user/login"},
+		},
+		PayloadUsed: payload,
+		AttackBody:  `{"error":"Invalid email ` + payload + `"}`,
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("JSON echo is not XSS: %q", finding.Evidence)
+	}
+}
+
+func TestRegexValidatorXSSIgnoresJavascriptURLWithoutMarkup(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "javascript:alert(1)"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/redirect?to="},
+		},
+		PayloadUsed: payload,
+		AttackBody:  "<html><body>blocked redirect to " + payload + "</body></html>",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("javascript: URL reflection is not regex XSS: %q", finding.Evidence)
+	}
+}
+
 func TestTimingValidatorIgnoresSleepShorterThanTolerance(t *testing.T) {
 	validator := evidence.NewTimingValidator(config.EvidenceConfig{TimingTolerance: 2 * time.Second})
 	resp := types.Response{
@@ -108,6 +161,28 @@ func TestTimingValidatorIgnoresSleepShorterThanTolerance(t *testing.T) {
 	}
 	if finding := validator.Analyze(context.Background(), resp); finding != nil {
 		t.Fatalf("sleep shorter than tolerance must not confirm: %+v", finding)
+	}
+}
+
+func TestDiffValidatorSkipsIDOR(t *testing.T) {
+	validator := evidence.NewDiffValidator(config.EvidenceConfig{BodyDiffThreshold: 100})
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{
+				AttackID: "atk-1",
+				Category: "IDOR",
+			},
+			Vector: contracts.AttackVector{Route: "http://shop.test/rest/basket/1"},
+		},
+		BaselineStatus: 200,
+		AttackStatus:   404,
+		BaselineBody:   stringsRepeat("a", 1000),
+		AttackBody:     "Not Found",
+		PayloadUsed:    "99",
+		RawRequest:     "GET /rest/basket/99",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("IDOR must not confirm from body-length diff, got %q", finding.Evidence)
 	}
 }
 

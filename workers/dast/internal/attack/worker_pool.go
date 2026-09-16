@@ -23,10 +23,11 @@ import (
 const defaultMaxBodyBytes = 1 << 20
 
 type baselineResult struct {
-	status int
-	body   string
-	ms     int64
-	err    error
+	status   int
+	body     string
+	location string
+	ms       int64
+	err      error
 }
 
 type RestyEngine struct {
@@ -66,7 +67,7 @@ func (e *RestyEngine) MapVectorsToJobs(vectors []contracts.AttackVector, attacks
 	jobs := MapVectorsToJobs(vectors, attacks)
 	if e.cfg.MaxJobs > 0 && len(jobs) > e.cfg.MaxJobs {
 		e.logger.Warn("capping attack jobs", "before", len(jobs), "max", e.cfg.MaxJobs)
-		jobs = jobs[:e.cfg.MaxJobs]
+		jobs = CapJobs(jobs, e.cfg.MaxJobs)
 	}
 	return jobs
 }
@@ -142,8 +143,8 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *base
 	key := baselineKey(baselineSpec)
 	cached, ok := cache.get(key)
 	if !ok {
-		status, body, ms, sendErr := e.send(ctx, baselineSpec)
-		cached = baselineResult{status: status, body: body, ms: ms, err: sendErr}
+		status, body, location, ms, sendErr := e.send(ctx, baselineSpec)
+		cached = baselineResult{status: status, body: body, location: location, ms: ms, err: sendErr}
 		if sendErr == nil {
 			cache.put(key, cached)
 		}
@@ -156,9 +157,10 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *base
 	}
 	resp.BaselineStatus = cached.status
 	resp.BaselineBody = cached.body
+	resp.BaselineLocation = cached.location
 	resp.BaselineMs = cached.ms
 
-	attackStatus, attackBody, attackMs, err := e.send(ctx, attackSpec)
+	attackStatus, attackBody, attackLocation, attackMs, err := e.send(ctx, attackSpec)
 	if err != nil {
 		resp.Error = err
 		resp.AttackMs = attackMs
@@ -167,13 +169,14 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *base
 	}
 	resp.AttackStatus = attackStatus
 	resp.AttackBody = attackBody
+	resp.AttackLocation = attackLocation
 	resp.AttackMs = attackMs
 	return resp
 }
 
-func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int, string, int64, error) {
+func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int, string, string, int64, error) {
 	if err := e.limit.Wait(ctx); err != nil {
-		return 0, "", 0, err
+		return 0, "", "", 0, err
 	}
 
 	req := e.client.R().SetContext(ctx).SetDoNotParseResponse(true)
@@ -188,12 +191,13 @@ func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int
 	httpResp, err := req.Execute(spec.Method, spec.URL)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
-		return 0, "", elapsed, err
+		return 0, "", "", elapsed, err
 	}
 
+	location := httpResp.Header().Get("Location")
 	raw := httpResp.RawBody()
 	if raw == nil {
-		return httpResp.StatusCode(), "", elapsed, nil
+		return httpResp.StatusCode(), "", location, elapsed, nil
 	}
 	defer raw.Close()
 
@@ -203,13 +207,13 @@ func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int
 	}
 	limited, err := io.ReadAll(io.LimitReader(raw, int64(max)+1))
 	if err != nil {
-		return httpResp.StatusCode(), "", elapsed, err
+		return httpResp.StatusCode(), "", location, elapsed, err
 	}
 	if len(limited) > max {
 		e.logger.Warn("truncated oversized response body", "bytes", len(limited), "max", max, "url", spec.URL)
 		limited = limited[:max]
 	}
-	return httpResp.StatusCode(), httputil.Truncate(string(limited), max), elapsed, nil
+	return httpResp.StatusCode(), httputil.Truncate(string(limited), max), location, elapsed, nil
 }
 
 func baselineKey(spec injectors.RequestSpec) string {
