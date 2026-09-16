@@ -1,53 +1,19 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { isAdmin } from "@/lib/auth/roles";
 import { useMe } from "@/lib/hooks/auth/use-auth";
 import { useUiStore } from "@/lib/stores/ui-store";
 import {
   ClipboardListIcon,
+  HomeIcon,
   ShieldIcon,
 } from "@/components/ui/icons";
 import { ProjectsSidebarNav } from "@/components/layout/projects-sidebar-nav";
 import { SidebarHeader } from "@/components/layout/sidebar-header";
 import { AppSidebarFrame } from "@/components/layout/app-sidebar-frame";
-
-function NavItem({
-  href,
-  label,
-  Icon,
-  active,
-  collapsed,
-}: {
-  href: string;
-  label: string;
-  Icon: ComponentType<{ className?: string }>;
-  active: boolean;
-  collapsed: boolean;
-}) {
-  return (
-    <Link
-      href={href}
-      title={label}
-      aria-label={label}
-      className={cn(
-        "flex items-center rounded-app text-sm transition-colors",
-        collapsed
-          ? "h-10 justify-center px-0 max-lg:gap-3 max-lg:justify-start max-lg:px-3 max-lg:py-2"
-          : "gap-3 px-3 py-2",
-        active
-          ? "bg-primary/10 font-medium text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Icon className="h-4 w-4 shrink-0" />
-      <span className={cn("truncate", collapsed && "lg:hidden")}>{label}</span>
-    </Link>
-  );
-}
+import { SidebarNavItem } from "@/components/layout/sidebar-nav-item";
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -64,7 +30,15 @@ export function AdminSidebar() {
       <SidebarHeader />
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
-        <NavItem
+        <SidebarNavItem
+          href="/"
+          label="Início"
+          Icon={HomeIcon}
+          active={pathname === "/"}
+          collapsed={collapsed}
+        />
+
+        <SidebarNavItem
           href="/auditoria"
           label="Auditoria"
           Icon={ClipboardListIcon}
@@ -73,7 +47,7 @@ export function AdminSidebar() {
         />
 
         {showAdminNav ? (
-          <NavItem
+          <SidebarNavItem
             href="/admin"
             label="Admin"
             Icon={ShieldIcon}
