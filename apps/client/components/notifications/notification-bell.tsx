@@ -85,7 +85,7 @@ export function NotificationBell({ enabled = true }: { enabled?: boolean }) {
     }
 
     setOpen(false);
-    router.push("/notificacoes");
+    router.push(notification.action_url ?? "/notificacoes");
   };
 
   return (
