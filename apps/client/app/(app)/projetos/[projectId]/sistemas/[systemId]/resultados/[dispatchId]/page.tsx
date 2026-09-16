@@ -14,6 +14,7 @@ import type { PaginationMeta, SystemResult } from "@/lib/contracts/results/resul
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
 import { formatFindingSourceLocation, isSastResult } from "@/lib/results/source-location";
 import { formatDate, formatDuration, cn } from "@/lib/utils";
+import { CopyVulnerabilitiesButton } from "@/components/results/copy-vulnerabilities-button";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
 import { ProbeOutcomeFilter } from "@/components/results/probe-outcome-filter";
@@ -241,12 +242,16 @@ export default function ResultsDetailPage() {
             {showCompactCoverage ? (
               showVulnerabilities ? (
                 <VulnerabilitiesSection
+                  projectId={projectId}
+                  systemId={systemId}
+                  dispatchId={dispatchId}
                   results={results}
                   dispatch={dispatch}
                   isPending={isPending}
                   isFetching={isFetching}
                   vulnerabilitiesTotal={vulnerabilitiesTotal}
                   resultsPagination={resultsPagination}
+                  logFilters={appliedLogFilters}
                   onPageChange={setResultsPage}
                 />
               ) : null
@@ -263,12 +268,16 @@ export default function ResultsDetailPage() {
 
                 {showVulnerabilities ? (
                   <VulnerabilitiesSection
+                    projectId={projectId}
+                    systemId={systemId}
+                    dispatchId={dispatchId}
                     results={results}
                     dispatch={dispatch}
                     isPending={isPending}
                     isFetching={isFetching}
                     vulnerabilitiesTotal={vulnerabilitiesTotal}
                     resultsPagination={resultsPagination}
+                    logFilters={appliedLogFilters}
                     onPageChange={setResultsPage}
                   />
                 ) : null}
@@ -304,29 +313,54 @@ export default function ResultsDetailPage() {
 }
 
 function VulnerabilitiesSection({
+  projectId,
+  systemId,
+  dispatchId,
   results,
   dispatch,
   isPending,
   isFetching,
   vulnerabilitiesTotal,
   resultsPagination,
+  logFilters,
   onPageChange,
 }: {
+  projectId: string;
+  systemId: string;
+  dispatchId: string;
   results: SystemResult[];
   dispatch?: AttackDispatch;
   isPending: boolean;
   isFetching: boolean;
   vulnerabilitiesTotal: number;
   resultsPagination?: PaginationMeta;
+  logFilters: LogSearchFilterValues;
   onPageChange: (page: number) => void;
 }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Vulnerabilidades</CardTitle>
-        <CardDescription>
-          Achados confirmados e evidencias do scan.
-        </CardDescription>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle>Vulnerabilidades</CardTitle>
+            <CardDescription>
+              Achados confirmados e evidencias do scan.
+            </CardDescription>
+          </div>
+          {vulnerabilitiesTotal > 0 ? (
+            <div className="flex shrink-0 items-center gap-2">
+              <CopyVulnerabilitiesButton
+                projectId={projectId}
+                systemId={systemId}
+                dispatchId={dispatchId}
+                results={results}
+                total={vulnerabilitiesTotal}
+                scanType={dispatch?.scan_type}
+                logFilters={logFilters}
+              />
+            </div>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent>
         {vulnerabilitiesTotal === 0 && !isPending ? (
