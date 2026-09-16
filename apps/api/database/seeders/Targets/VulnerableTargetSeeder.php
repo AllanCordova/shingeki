@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\Targets;
 
 use App\Models\Project\Project;
 use App\Models\System\Stack;
@@ -15,8 +15,6 @@ class VulnerableTargetSeeder extends Seeder
     use PublishesSeedCovers;
     use WithoutModelEvents;
 
-    public const PROJECT_NAME = 'Pentest Lab';
-
     public const SYSTEM_NAME = 'Vulnerable PHP Target';
 
     private const PROJECT_COVER_FILE = 'pentest-lab.jpg';
@@ -25,18 +23,19 @@ class VulnerableTargetSeeder extends Seeder
 
     public function run(): void
     {
-        $user = User::query()->where('email', 'test@example.com')->first();
-
-        if ($user === null) {
-            return;
-        }
-
         $targetUrl = rtrim((string) config('attacks.vulnerable_target_url'), '/');
 
+        foreach (TargetsSeeder::users() as $user) {
+            $this->seedLabForUser($user, $targetUrl);
+        }
+    }
+
+    private function seedLabForUser(User $user, string $targetUrl): void
+    {
         $project = Project::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
-                'name' => self::PROJECT_NAME,
+                'name' => TargetsSeeder::PROJECT_NAME,
             ],
             [
                 'description' => 'Local intentionally vulnerable app for DAST validation.',
