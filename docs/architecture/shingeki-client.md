@@ -18,7 +18,7 @@ app/
     notificacoes/
     termos/ataques/
   api/               # Route handlers — proxy REST e GraphQL para a Laravel
-  conectar-alvo/     # Captura same-origin da sessão do alvo
+  conectar-alvo/     # Página 410: captura de sessão desligada
   page.tsx           # Landing pública
 proxy.ts             # Rotas privadas; `/` é pública
 lib/
