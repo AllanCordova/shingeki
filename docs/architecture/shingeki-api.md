@@ -10,18 +10,17 @@ Contratos HTTP: [API.md](../API.md). Como rodar: [RUN-PROJECT.md](../RUN-PROJECT
 app/
   Http/Controllers/     # Auth (+ Google), Admin, Project, System (CRUD + OwnedSystem),
                         # Attack, SystemResult, Audit, Remediation (+ AI, GitHub, History),
-                        # CoverUpload, TargetSession (legado), ManualProxy, Notification, Catalog*
+                        # CoverUpload, ManualProxy, Notification, Catalog*
   Http/Middleware/      # EnsureUserRole (ADMIN bypass)
   Http/Requests/        # Form Requests + ValidatesCoverSelection
   Policies/             # Escopo por dono; CatalogPolicy (ownership + papéis)
   Models/               # User, Project, System, Attack, AttackDispatch, AttackAcknowledgment,
-                        # SystemResult, DispatchProbe, Remediation, SystemTargetSession,
+                        # SystemResult, DispatchProbe, Remediation,
                         # CatalogImport, AiRemediationSuggestion, UserCoverUpload, …
   GraphQL/              # Query/mutation da sidebar (Lighthouse)
   Services/
     Cover/              # Upload, biblioteca, avatar
     Attack/             # Catálogo para dispatch, RabbitMQ, resultados e probes
-    TargetSession/      # Legado; captura de sessao nao e mais o caminho do DAST
     CatalogImport/      # Parser CSV, validação por linha, filas
     Remediation/        # Snippets por stack; patches GitHub
     Ai/                 # LLM (Gemini/Groq)

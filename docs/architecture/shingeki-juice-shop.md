@@ -25,7 +25,7 @@ Contas padrão da aplicação OWASP (não repetir noutros guias):
 
 | E-mail | Senha | Uso |
 |--------|-------|-----|
-| `admin@juice-sh.op` | `admin123` | Sessão autenticada (extensão) |
+| `admin@juice-sh.op` | `admin123` | Login do scanner (DAST autenticado) |
 | `jim@juice-sh.op` | `ncc-1701` | Segundo usuário (IDOR, fase posterior) |
 
 ## Gold set — rodada 2 (autenticado)
@@ -38,7 +38,7 @@ npm run test:dast-juice-auth
 # opcional: -email admin@juice-sh.op -password admin123
 ```
 
-O harness faz login JSON, anexa o Bearer (o mesmo header que a extensão vai mandar) e pontua só estas linhas:
+O harness faz login JSON, anexa o Bearer e pontua só estas linhas:
 
 | Challenge | Rota | Categoria | Esperado |
 |-----------|------|-----------|----------|
@@ -46,7 +46,7 @@ O harness faz login JSON, anexa o Bearer (o mesmo header que a extensão vai man
 | Admin users | `GET /api/Users/` | `IDOR` / `URL_PATH` | Hit — lista com ≥2 `email` (também acessível como `jim`, BAC) |
 | Review IDOR | `PUT /rest/products/1/reviews` campo `author` | `IDOR` / `JSON_BODY` | Hit — autor estrangeiro persiste no GET da review |
 
-UI depois: sessão da extensão + `admin@juice-sh.op` / `admin123`, catálogo re-seedado (`AttackCatalogSeeder` agora tem IDOR path + JSON), worker rebuild. Discovery com auth semeia basket, `/api/Users/` e reviews se o crawl não as gravar.
+UI depois: login do scanner com `admin@juice-sh.op` / `admin123`, catálogo re-seedado (`AttackCatalogSeeder` agora tem IDOR path + JSON), worker rebuild. Discovery com auth semeia basket, `/api/Users/` e reviews se o crawl não as gravar.
 
 ## Gold set — rodada 1 (anônimo)
 
@@ -84,7 +84,7 @@ npm run test:dast-juice-coverage
 | JWT `none` | `GET /api/Users/` header `Authorization` | Hit — none 200 vs assinatura quebrada 401 |
 | `/ftp` confidential | `GET /ftp/` → `acquisitions.md` | Hit — “This document is confidential” |
 
-## Score do scan autenticado (UI + extensão)
+## Score do scan autenticado (UI + login do scanner)
 
 Dispatch DAST `full` com sessão `admin@juice-sh.op`. Recall do gold set **fechado** (rodada 1 + 2). Os 15 findings são ~6 bugs únicos; o resto é variante de payload.
 
@@ -119,7 +119,7 @@ Scan anônimo `full` de novo (~5,3 min). Só search SQLi. **Não é regressão d
 ## Como pontuar um scan
 
 1. Anônimo `full` — o crawl vê `/rest/user/login`, `/rest/products/search` e `/#/search`? (rede passiva + vetor SPA).
-2. Com sessão da extensão — rotas gravadas entram mesmo se o Chromium cair no login. Harness `-auth` cobre basket / `/api/Users/` / reviews sem crawl.
+2. Com login do scanner — o worker entra sozinho e semeia rotas autenticadas. Harness `-auth` cobre basket / `/api/Users/` / reviews sem crawl.
 3. **Discovery:** vetores ∩ rotas da tabela. Com auth, o worker também semeia basket, users e reviews.
 4. **Recall:** findings ∩ linhas com esperado Hit (rodada 1 anônima **ou** rodada 2 autenticada, não misturar).
 5. **Precisão:** findings que não estão no gabarito. `DiffValidator` não confirma SQL/XSS/PATH/IDOR. Reflexão XSS só no JSON da API **não** conta como o challenge DOM.

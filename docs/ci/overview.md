@@ -10,7 +10,7 @@ Este arquivo descreve o que o CI **roda hoje** — não o que poderia rodar.
 | `tests` | Pest (`php artisan test`) | `apps/api` |
 | `dast-worker` | `go vet` / `go test` | `workers/dast` |
 
-Não entram no workflow (ainda): `workers/sast`, `apps/client`, `apps/extension`.
+Não entram no workflow (ainda): `workers/sast`, `apps/client`.
 
 ## Rodar localmente (`apps/api`)
 

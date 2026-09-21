@@ -4,7 +4,6 @@ namespace App\Services\ManualProxy;
 
 use App\Enums\Attack\AttackTargetLocation;
 use App\Models\System\System;
-use App\Models\User\User;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -25,7 +24,6 @@ class ManualProxyService
      * @return array<string, mixed>
      */
     public function send(
-        User $user,
         System $system,
         string $method,
         string $path,
@@ -33,11 +31,8 @@ class ManualProxyService
         array $headers,
         ?string $body,
         ?string $contentType,
-        bool $useTargetSession,
         ?array $payload,
     ): array {
-        unset($user, $useTargetSession);
-
         $method = strtoupper($method);
         $url = $this->urlGuard->resolve($system, $path);
         $url = $this->payloadInjector->mergeQuery($url, $query);

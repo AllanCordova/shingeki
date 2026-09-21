@@ -2,7 +2,7 @@
 
 O worker DAST entra no alvo **com o Chromium dele**, usando usuario e senha gravados no sistema. A sessao nasce no scan. Nao ha copia de cookie/token do Chrome da pessoa.
 
-A extensao Chrome (`apps/extension`) e o fluxo `target-session/capture` **estao fora de uso**. Rotas antigas ainda existem no backend, mas o client nao as chama.
+A extensão Chrome (`apps/extension`) e o fluxo `target-session/capture` foram removidos. O DAST autentica com credenciais no sistema.
 
 Voltar ao [indice da API](../API.md).
 

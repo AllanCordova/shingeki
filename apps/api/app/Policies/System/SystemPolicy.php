@@ -38,11 +38,6 @@ class SystemPolicy
         return $this->ownsSystemOnRoute($user, $system);
     }
 
-    public function manageTargetSession(User $user, System $system): bool
-    {
-        return $this->ownsSystemOnRoute($user, $system);
-    }
-
     public function useManualProxy(User $user, System $system): bool
     {
         return $user->role->canUseManualProxy() && $this->ownsSystemOnRoute($user, $system);
