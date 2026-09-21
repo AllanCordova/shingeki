@@ -15,7 +15,6 @@ use App\Models\System\System;
 use App\Services\Attack\AttackCatalogService;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Services\Notification\UserNotificationService;
-use App\Services\TargetSession\TargetSessionService;
 use App\Support\AttackAcknowledgmentTerms;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
@@ -25,7 +24,6 @@ class AttackController extends Controller
     public function __construct(
         private readonly AttackCatalogService $attackCatalog,
         private readonly AttackQueuePublisher $attackQueuePublisher,
-        private readonly TargetSessionService $targetSessionService,
         private readonly UserNotificationService $userNotificationService,
     ) {}
 
@@ -112,20 +110,19 @@ class AttackController extends Controller
             $request->user(),
             $attacks,
             $scanType,
-            $this->targetSessionService->resolveQueueAuth($request->user(), $system),
+            $system->queueAuth(),
         );
 
         $this->userNotificationService->trackAttackDispatchPending($dispatch);
 
         $scanLabel = $scanType->label();
-        $targetSession = $this->targetSessionService->findActiveSession($request->user(), $system);
 
         return response()->json([
             'message' => "{$scanLabel} attack catalog dispatched to processing queue.",
             'dispatch' => $this->formatDispatch($dispatch),
             'attacks_count' => $attacks->count(),
             'attacks' => $attacks->map(fn (Attack $attack) => $this->formatAttack($attack)),
-            'target_session_connected' => $targetSession !== null,
+            'scanner_login_configured' => $system->hasScannerLogin(),
         ], 202);
     }
 

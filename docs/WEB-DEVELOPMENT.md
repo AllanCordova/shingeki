@@ -22,7 +22,6 @@ O BFF em `/api` encaminha para a Laravel via `API_BASE_URL` em `apps/client/.env
 | `API_BASE_URL` | Origin da Laravel + `/api` (REST) |
 | `NEXT_PUBLIC_MEDIA_BASE_URL` | Origin da Laravel **sem** `/api` (capas e avatar) |
 | `PEXELS_API_KEY` | Banco de imagens no BFF (`cover-stock-images`); sem chave a busca retorna `503` |
-| `NEXT_PUBLIC_SHINGEKI_EXTENSION_ID` | Opcional; messaging direto com a extensão |
 
 Google OIDC configura-se na **API** (`GOOGLE_*`), não no client. Contrato: [AUTHENTICATION.md](api/AUTHENTICATION.md).
 

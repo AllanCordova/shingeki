@@ -107,11 +107,11 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 ## Discovery
 
 - **Dinâmico (principal)**: Rod/Chromium, quando `DISCOVERY_ROD_ENABLED=true`. Abre o seed, espera o JavaScript (`WaitLoad` + settle), clica botões/`role=button`/`onclick`, preenche formulários com dados fictícios e observa o tráfego de rede. URLs entram numa **fila de prioridade** (score): rotas com `api`/`admin`/`estoque`/CRUD sobem; `blog`/`faq`/paginação descem.
-- **Rede**: observação passiva (`NetworkRequestWillBeSent`). POST/PUT/PATCH/DELETE no mesmo registrable domain (REST e GraphQL, inclusive `api.`) viram vetores. Sem hijack de `fetch`. Rotas XHR gravadas pela extensão entram no mapa mesmo se o Chromium headless cair no login.
+- **Rede**: observação passiva (`NetworkRequestWillBeSent`). POST/PUT/PATCH/DELETE no mesmo registrable domain (REST e GraphQL, inclusive `api.`) viram vetores.
 - **SPA hash**: links `#/…` entram no crawl; se o app tem router hash **e** uma API de search (`q`), o discovery acrescenta `GET /#/search?q=` como `QUERY_PARAMETER` (sink DOM, não o JSON `/rest/.../search`). Inputs com cara de busca também geram esse vetor.
-- **Sessão**: replay estruturado — cookies com domain/path/SameSite/HttpOnly/partition, `Authorization`, `auth.storage` (local/session por origem) e User-Agent da captura. Injeta na origem antes do seed. Redirect para `/login` **não aborta** o crawl: segue rotas gravadas. Se não houver Bearer, sintetiza a partir de chaves no storage (`access_token`, `jwt`, …) para a fase HTTP.
-- **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless. `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair com o mesmo IP da sessão capturada.
-- **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML; também visita rotas gravadas.
+- **Sessão**: o worker faz login com `auth.type=credentials` (`login_url`, usuario, senha). Tenta JSON (`/rest/user/login`) e, se precisar, preenche o form no Chromium. Cookies e tokens colhidos depois do login vão para a fase HTTP. Sem credenciais, o crawl é só a superfície pública. Com credenciais, se o login falhar o dispatch termina `failed` — não cai para crawl anônimo.
+- **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless (lab). `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair por um proxy.
+- **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML.
 - **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
 
 ### Variáveis úteis (discovery)

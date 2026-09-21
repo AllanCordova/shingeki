@@ -125,6 +125,46 @@ describe('POST attacks/dispatch', function () {
             ->and($acknowledgment->terms_version)->toBe(AttackAcknowledgmentTerms::VERSION);
     });
 
+    test('publishes scanner credentials instead of a copied target session', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $catalogAttacks = Attack::factory()->count(1)->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'login_url' => 'https://app.example.com/login',
+            'login_username' => 'scanner@example.com',
+            'login_password' => 'secret-pass-123',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once()
+            ->with(
+                Mockery::type(AttackDispatch::class),
+                Mockery::on(fn (System $queuedSystem) => $queuedSystem->is($system)),
+                Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
+                Mockery::on(fn (Collection $attacks) => $attacks->count() === 1),
+                AttackScanType::Dast,
+                Mockery::on(fn (?array $auth) => $auth === [
+                    'type' => 'credentials',
+                    'username' => 'scanner@example.com',
+                    'password' => 'secret-pass-123',
+                    'login_url' => 'https://app.example.com/login',
+                ]),
+            );
+
+        $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload($catalogAttacks->pluck('id')->all()),
+        )
+            ->assertAccepted()
+            ->assertJsonPath('scanner_login_configured', true)
+            ->assertJsonMissingPath('target_session_connected');
+    });
+
     test('dispatches with quick depth when requested', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         $attack = Attack::factory()->for($admin)->create();

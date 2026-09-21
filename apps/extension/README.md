@@ -1,6 +1,12 @@
 # Extensão (`apps/extension`)
 
-Extensão **Chrome / Edge (Manifest V3)** que captura cookies HttpOnly **com atributos**, `localStorage`/`sessionStorage` (todos os frames), User-Agent e rotas XHR/fetch do domínio do alvo, e completa o ticket público `POST /api/target-session/capture/{ticket}`.
+**Fora de uso.** O DAST autentica com usuario/senha no Chromium do worker. Contrato atual: [TARGET-SESSION.md](../../docs/api/TARGET-SESSION.md).
+
+Esta pasta permanece no repositorio so como codigo legado. O client nao oferece download, armacao de ticket nem captura de sessao.
+
+---
+
+Extensão **Chrome / Edge (Manifest V3)** que no passado capturava cookies HttpOnly, storage e rotas XHR. Esse fluxo foi abandonado.
 
 Contrato HTTP e fluxos (popup, extensão, import): [docs/api/TARGET-SESSION.md](../../docs/api/TARGET-SESSION.md). Este README é a fonte única de **instalação, ZIP e `manifest.json`**.
 

@@ -22,7 +22,7 @@ export const manualProxySendSchema = z.object({
   headers_json: zJsonObjectString("Headers deve ser um objeto JSON valido.").default("{}"),
   body: z.string().optional(),
   content_type: z.string().optional(),
-  use_target_session: z.boolean().default(true),
+  use_target_session: z.boolean().default(false),
   apply_payload: z.boolean().default(false),
   payload_target_location: z.enum(ATTACK_TARGET_LOCATIONS).optional(),
   payload_field: z.string().optional(),
@@ -159,7 +159,7 @@ export function routeMapToSendInput(route: ManualRouteMap): ManualProxySendInput
     headers_json: recordToJson(route.headers),
     body: route.body ?? "",
     content_type: route.content_type ?? undefined,
-    use_target_session: true,
+    use_target_session: false,
     apply_payload: false,
   };
 }

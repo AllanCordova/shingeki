@@ -13,15 +13,14 @@ function ConectarAlvoContent() {
       <ErrorShow
         error={{
           message: ticket
-            ? "Este atalho não captura mais a sessão automaticamente. Use a extensão Shingeki ou a importação manual na página do sistema."
+            ? "A captura automática de sessão foi desligada. Configure usuário e senha do alvo na página do sistema (login do scanner)."
             : "Link de conexão inválido.",
           status: 410,
           hasFieldErrors: false,
         }}
       />
       <p className="max-w-md text-sm text-muted-foreground">
-        A sessão do alvo precisa ser a autenticação do próprio alvo — nunca a
-        sessão da plataforma Shingeki.
+        A autenticação do DAST fica no scanner, não nesta janela.
       </p>
       <Button type="button" onClick={() => window.close()}>
         Fechar janela

@@ -51,6 +51,9 @@ class VulnerableTargetSeeder extends Seeder
             [
                 'cover_path' => $this->publishSeedCover(self::SYSTEM_COVER_FILE),
                 'target_url' => $targetUrl,
+                'login_url' => $targetUrl.'/login.php',
+                'login_username' => 'guest@vuln.local',
+                'login_password' => 'guest123',
                 'repository_url' => 'https://github.com/AllanCordova/vulnerable-target',
             ],
         );

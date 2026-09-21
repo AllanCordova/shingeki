@@ -1,9 +1,12 @@
 package contracts
 
 import (
+	"errors"
 	"net/url"
 	"strings"
 )
+
+var ErrScannerLogin = errors.New("scanner login failed")
 
 type TargetStorage struct {
 	Local   StringMap      `json:"local,omitempty"`
@@ -43,12 +46,66 @@ type CapturedRoute struct {
 }
 
 type TargetAuth struct {
-	Type      string            `json:"type"`
-	Headers   map[string]string `json:"headers"`
-	Storage   *TargetStorage    `json:"storage,omitempty"`
-	Cookies   []CapturedCookie  `json:"cookies,omitempty"`
-	UserAgent string            `json:"user_agent,omitempty"`
-	Routes    []CapturedRoute   `json:"routes,omitempty"`
+	Type               string            `json:"type"`
+	Headers            map[string]string `json:"headers"`
+	Storage            *TargetStorage    `json:"storage,omitempty"`
+	Cookies            []CapturedCookie  `json:"cookies,omitempty"`
+	UserAgent          string            `json:"user_agent,omitempty"`
+	Routes             []CapturedRoute   `json:"routes,omitempty"`
+	LoginURL           string            `json:"login_url,omitempty"`
+	Username           string            `json:"username,omitempty"`
+	Password           string            `json:"password,omitempty"`
+	LoggedInIndicator  string            `json:"logged_in_indicator,omitempty"`
+}
+
+func (auth *TargetAuth) HasCredentials() bool {
+	if auth == nil {
+		return false
+	}
+	return strings.TrimSpace(auth.Username) != "" && strings.TrimSpace(auth.Password) != ""
+}
+
+func (auth *TargetAuth) HasSession() bool {
+	if auth == nil {
+		return false
+	}
+	if len(auth.Cookies) > 0 {
+		return true
+	}
+	headers := EffectiveAuthHeaders(auth)
+	if headerValue(headers, "Authorization") != "" || headerValue(headers, "Cookie") != "" {
+		return true
+	}
+	if auth.Storage == nil {
+		return false
+	}
+	return len(auth.Storage.Local) > 0 || len(auth.Storage.Session) > 0 || len(auth.Storage.Origins) > 0
+}
+
+func ApplyBearerToken(auth *TargetAuth, token string) {
+	if auth == nil {
+		return
+	}
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return
+	}
+	raw := token
+	if strings.HasPrefix(strings.ToLower(token), "bearer ") {
+		raw = strings.TrimSpace(token[7:])
+	}
+	if auth.Headers == nil {
+		auth.Headers = map[string]string{}
+	}
+	auth.Headers["Authorization"] = "Bearer " + raw
+	if auth.Storage == nil {
+		auth.Storage = &TargetStorage{}
+	}
+	if auth.Storage.Local == nil {
+		auth.Storage.Local = StringMap{}
+	}
+	auth.Storage.Local["token"] = raw
+	auth.Storage.Local["access_token"] = raw
 }
 
 func (b DispatchBatch) AuthHeaders() map[string]string {
