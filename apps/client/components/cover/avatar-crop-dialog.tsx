@@ -93,6 +93,7 @@ function AvatarCropWorkspace({
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- new image must drop the previous crop preview
     setDataUrl(null);
   }, [objectUrl]);
 
@@ -113,6 +114,7 @@ function AvatarCropWorkspace({
 
   useEffect(() => {
     if (!naturalSize || viewportSize <= 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- keep pan inside the viewport after zoom/size changes
     setOffset((current) =>
       clampOffset(current, zoom, naturalSize, viewportSize),
     );
