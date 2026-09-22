@@ -87,3 +87,4 @@ components/
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` |
 | Notificações | Sininho no header (poll 20s) + `/notificacoes` |
 | Login do scanner | Card na pagina do sistema (usuario/senha do alvo) |
+| Testes | `npm test` em `lib/**/*.test.ts` (copy de scan, redirect seguro, duração); CI também roda `lint` e `tsc --noEmit` |
