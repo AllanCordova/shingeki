@@ -1,8 +1,6 @@
 # API — Login do scanner (DAST autenticado)
 
-O worker DAST entra no alvo **com o Chromium dele**, usando usuário e senha gravados no sistema. A sessão nasce no scan. Não há cópia de cookie/token do Chrome da pessoa.
-
-O DAST autentica com credenciais gravadas no sistema. Não há captura de sessão no browser da pessoa.
+O worker DAST entra no alvo com usuário e senha gravados no sistema. A sessão nasce no scan — JSON, POST de form HTML ou Chromium. Não há cópia de cookie/token do Chrome da pessoa.
 
 Voltar ao [índice da API](../API.md).
 
@@ -12,7 +10,7 @@ Voltar ao [índice da API](../API.md).
 
 | Campo | Regras |
 |-------|--------|
-| `login_url` | Opcional. URL da página de login |
+| `login_url` | Opcional. Página HTML do form (`/login.php`) ou endpoint JSON (`/api/auth/login`, `/rest/user/login`) |
 | `login_username` | Opcional. E-mail ou usuário do alvo |
 | `login_password` | Opcional. Write-only; nunca volta na API |
 | `logged_in_indicator` | Opcional. Texto visível só depois do login |
@@ -43,10 +41,11 @@ A resposta inclui `scanner_login_configured: true|false`.
 
 O worker:
 
-1. Tenta login JSON (`POST /rest/user/login` e formatos `{token,access_token}`).
-2. Se falhar, preenche o form no Chromium.
-3. Crawla autenticado (links, cliques, XHR).
-4. Reaproveita cookies/Bearer colhidos no browser para os ataques HTTP.
+1. Se `login_url` for um endpoint JSON (`/rest/`, `/api/`, `/auth/` + login), faz `POST` JSON com `{email,password}` e `{username,password}` e lê `{token,access_token}` ou cookie.
+2. Se `login_url` for página HTML (`.php`, `.html`…), faz `POST` `application/x-www-form-urlencoded` e guarda a sessão (`PHPSESSID`).
+3. Em SPA sem path JSON (ex. Juice Shop `/#/login`), cai em `POST /rest/user/login`.
+4. Se ainda não houver sessão e o Chromium estiver ligado, preenche o form no browser.
+5. Crawla autenticado (links, cliques, XHR) e reaproveita cookies/Bearer nos ataques HTTP.
 
 Se JSON e form falharem, o job termina como `failed`. O client mostra: "O scanner não conseguiu entrar no alvo…".
 

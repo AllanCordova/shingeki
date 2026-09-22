@@ -74,6 +74,35 @@ func TestJSONLoginURL(t *testing.T) {
 	}
 }
 
+func TestCredentialJSONLoginURL(t *testing.T) {
+	shop := targeturl.CredentialJSONLoginURL("http://shop.test/#/", "http://shop.test/#/login")
+	if shop != "http://shop.test/rest/user/login" {
+		t.Fatalf("juice shop=%q", shop)
+	}
+	api := targeturl.CredentialJSONLoginURL("https://app.example/", "https://app.example/api/v1/auth/login")
+	if api != "https://app.example/api/v1/auth/login" {
+		t.Fatalf("api=%q", api)
+	}
+	php := targeturl.CredentialJSONLoginURL("http://lab.test/", "http://lab.test/login.php")
+	if php != "" {
+		t.Fatalf("php lab must skip json login, got %q", php)
+	}
+	fallback := targeturl.CredentialJSONLoginURL("http://shop.test/", "")
+	if fallback != "http://shop.test/rest/user/login" {
+		t.Fatalf("empty login_url=%q", fallback)
+	}
+}
+
+func TestHTMLFormLoginURL(t *testing.T) {
+	got := targeturl.HTMLFormLoginURL("http://lab.test/", "http://lab.test/login.php")
+	if got != "http://lab.test/login.php" {
+		t.Fatalf("got %q", got)
+	}
+	if targeturl.HTMLFormLoginURL("http://shop.test/", "http://shop.test/#/login") != "" {
+		t.Fatal("hash login is not an HTML form")
+	}
+}
+
 func TestAuthenticatedRESTURLs(t *testing.T) {
 	if got := targeturl.RESTBasketURL("http://shop.test/#/", "6"); got != "http://shop.test/rest/basket/6" {
 		t.Fatalf("basket=%q", got)
