@@ -12,7 +12,6 @@ export * from "./attack/attack";
 export * from "./results/result";
 export * from "./system/stack";
 export * from "./remediation/remediation";
-export * from "./target-session/target-session";
 export * from "./catalog/catalog-attack";
 export * from "./catalog/catalog-remediation";
 export * from "./catalog/catalog-list";

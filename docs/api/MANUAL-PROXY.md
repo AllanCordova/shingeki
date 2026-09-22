@@ -42,7 +42,6 @@ Base: `/api/projects/{project}/systems/{system}/manual-proxy`
 | `headers` | Opcional; objeto string→string |
 | `body` | Opcional; string bruta |
 | `content_type` | Opcional |
-| `use_target_session` | Ignorado. A captura de sessao foi desligada; envie Cookie/Bearer em `headers` se precisar |
 | `payload` | Opcional; `{ target_location, field, value }` para injeção catalogada |
 
 **Resposta `200`:**

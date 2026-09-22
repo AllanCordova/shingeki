@@ -6,7 +6,6 @@ use App\Enums\Attack\AttackScanType;
 use App\Models\Attack\AttackDispatch;
 use App\Models\Project\Project;
 use App\Models\Signature\Signature;
-use App\Models\TargetSession\SystemTargetSession;
 use Database\Factories\SystemFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -140,11 +139,6 @@ class System extends Model
     public function attackDispatches(): HasMany
     {
         return $this->hasMany(AttackDispatch::class);
-    }
-
-    public function targetSessions(): HasMany
-    {
-        return $this->hasMany(SystemTargetSession::class);
     }
 
     public function stacks(): BelongsToMany

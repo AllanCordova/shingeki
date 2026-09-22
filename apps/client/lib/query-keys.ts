@@ -60,8 +60,6 @@ export const queryKeys = {
   systems: (projectId: string) => ["projects", projectId, "systems"] as const,
   system: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId] as const,
-  targetSession: (projectId: string, systemId: string) =>
-    ["projects", projectId, "systems", systemId, "target-session"] as const,
   manualProxyRoutes: (projectId: string, systemId: string) =>
     ["projects", projectId, "systems", systemId, "manual-proxy", "routes"] as const,
 
