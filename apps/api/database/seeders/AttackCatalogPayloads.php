@@ -180,6 +180,18 @@ final class AttackCatalogPayloads
     /**
      * @return list<string>
      */
+    public static function csrfOrigin(): array
+    {
+        return [
+            'https://evil.invalid',
+            'http://attacker.example',
+            'https://evil.example',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
     public static function openRedirect(): array
     {
         return [

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/shingeki/dast-worker/internal/config"
@@ -178,5 +179,46 @@ func TestCompositeDoesNotFallbackWhenRodReportsScannerLoginFailure(t *testing.T)
 	}
 	if colly.calls != 0 {
 		t.Fatalf("static crawl must not run after login failure, calls=%d", colly.calls)
+	}
+}
+
+func TestCompositeSkipsSPATrainingWhenStartPathSet(t *testing.T) {
+	seed := []contracts.AttackVector{
+		contracts.NewAttackVector("http://shop.test/#/", "GET", "URL_PATH"),
+		contracts.NewAttackVector("http://shop.test/rest/products/search?q=", "GET", "QUERY_PARAMETER"),
+	}
+	engine := func() *CompositeEngine {
+		return &CompositeEngine{
+			cfg: config.Config{
+				Discovery: config.DiscoveryConfig{
+					MaxPages:   50,
+					RodEnabled: true,
+				},
+			},
+			logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+			static:  &stubCrawl{},
+			dynamic: &stubCrawl{vectors: seed},
+		}
+	}
+
+	scoped, err := engine().Discover(context.Background(), "http://shop.test", nil, Options{StartPath: "/admin"})
+	if err != nil {
+		t.Fatalf("scoped: %v", err)
+	}
+	if len(scoped) != 2 {
+		t.Fatalf("scoped crawl must keep only crawled routes, got %#v", scoped)
+	}
+	for _, vector := range scoped {
+		if strings.Contains(vector.Route, "/ftp") || strings.Contains(vector.Route, "/redirect") || strings.Contains(vector.Route, "/rest/user/login") {
+			t.Fatalf("start_path must not seed site-wide SPA routes, got %#v", scoped)
+		}
+	}
+
+	full, err := engine().Discover(context.Background(), "http://shop.test", nil, Options{})
+	if err != nil {
+		t.Fatalf("full: %v", err)
+	}
+	if len(full) <= len(scoped) {
+		t.Fatalf("unscoped crawl should add SPA training vectors, scoped=%d full=%d", len(scoped), len(full))
 	}
 }

@@ -42,11 +42,11 @@ O harness faz login JSON, anexa o Bearer e pontua só estas linhas:
 
 | Challenge | Rota | Categoria | Esperado |
 |-----------|------|-----------|----------|
-| Basket IDOR | `GET /rest/basket/{bid}` → id `2` | `IDOR` / `URL_PATH` | Hit — JSON de outro `UserId` com 200 |
+| Basket IDOR | `GET /rest/basket/{bid}` → id `2` (`jim`) | `IDOR` / `URL_PATH` | Hit — JSON de outro `UserId` com 200 |
 | Admin users | `GET /api/Users/` | `IDOR` / `URL_PATH` | Hit — lista com ≥2 `email` (também acessível como `jim`, BAC) |
 | Review IDOR | `PUT /rest/products/1/reviews` campo `author` | `IDOR` / `JSON_BODY` | Hit — autor estrangeiro persiste no GET da review |
 
-UI depois: login do scanner com `admin@juice-sh.op` / `admin123`, catálogo re-seedado (`AttackCatalogSeeder` agora tem IDOR path + JSON), worker rebuild. Discovery com auth semeia basket, `/api/Users/` e reviews se o crawl não as gravar.
+UI depois: login do scanner com `admin@juice-sh.op` / `admin123`, catálogo re-seedado (`AttackCatalogSeeder` agora tem IDOR path + JSON e CSRF `Origin`), worker rebuild. Discovery com auth semeia basket `1` **e** `2` (jim), `/api/Users/` e reviews se o crawl não as gravar.
 
 ## Gold set — rodada 1 (anônimo)
 
@@ -68,7 +68,7 @@ Re-seede o catálogo depois de puxar payloads novos: `php artisan db:seed --clas
 | DOM XSS no search | `GET /#/search?q=` payload iframe `javascript:alert(\`xss\`)` | `XSS` / `QUERY_PARAMETER` | Hit — dialog JS ou `iframe[src=javascript:]` no DOM (não no JSON da API) |
 | LFI genérico (`/etc/passwd`) | path | `PATH_TRAVERSAL` | Miss esperado — Juice Shop não é o lab PHP |
 
-**Ainda CTF (não DAST genérico):** puzzles, stego, score-board, cupom. CSRF fica no catálogo mas o motor ainda não confirma (risco de FP). SSTI/XXE/NoSQL têm payload + validador; neste Juice Shop SSTI no profile deu 401, XXE no upload está deprecated, NoSQL não aplica (SQLite).
+**Ainda CTF (não DAST genérico):** puzzles, stego, score-board, cupom. SSTI/XXE/NoSQL têm payload + validador; neste Juice Shop SSTI no profile deu 401, XXE no upload está deprecated, NoSQL não aplica (SQLite). CSRF agora confirma só com token CSRF esvaziado ou `Origin`/`Referer` cross-site em pedido autenticado (o harness `-coverage` pontua `GET /rest/user/change-password`).
 
 ## Gold set — rodada 3 (cobertura)
 
@@ -83,6 +83,7 @@ npm run test:dast-juice-coverage
 | Open redirect | `GET /redirect?to=` prefix bypass `github.com/juice-shop/juice-shop.evil.invalid` | Hit — `Location` off-origin |
 | JWT `none` | `GET /api/Users/` header `Authorization` | Hit — none 200 vs assinatura quebrada 401 |
 | `/ftp` confidential | `GET /ftp/` → `acquisitions.md` | Hit — “This document is confidential” |
+| CSRF change-password | `GET /rest/user/change-password` header `Origin: https://evil.invalid` | Hit — 200 autenticado sem checagem de origem |
 
 ## Score do scan autenticado (UI + login do scanner)
 
