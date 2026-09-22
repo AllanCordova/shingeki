@@ -13,6 +13,8 @@ export function useObjectUrl(source: Blob | null | undefined): string | null {
 
   useEffect(() => {
     if (!source) {
+      // blob URLs must be created and revoked in this effect (see file comment)
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- revoke-safe object URL
       setUrl(null);
       return;
     }
