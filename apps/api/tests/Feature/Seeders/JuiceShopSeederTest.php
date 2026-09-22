@@ -44,6 +44,8 @@ test('juice shop seeder adds training system to pentest lab for test and admin u
         expect($system)->not->toBeNull()
             ->and($system->cover_path)->toBe('/storage/covers/owasp-juice-shop.jpg')
             ->and($system->target_url)->toBe('http://127.0.0.1:3001')
+            ->and($system->login_url)->toBe('http://127.0.0.1:3001/#/login')
+            ->and($system->hasScannerLogin())->toBeTrue()
             ->and($system->repository_url)->toBe('https://github.com/juice-shop/juice-shop');
 
         $slugs = $system->fresh()->stacks->pluck('slug')->sort()->values();

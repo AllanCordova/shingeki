@@ -3,6 +3,7 @@
 namespace App\Http\Requests\System;
 
 use App\Http\Requests\Concerns\ValidatesCoverSelection;
+use App\Http\Requests\Concerns\ValidatesScannerLogin;
 use App\Http\Requests\Concerns\ValidatesTargetUrl;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,11 +11,17 @@ use Illuminate\Foundation\Http\FormRequest;
 class SystemUpdate extends FormRequest
 {
     use ValidatesCoverSelection;
+    use ValidatesScannerLogin;
     use ValidatesTargetUrl;
 
     public function authorize(): bool
     {
         return true;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $this->prepareScannerLogin();
     }
 
     /**
@@ -24,6 +31,7 @@ class SystemUpdate extends FormRequest
     {
         return [
             ...$this->coverUpdateRules(),
+            ...$this->scannerLoginRules(),
             'name' => ['sometimes', 'string', 'max:255'],
             'target_url' => $this->browserTargetUrlRules(required: false),
             'login_url' => $this->browserLoginUrlRules(),

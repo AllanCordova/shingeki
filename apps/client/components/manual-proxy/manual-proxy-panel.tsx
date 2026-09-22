@@ -211,15 +211,6 @@ export function ManualProxyPanel({
 
         <div className="flex flex-col justify-center gap-4">
           <Checkbox
-            checked={form.use_target_session}
-            onChange={(event) =>
-              updateField("use_target_session", event.target.checked)
-            }
-            label="Usar sessão conectada do alvo"
-            description="Envia Cookie ou Bearer da sessão conectada acima."
-          />
-
-          <Checkbox
             checked={form.apply_payload}
             onChange={(event) => updateField("apply_payload", event.target.checked)}
             label="Aplicar payload de ataque"

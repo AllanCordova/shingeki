@@ -3,6 +3,7 @@ package discovery
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"testing"
@@ -121,5 +122,61 @@ func TestCompositeMergesStaticWhenRodReturnsNothing(t *testing.T) {
 	}
 	if len(vectors) != 1 || vectors[0].TargetLocation != "FORM" {
 		t.Fatalf("expected merged static vectors, got %+v", vectors)
+	}
+}
+
+func TestCompositeFailsWhenCredentialsHaveNoSession(t *testing.T) {
+	rod := &stubCrawl{vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("http://127.0.0.1:1/", "GET", "URL_PATH"),
+	}}
+	engine := &CompositeEngine{
+		cfg: config.Config{
+			Discovery: config.DiscoveryConfig{
+				MaxPages:   50,
+				RodEnabled: true,
+			},
+		},
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		static:  &stubCrawl{},
+		dynamic: rod,
+	}
+
+	auth := &contracts.TargetAuth{Type: "credentials", Username: "user", Password: "pass"}
+	_, err := engine.Discover(context.Background(), "http://127.0.0.1:1", auth, Options{})
+	if err == nil {
+		t.Fatal("expected scanner login failure")
+	}
+	if !errors.Is(err, contracts.ErrScannerLogin) {
+		t.Fatalf("got %v", err)
+	}
+	if rod.calls != 1 {
+		t.Fatalf("rod calls=%d", rod.calls)
+	}
+}
+
+func TestCompositeDoesNotFallbackWhenRodReportsScannerLoginFailure(t *testing.T) {
+	rod := &stubCrawl{err: fmt.Errorf("%w: no login form found", contracts.ErrScannerLogin)}
+	colly := &stubCrawl{vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("http://127.0.0.1:1/login.php", "POST", "FORM"),
+	}}
+	engine := &CompositeEngine{
+		cfg: config.Config{
+			Discovery: config.DiscoveryConfig{
+				MaxPages:   50,
+				RodEnabled: true,
+			},
+		},
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		static:  colly,
+		dynamic: rod,
+	}
+
+	auth := &contracts.TargetAuth{Type: "credentials", Username: "user", Password: "pass"}
+	_, err := engine.Discover(context.Background(), "http://127.0.0.1:1", auth, Options{})
+	if !errors.Is(err, contracts.ErrScannerLogin) {
+		t.Fatalf("got %v", err)
+	}
+	if colly.calls != 0 {
+		t.Fatalf("static crawl must not run after login failure, calls=%d", colly.calls)
 	}
 }

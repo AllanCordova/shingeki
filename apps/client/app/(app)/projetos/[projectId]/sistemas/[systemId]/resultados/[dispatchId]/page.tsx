@@ -8,6 +8,7 @@ import type { DispatchProbeListFilter } from "@/lib/contracts";
 import {
   dispatchStatusLabel,
   dispatchStatusTone,
+  dispatchFailureCopy,
 } from "@/lib/contracts/attack/attack";
 import type { AttackDispatch } from "@/lib/contracts/attack/attack";
 import type { PaginationMeta, SystemResult } from "@/lib/contracts/results/result";
@@ -194,7 +195,7 @@ export default function ResultsDetailPage() {
             </p>
             {dispatch?.status === "failed" ? (
               <p className="text-sm text-danger">
-                O scan nao foi concluido. Tente disparar novamente.
+                {dispatchFailureCopy(dispatch.failure_reason)}
               </p>
             ) : null}
           </div>

@@ -10,7 +10,6 @@ Como subir a stack: [RUN-PROJECT.md](RUN-PROJECT.md). Contratos HTTP: [API.md](A
 flowchart TB
   subgraph clients [Clients]
     Web["apps/client\nNext.js + BFF"]
-    Ext["apps/extension\nChrome/Edge"]
   end
   API["apps/api\nLaravel REST + GraphQL"]
   Queue[(RabbitMQ)]
@@ -19,7 +18,6 @@ flowchart TB
   Target["labs/vulnerable-target\nPHP lab"]
   Juice["OWASP Juice Shop\ntreino DAST"]
   Web --> API
-  Ext --> API
   API --> Queue
   Queue --> DastWorker
   Queue --> SastWorker
@@ -36,7 +34,7 @@ O browser fala só com o BFF (`apps/client/app/api/*`). O token Sanctum fica em 
 |--------|-----------|
 | `apps/api` | [architecture/shingeki-api.md](architecture/shingeki-api.md) |
 | `apps/client` | [architecture/shingeki-client.md](architecture/shingeki-client.md) |
-| `apps/extension` | Contrato: [TARGET-SESSION](api/TARGET-SESSION.md). Empacotamento: [README da extensão](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md). |
+| `apps/extension` | Fora de uso. Login do scanner: [TARGET-SESSION](api/TARGET-SESSION.md) |
 | `workers/dast` | [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md) |
 | `workers/sast` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
 | `labs/vulnerable-target` | [architecture/shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |

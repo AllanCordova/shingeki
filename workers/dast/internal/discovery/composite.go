@@ -2,6 +2,8 @@ package discovery
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/shingeki/dast-worker/internal/config"
@@ -38,6 +40,13 @@ func (e *CompositeEngine) Discover(
 	if err != nil {
 		return nil, err
 	}
+
+	if err := ApplyJSONLogin(ctx, seedURL, auth); err != nil {
+		e.logger.Warn("json credential login failed; browser form login may still work", "error", err)
+	} else if auth != nil && auth.HasCredentials() && len(contracts.EffectiveAuthHeaders(auth)) > 0 {
+		e.logger.Info("applied json credential login for discovery")
+	}
+
 	if seedURL != targetURL {
 		e.logger.Info("scoped discovery seed",
 			"target", targetURL,
@@ -60,6 +69,9 @@ func (e *CompositeEngine) Discover(
 	if discCfg.RodEnabled {
 		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, auth, seedURL)
 		if rodErr != nil {
+			if errors.Is(rodErr, contracts.ErrScannerLogin) {
+				return nil, rodErr
+			}
 			e.logger.Warn("dynamic discovery failed; falling back to static crawl", "error", rodErr)
 			staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
 			if staticErr != nil {
@@ -135,6 +147,10 @@ func (e *CompositeEngine) Discover(
 			"depth", opts.Depth,
 			"max_routes", opts.MaxRoutes,
 		)
+	}
+
+	if auth.HasCredentials() && !auth.HasSession() {
+		return nil, fmt.Errorf("%w: credentials did not establish a session", contracts.ErrScannerLogin)
 	}
 
 	return vectors, nil
