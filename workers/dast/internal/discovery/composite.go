@@ -42,9 +42,15 @@ func (e *CompositeEngine) Discover(
 	}
 
 	if err := ApplyJSONLogin(ctx, seedURL, auth); err != nil {
-		e.logger.Warn("json credential login failed; browser form login may still work", "error", err)
+		e.logger.Warn("json credential login failed; form login may still work", "error", err)
 	} else if auth != nil && auth.HasCredentials() && len(contracts.EffectiveAuthHeaders(auth)) > 0 {
 		e.logger.Info("applied json credential login for discovery")
+	}
+
+	if err := ApplyHTTPFormLogin(ctx, seedURL, auth); err != nil {
+		e.logger.Warn("http form login failed; browser form login may still work", "error", err)
+	} else if auth != nil && auth.HasCredentials() && auth.HasSession() && auth.LoginURL != "" {
+		e.logger.Info("applied http form login for discovery")
 	}
 
 	if seedURL != targetURL {
