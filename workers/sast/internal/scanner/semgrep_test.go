@@ -1,6 +1,8 @@
 package scanner_test
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/shingeki/sast-worker/internal/scanner"
@@ -58,5 +60,46 @@ func TestParseSemgrepOutputIgnoresLeadingNoise(t *testing.T) {
 	}
 	if len(findings) != 0 {
 		t.Fatalf("expected 0 findings, got %d", len(findings))
+	}
+}
+
+func TestDetectRepoLanguages(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "app"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "node_modules"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "app", "page.tsx"), []byte("export default function Page() { return null }"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "node_modules", "index.js"), []byte("module.exports = 1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	got := scanner.DetectRepoLanguages(dir)
+	if len(got) != 1 || got[0] != "typescript" {
+		t.Fatalf("detected=%v", got)
+	}
+}
+
+func TestHydrateSnippetsReplacesRequiresLogin(t *testing.T) {
+	dir := t.TempDir()
+	workflow := filepath.Join(dir, "test.yml")
+	content := "name: ci\nsteps:\n  - uses: actions/checkout@v4\n"
+	if err := os.WriteFile(workflow, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	findings := []scanner.Finding{{
+		Path:    workflow,
+		Line:    3,
+		EndLine: 3,
+		Snippet: "requires login",
+	}}
+	scanner.HydrateSnippets(dir, findings)
+	if findings[0].Snippet != "- uses: actions/checkout@v4" {
+		t.Fatalf("snippet=%q", findings[0].Snippet)
 	}
 }

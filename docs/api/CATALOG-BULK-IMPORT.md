@@ -53,7 +53,7 @@ Colunas (header obrigatorio):
 | Coluna | Obrigatorio | Valores aceitos |
 |--------|-------------|-----------------|
 | `scan_type` | sim | `DAST`, `SAST` |
-| `category` | sim | `SQL_INJECTION`, `XSS`, `CSRF`, `COMMAND_INJECTION`, `PATH_TRAVERSAL`, `SSRF`, `XXE`, `LDAP_INJECTION`, `NOSQL_INJECTION`, `IDOR`, `OPEN_REDIRECT`, `SSTI`, `JWT_CONFUSION` |
+| `category` | sim | `SQL_INJECTION`, `XSS`, `CSRF`, `COMMAND_INJECTION`, `PATH_TRAVERSAL`, `SSRF`, `XXE`, `LDAP_INJECTION`, `NOSQL_INJECTION`, `IDOR`, `OPEN_REDIRECT`, `SSTI`, `JWT_CONFUSION`, `SUPPLY_CHAIN` |
 | `target_location` | sim | `FORM`, `QUERY_PARAMETER`, `HEADER`, `COOKIE`, `JSON_BODY`, `URL_PATH`, `FILE_UPLOAD`, `API_ENDPOINT`, `SOURCE_CODE` |
 | `risk_level` | sim | `LOW`, `MEDIUM`, `HIGH` |
 | `payload_json` | sim | Objeto JSON (ex.: `{"parameter":"q","value":"<script>alert(1)</script>"}`) |

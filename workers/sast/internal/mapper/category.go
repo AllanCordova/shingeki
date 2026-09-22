@@ -16,6 +16,7 @@ const (
 	CategoryJWTConfusion     = "JWT_CONFUSION"
 	CategoryCSRF             = "CSRF"
 	CategoryIDOR             = "IDOR"
+	CategorySupplyChain      = "SUPPLY_CHAIN"
 )
 
 type categoryHint struct {
@@ -37,6 +38,7 @@ var checkIDCategoryHints = []categoryHint{
 	{CategoryJWTConfusion, []string{"jwt", "none-algorithm", "algorithm-confusion"}},
 	{CategoryCSRF, []string{"csrf", "cors-misconfig"}},
 	{CategoryIDOR, []string{"idor", "broken-access", "mass-assignment", "insecure-direct-object"}},
+	{CategorySupplyChain, []string{"github-actions", "mutable-action-tag", "unpinned-action", "third-party-action", "supply-chain"}},
 }
 
 func CategoryForCheckID(checkID string) string {

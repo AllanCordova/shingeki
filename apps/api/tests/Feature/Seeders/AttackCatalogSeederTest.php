@@ -103,7 +103,7 @@ test('attack catalog seeder creates a sast source-code attack per category', fun
         ->where('scan_type', AttackScanType::Sast)
         ->get();
 
-    expect($sast)->toHaveCount(13);
+    expect($sast)->toHaveCount(14);
 
     $categories = $sast->pluck('category')->map(fn ($c) => $c->value)->unique()->sort()->values();
     expect($categories->all())->toEqualCanonicalizing([
@@ -120,6 +120,7 @@ test('attack catalog seeder creates a sast source-code attack per category', fun
         AttackCategory::JwtConfusion->value,
         AttackCategory::Csrf->value,
         AttackCategory::Idor->value,
+        AttackCategory::SupplyChain->value,
     ]);
 
     foreach ($sast as $attack) {

@@ -91,6 +91,56 @@ func TestAttackIDForFindingSkipsUnselectedCategory(t *testing.T) {
 	}
 }
 
+func TestAttackIDForFindingMapsSupplyChain(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "sqli-1",
+				Category: "SQL_INJECTION",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+			{
+				AttackID: "supply-1",
+				Category: "SUPPLY_CHAIN",
+				Payload:  json.RawMessage(`{"languages":["javascript"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+		Path:    ".github/workflows/test.yml",
+	})
+	if got != "supply-1" {
+		t.Fatalf("github-actions finding must map to SUPPLY_CHAIN, got %s", got)
+	}
+}
+
+func TestAttackIDForFindingSkipsUncategorizedWithoutCatalogMatch(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "xss-1",
+				Category: "XSS",
+				Payload:  json.RawMessage(`{"languages":["javascript"]}`),
+			},
+			{
+				AttackID: "sqli-1",
+				Category: "SQL_INJECTION",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+		Path:    ".github/workflows/test.yml",
+	})
+	if got != "" {
+		t.Fatalf("supply-chain finding must not inherit SQL_INJECTION, got %s", got)
+	}
+}
+
 func TestCategoryForCheckID(t *testing.T) {
 	if got := mapper.CategoryForCheckID("php.lang.security.injection.echoed-request.echoed-request"); got != mapper.CategoryXSS {
 		t.Fatalf("xss=%s", got)
@@ -100,5 +150,8 @@ func TestCategoryForCheckID(t *testing.T) {
 	}
 	if got := mapper.CategoryForCheckID("python.lang.security.audit.sqli.psycopg-sqli"); got != mapper.CategorySQLInjection {
 		t.Fatalf("sqli=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag"); got != mapper.CategorySupplyChain {
+		t.Fatalf("supply=%s", got)
 	}
 }

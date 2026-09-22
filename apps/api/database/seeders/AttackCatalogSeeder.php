@@ -114,6 +114,7 @@ class AttackCatalogSeeder extends Seeder
             ['category' => AttackCategory::JwtConfusion, 'risk' => AttackRiskLevel::High],
             ['category' => AttackCategory::Csrf, 'risk' => AttackRiskLevel::Medium],
             ['category' => AttackCategory::Idor, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::SupplyChain, 'risk' => AttackRiskLevel::High],
         ];
     }
 
