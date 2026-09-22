@@ -39,7 +39,6 @@ const DEFAULT_FORM: ManualProxySendInput = {
   headers_json: "{}",
   body: "",
   content_type: "",
-  use_target_session: true,
   apply_payload: false,
   payload_target_location: "QUERY_PARAMETER",
   payload_field: "",

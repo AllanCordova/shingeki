@@ -15,7 +15,7 @@ echo <<<'HTML'
     <li><strong>Path traversal</strong> — <code>GET /browse/{file}</code> reads from storage without sanitization</li>
 </ul>
 <h2>Authenticated routes</h2>
-<p>Sign in first (session cookie). Use <strong>Conectar ao alvo</strong> in Shingeki to import the cookie for authenticated scans.</p>
+<p>Sign in first (session cookie). In Shingeki, use <strong>Login do scanner</strong> with the lab credentials — the worker authenticates itself.</p>
 <ul>
     <li><a href="/dashboard.php">Dashboard</a> — session-protected landing page</li>
     <li><strong>SQL injection</strong> — <code>POST /profile.php</code> field <code>email</code> (requires login)</li>

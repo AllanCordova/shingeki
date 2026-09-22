@@ -61,7 +61,7 @@ Exemplo de validação:
 | Módulo | Guia |
 |--------|------|
 | Aceite de responsabilidade | [api/ATTACK-ACKNOWLEDGMENT.md](api/ATTACK-ACKNOWLEDGMENT.md) |
-| Sessão do alvo | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
+| Login do scanner | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Ataques, probes, resultados, comparar, PDF | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
 | Arsenal manual (proxy) | [api/MANUAL-PROXY.md](api/MANUAL-PROXY.md) |
 | Notificações in-app | [api/NOTIFICATIONS.md](api/NOTIFICATIONS.md) |
@@ -87,7 +87,6 @@ Não é REST. Schema e regra de uso: [architecture/shingeki-api.md](architecture
 - `GET /api/auth/google/redirect`
 - `GET /api/auth/google/callback`
 - `POST /api/auth/google/exchange`
-- `POST /api/target-session/capture/{ticket}` (legado; fora do fluxo do client)
 
 ### Protegidas (`auth:sanctum`)
 
@@ -109,7 +108,6 @@ Não é REST. Schema e regra de uso: [architecture/shingeki-api.md](architecture
 - `GET /api/projects/{project}/dashboard`
 - `GET|POST /api/projects/{project}/systems`
 - `GET|PUT|DELETE /api/projects/{project}/systems/{system}`
-- `GET|POST|DELETE .../target-session` · `POST .../target-session/connect/start` (legado)
 - Login do scanner: `login_url` / `login_username` / `login_password` no sistema — [TARGET-SESSION.md](api/TARGET-SESSION.md)
 - `GET .../attack-acknowledgment`
 - `POST .../attacks/dispatch` (DAST) · `POST .../attacks/dispatch/sast` (SAST)

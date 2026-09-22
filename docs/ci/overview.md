@@ -9,8 +9,8 @@ Este arquivo descreve o que o CI **roda hoje** — não o que poderia rodar.
 | `lint` | Laravel Pint | `apps/api` |
 | `tests` | Pest (`php artisan test`) | `apps/api` |
 | `dast-worker` | `go vet` / `go test` | `workers/dast` |
-
-Não entram no workflow (ainda): `workers/sast`, `apps/client`, `apps/extension`.
+| `sast-worker` | `go vet` / `go test` | `workers/sast` |
+| `client` | ESLint, `tsc --noEmit`, `tsx --test` | `apps/client` |
 
 ## Rodar localmente (`apps/api`)
 
@@ -29,6 +29,10 @@ composer test
 | `composer test` | Testes (igual ao CI) |
 
 Worker DAST: `cd workers/dast && go vet ./... && go test -race ./...`.
+
+Worker SAST: `cd workers/sast && go vet ./... && go test -race ./...`.
+
+Client: `cd apps/client && npm ci && npm run lint && npm run typecheck && npm test`.
 
 ## Documentação (MkDocs)
 

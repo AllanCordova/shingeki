@@ -21,7 +21,7 @@ test('attack catalog seeder creates generic dast payloads for every category', f
         ->where('scan_type', AttackScanType::Dast)
         ->get();
 
-    expect($dast)->toHaveCount(27);
+    expect($dast)->toHaveCount(28);
 
     $categories = $dast->pluck('category')->map(fn ($c) => $c->value)->unique()->sort()->values();
     expect($categories->all())->toEqualCanonicalizing([
@@ -82,4 +82,13 @@ test('attack catalog seeder creates generic dast payloads for every category', f
 
     expect($redirect)->not->toBeNull()
         ->and($redirect->payload['values'])->toContain('https://github.com/juice-shop/juice-shop.evil.invalid');
+
+    $csrfHeader = $dast->first(
+        fn (Attack $attack) => $attack->category === AttackCategory::Csrf
+            && $attack->target_location === AttackTargetLocation::Header,
+    );
+
+    expect($csrfHeader)->not->toBeNull()
+        ->and($csrfHeader->payload['field'])->toBe('Origin')
+        ->and($csrfHeader->payload['values'])->toEqual(AttackCatalogPayloads::csrfOrigin());
 });

@@ -2,21 +2,13 @@
 
 Disparo assíncrono via RabbitMQ e consulta de achados. Voltar ao [índice da API](../API.md).
 
-Requer workers, filas e (para DAST em laboratório) alvo vulnerável. API e stack Docker: [RUN-PROJECT.md](../RUN-PROJECT.md).
+Requer workers e filas. API e Docker: [RUN-PROJECT.md](../RUN-PROJECT.md). Labs (treino local, opcional): [Validar os workers](../RUN-PROJECT.md#validar-os-workers).
 
 ## Ambiente de laboratório
 
-Stack, consumers e URLs de serviço: [RUN-PROJECT.md](../RUN-PROJECT.md). Vetores e credenciais do alvo: [shingeki-vulnerable-target.md](../architecture/shingeki-vulnerable-target.md).
+Os labs **não** fazem parte do contrato HTTP. URLs, profiles Docker e harness: [Validar os workers](../RUN-PROJECT.md#validar-os-workers). Vetores e credenciais: [lab PHP](../architecture/shingeki-vulnerable-target.md), [Juice Shop](../architecture/shingeki-juice-shop.md).
 
-O alvo usa a porta `VULNERABLE_TARGET_PORT` (padrão `8090`).
-
-| Contexto | URL do alvo |
-|----------|-------------|
-| Navegador, popup de login | `http://127.0.0.1:8090` ou `http://localhost:8090` |
-| Worker DAST (Docker) | resolvido automaticamente para `http://vulnerable-target` |
-| API — manual proxy | `WorkerTargetUrlResolver::forManualProxy()` — URL do browser/lab (ver [MANUAL-PROXY.md](MANUAL-PROXY.md)) |
-
-**Importante:** não cadastre `host.docker.internal` nem `http://vulnerable-target` como URL alvo — esses hostnames só existem dentro do Docker e quebram o navegador (`DNS_PROBE_POSSIBLE`). A API reescreve a URL ao publicar o batch na fila. Registros legados com `http://vulnerable-target` funcionam no manual proxy via reescrita automática.
+Cadastre no sistema a URL de **host** (`http://127.0.0.1:8090` ou `:3001`). Não use `host.docker.internal` nem `http://vulnerable-target` — esses nomes só existem dentro do Docker e quebram o navegador. A API reescreve loopback ao publicar o batch.
 
 ### Aceite de responsabilidade
 
@@ -146,7 +138,7 @@ Lista dispatches do sistema (mais recentes primeiro).
 }
 ```
 
-`status`: `pending` enquanto `completed_at` for `null`; `completed` caso contrário.
+`status`: `pending` enquanto `completed_at` e `failed_at` forem `null`; `failed` quando `failed_at` estiver preenchido; `completed` quando o scan terminar com sucesso (`completed_at`). Falhas **não** preenchem `completed_at` — dashboard, remediação e relatório de auditoria só consideram scans concluídos.
 
 **Probes** são tentativas de payload (`dispatch_probes`), distintas dos **achados** (`system_results`). O worker DAST publica `attack.probe` para cada tentativa (`vulnerable` / `clean` / `error`) e um achado só quando a evidência confirma vulnerabilidade. Contrato da fila: [shingeki-dast-worker.md](../architecture/shingeki-dast-worker.md).
 

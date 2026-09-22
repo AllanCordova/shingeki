@@ -135,13 +135,11 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      vulnerable-target:
-        condition: service_healthy
     networks:
       - shingeki
 
   juice-shop:
-    profiles: ["stack"]
+    profiles: ["labs"]
     image: bkimminich/juice-shop
     container_name: shingeki-juice-shop
     restart: unless-stopped
@@ -163,7 +161,7 @@ services:
       start_period: 40s
 
   vulnerable-target:
-    profiles: ["stack"]
+    profiles: ["labs"]
     build:
       context: ./labs/vulnerable-target
     container_name: shingeki-vulnerable-target

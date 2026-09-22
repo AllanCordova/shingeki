@@ -3,6 +3,7 @@ package goldset
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/shingeki/dast-worker/internal/contracts"
@@ -19,6 +20,7 @@ const (
 	ChallengeOpenRedirect = "open-redirect"
 	ChallengeJWTNone      = "jwt-none"
 	ChallengeFTPFile      = "ftp-confidential"
+	ChallengeCSRF         = "csrf-change-password"
 	ReviewIDORAuthor      = "idor-harness@shingeki.test"
 )
 
@@ -35,7 +37,7 @@ func ExpectedAuthChallenges() []string {
 }
 
 func ExpectedCoverageChallenges() []string {
-	return []string{ChallengeOpenRedirect, ChallengeJWTNone, ChallengeFTPFile}
+	return []string{ChallengeOpenRedirect, ChallengeJWTNone, ChallengeFTPFile, ChallengeCSRF}
 }
 
 func Catalog() []contracts.AttackItem {
@@ -105,6 +107,7 @@ func AuthVectors(targetURL string, session Session) []contracts.AttackVector {
 	}
 
 	basket := contracts.NewAttackVector(targeturl.RESTBasketURL(origin, bid), http.MethodGet, "URL_PATH")
+	foreign := contracts.NewAttackVector(targeturl.RESTBasketURL(origin, targeturl.ForeignBasketID(bid)), http.MethodGet, "URL_PATH")
 	users := contracts.NewAttackVector(targeturl.APIUsersURL(origin), http.MethodGet, "URL_PATH")
 
 	review := contracts.NewAttackVector(targeturl.ProductReviewsURL(origin, "1"), http.MethodPut, "JSON_BODY")
@@ -113,7 +116,7 @@ func AuthVectors(targetURL string, session Session) []contracts.AttackVector {
 	body, _ := json.Marshal(map[string]string{"message": "shingeki-dast", "author": author})
 	review.Body = string(body)
 
-	return []contracts.AttackVector{basket, users, review}
+	return []contracts.AttackVector{basket, foreign, users, review}
 }
 
 func CoverageCatalog() []contracts.AttackItem {
@@ -128,10 +131,16 @@ func CoverageCatalog() []contracts.AttackItem {
 	ftpPayload, _ := json.Marshal(map[string]any{
 		"value": "acquisitions.md",
 	})
+	csrfPayload, _ := json.Marshal(map[string]any{
+		"value":  "https://evil.invalid",
+		"values": []string{"https://evil.invalid"},
+		"field":  "Origin",
+	})
 	return []contracts.AttackItem{
 		{AttackID: "gold-redirect", Category: "OPEN_REDIRECT", TargetLocation: "QUERY_PARAMETER", RiskLevel: "MEDIUM", Payload: redirectPayload},
 		{AttackID: "gold-jwt", Category: "JWT_CONFUSION", TargetLocation: "HEADER", RiskLevel: "HIGH", Payload: jwtPayload},
 		{AttackID: "gold-ftp", Category: "PATH_TRAVERSAL", TargetLocation: "URL_PATH", RiskLevel: "HIGH", Payload: ftpPayload},
+		{AttackID: "gold-csrf", Category: "CSRF", TargetLocation: "HEADER", RiskLevel: "MEDIUM", Payload: csrfPayload},
 	}
 }
 
@@ -149,7 +158,13 @@ func CoverageVectors(targetURL string, session Session) []contracts.AttackVector
 	users := contracts.NewAttackVector(targeturl.APIUsersURL(origin), http.MethodGet, "HEADER")
 	users.Headers = BearerAuth(session)
 
-	return []contracts.AttackVector{redirect, ftp, users}
+	csrf := contracts.NewAttackVector(
+		targeturl.ChangePasswordURL(origin)+"?current="+url.QueryEscape(DefaultAdminPassword)+"&new="+url.QueryEscape(DefaultAdminPassword)+"&repeat="+url.QueryEscape(DefaultAdminPassword),
+		http.MethodGet,
+		"HEADER",
+	)
+
+	return []contracts.AttackVector{redirect, ftp, users, csrf}
 }
 
 func Classify(route, category string) string {
@@ -170,6 +185,8 @@ func Classify(route, category string) string {
 		return ChallengeJWTNone
 	case strings.Contains(upper, "PATH") && strings.Contains(lower, "/ftp"):
 		return ChallengeFTPFile
+	case strings.Contains(upper, "CSRF") && strings.Contains(lower, "change-password"):
+		return ChallengeCSRF
 	case strings.Contains(upper, "IDOR") && strings.Contains(lower, "/rest/basket"):
 		return ChallengeBasketIDOR
 	case strings.Contains(upper, "IDOR") && strings.Contains(lower, "review"):

@@ -50,7 +50,6 @@ describe('manual proxy', function () {
                 'field' => 'q',
                 'value' => "' OR 1=1--",
             ],
-            'use_target_session' => false,
         ])
             ->assertOk()
             ->assertJsonPath('status_code', 200)

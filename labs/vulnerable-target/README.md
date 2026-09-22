@@ -1,12 +1,9 @@
 # Lab — alvo vulnerável (`labs/vulnerable-target`)
 
-Alvo PHP vulnerável (laboratório) do monorepo Shingeki.
+Alvo PHP vulnerável para **treino local**. Não faz parte da arquitetura do worker.
 
-**Arquitetura, vetores e credenciais (fonte única):** [docs/architecture/shingeki-vulnerable-target.md](../../docs/architecture/shingeki-vulnerable-target.md)
+**Vetores e credenciais (fonte única):** [docs/architecture/shingeki-vulnerable-target.md](../../docs/architecture/shingeki-vulnerable-target.md)
 
-**Como subir a stack:** [docs/RUN-PROJECT.md](../../docs/RUN-PROJECT.md)
+**Como subir:** [Validar os workers](../../docs/RUN-PROJECT.md#validar-os-workers)
 
-## Uso rápido
-
-- `POST /login.php` cria sessão PHP (`PHPSESSID`).
-- No Shingeki: **Conectar ao alvo** (popup → `/shingeki-capture.php`). Contrato: [TARGET-SESSION.md](../../docs/api/TARGET-SESSION.md).
+No Shingeki, use o card **Login do scanner** (`guest@vuln.local` / `guest123`). A captura de cookie foi aposentada.

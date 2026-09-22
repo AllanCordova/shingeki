@@ -26,7 +26,6 @@ class ManualProxyController extends Controller
 
         try {
             $result = $this->manualProxyService->send(
-                $request->user(),
                 $system,
                 $request->validated('method'),
                 $request->validated('path'),
@@ -34,7 +33,6 @@ class ManualProxyController extends Controller
                 $request->headerParams(),
                 $request->validated('body'),
                 $request->validated('content_type'),
-                $request->useTargetSession(),
                 $request->payloadParams(),
             );
         } catch (InvalidArgumentException $exception) {

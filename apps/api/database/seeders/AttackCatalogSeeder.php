@@ -58,15 +58,19 @@ class AttackCatalogSeeder extends Seeder
         $dast = [];
         foreach (self::dastPacks() as $pack) {
             $values = $pack['values'];
+            $payload = [
+                'value' => $values[0],
+                'values' => $values,
+            ];
+            if (! empty($pack['field'])) {
+                $payload['field'] = $pack['field'];
+            }
             $dast[] = [
                 'scan_type' => AttackScanType::Dast,
                 'category' => $pack['category'],
                 'target_location' => $pack['location'],
                 'risk_level' => $pack['risk'],
-                'payload' => [
-                    'value' => $values[0],
-                    'values' => $values,
-                ],
+                'payload' => $payload,
             ];
         }
 
@@ -86,7 +90,8 @@ class AttackCatalogSeeder extends Seeder
      *     category: AttackCategory,
      *     location: AttackTargetLocation,
      *     risk: AttackRiskLevel,
-     *     values: list<string>
+     *     values: list<string>,
+     *     field?: string
      * }>
      */
     private static function dastPacks(): array
@@ -122,6 +127,7 @@ class AttackCatalogSeeder extends Seeder
             ['category' => AttackCategory::LdapInjection, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::High, 'values' => $ldap],
             ['category' => AttackCategory::LdapInjection, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => $ldap],
             ['category' => AttackCategory::Csrf, 'location' => AttackTargetLocation::Form, 'risk' => AttackRiskLevel::Medium, 'values' => AttackCatalogPayloads::csrf()],
+            ['category' => AttackCategory::Csrf, 'location' => AttackTargetLocation::Header, 'risk' => AttackRiskLevel::Medium, 'values' => AttackCatalogPayloads::csrfOrigin(), 'field' => 'Origin'],
             ['category' => AttackCategory::OpenRedirect, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::Medium, 'values' => AttackCatalogPayloads::openRedirect()],
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::High, 'values' => $ssti],
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => $ssti],

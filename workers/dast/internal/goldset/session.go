@@ -17,6 +17,8 @@ import (
 const (
 	DefaultAdminEmail    = "admin@juice-sh.op"
 	DefaultAdminPassword = "admin123"
+	DefaultJimEmail      = "jim@juice-sh.op"
+	DefaultJimPassword   = "ncc-1701"
 )
 
 type Session struct {
