@@ -161,7 +161,10 @@ class UserNotificationService
         if ($dispatchIds !== []) {
             AttackDispatch::query()
                 ->whereIn('id', $dispatchIds)
-                ->whereNotNull('completed_at')
+                ->where(function ($query) {
+                    $query->whereNotNull('completed_at')
+                        ->orWhereNotNull('failed_at');
+                })
                 ->get()
                 ->each(fn (AttackDispatch $dispatch) => $this->completeAttackDispatch($dispatch));
         }

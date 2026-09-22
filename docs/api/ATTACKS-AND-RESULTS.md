@@ -146,7 +146,7 @@ Lista dispatches do sistema (mais recentes primeiro).
 }
 ```
 
-`status`: `pending` enquanto `completed_at` for `null`; `completed` caso contrário.
+`status`: `pending` enquanto `completed_at` e `failed_at` forem `null`; `failed` quando `failed_at` estiver preenchido; `completed` quando o scan terminar com sucesso (`completed_at`). Falhas **não** preenchem `completed_at` — dashboard, remediação e relatório de auditoria só consideram scans concluídos.
 
 **Probes** são tentativas de payload (`dispatch_probes`), distintas dos **achados** (`system_results`). O worker DAST publica `attack.probe` para cada tentativa (`vulnerable` / `clean` / `error`) e um achado só quando a evidência confirma vulnerabilidade. Contrato da fila: [shingeki-dast-worker.md](../architecture/shingeki-dast-worker.md).
 

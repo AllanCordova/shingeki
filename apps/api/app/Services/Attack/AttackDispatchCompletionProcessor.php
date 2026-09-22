@@ -75,7 +75,7 @@ class AttackDispatchCompletionProcessor
         }
 
         $dispatch->update([
-            'completed_at' => now(),
+            'completed_at' => $failed ? null : now(),
             'failed_at' => $failed ? now() : null,
             'failure_reason' => $reason,
             'duration_ms' => (int) $durationMs,

@@ -32,10 +32,16 @@ func AppendSPAAuthenticatedVectors(targetURL string, vectors []contracts.AttackV
 		return vectors
 	}
 
-	hasBasket, hasUsers, hasReviews := false, false, false
+	hasBasket1, hasBasket2, hasUsers, hasReviews := false, false, false, false
 	for _, vector := range vectors {
 		if isUsableBasketVector(vector) {
-			hasBasket = true
+			path := strings.ToLower(routePath(vector.Route))
+			if strings.HasSuffix(path, "/1") || strings.HasSuffix(path, "/1/") {
+				hasBasket1 = true
+			}
+			if strings.HasSuffix(path, "/2") || strings.HasSuffix(path, "/2/") {
+				hasBasket2 = true
+			}
 		}
 		if isUsableUsersVector(vector) {
 			hasUsers = true
@@ -45,8 +51,11 @@ func AppendSPAAuthenticatedVectors(targetURL string, vectors []contracts.AttackV
 		}
 	}
 
-	if !hasBasket {
+	if !hasBasket1 {
 		vectors = append(vectors, contracts.NewAttackVector(targeturl.RESTBasketURL(origin, "1"), http.MethodGet, "URL_PATH"))
+	}
+	if !hasBasket2 {
+		vectors = append(vectors, contracts.NewAttackVector(targeturl.RESTBasketURL(origin, targeturl.ForeignBasketID("1")), http.MethodGet, "URL_PATH"))
 	}
 	if !hasUsers {
 		vectors = append(vectors, contracts.NewAttackVector(targeturl.APIUsersURL(origin), http.MethodGet, "URL_PATH"))
