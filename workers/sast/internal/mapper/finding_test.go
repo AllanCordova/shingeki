@@ -91,6 +91,31 @@ func TestAttackIDForFindingSkipsUnselectedCategory(t *testing.T) {
 	}
 }
 
+func TestAttackIDForFindingKeepsUncategorizedRule(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "xss-1",
+				Category: "XSS",
+				Payload:  json.RawMessage(`{"languages":["javascript"]}`),
+			},
+			{
+				AttackID: "sqli-1",
+				Category: "SQL_INJECTION",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+		Path:    ".github/workflows/test.yml",
+	})
+	if got != "xss-1" {
+		t.Fatalf("uncategorized finding must still be published, got %s", got)
+	}
+}
+
 func TestCategoryForCheckID(t *testing.T) {
 	if got := mapper.CategoryForCheckID("php.lang.security.injection.echoed-request.echoed-request"); got != mapper.CategoryXSS {
 		t.Fatalf("xss=%s", got)

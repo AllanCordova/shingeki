@@ -15,7 +15,7 @@ flowchart LR
 
 1. **Consumer** lê mensagem batch da fila `attacks.sast.dispatch` (`scan_type: SAST`).
 2. **Clone** faz `git clone --depth 1` de `repository_url` em diretório temporário.
-3. **Semgrep** roda com regras `p/php`, `p/typescript`, `p/javascript`, `p/python`, `p/golang`, `p/java` e `p/ruby` (união das linguagens do lote).
+3. **Semgrep** roda `p/default` + `p/owasp-top-ten` e os packs das linguagens **presentes no repo** (`p/php`, `p/typescript`, `p/javascript`, `p/python`, `p/golang`, `p/java`, `p/ruby`). `go` no catálogo vira `p/golang` — `p/go` 404 e derruba o scan inteiro.
 4. **Mapper** associa cada `check_id` a um ataque SAST do catálogo (SQLi, XSS, path traversal…). Findings sem categoria no lote são descartados.
 5. **Publisher** envia achados, probes `clean` para categorias sem hit, e mensagem de conclusão em `attacks.results`.
 
