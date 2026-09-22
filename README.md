@@ -15,7 +15,7 @@ Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](d
 | [`apps/extension/`](apps/extension/) | Extensão Chrome/Edge (legado; fora de uso) |
 | [`workers/dast/`](workers/dast/) | Worker Go DAST (discovery, ataques, evidências) |
 | [`workers/sast/`](workers/sast/) | Worker Go SAST (clone + Semgrep) |
-| [`labs/vulnerable-target/`](labs/vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
+| [`labs/vulnerable-target/`](labs/vulnerable-target/) | Lab PHP de **treino local** (não entra no grafo do worker) |
 | Juice Shop (Docker) | Treino DAST — [docs/architecture/shingeki-juice-shop.md](docs/architecture/shingeki-juice-shop.md) |
 
 ## Documentação
@@ -26,9 +26,11 @@ Fonte canônica: **[`docs/`](docs/index.md)** (cada tópico tem um arquivo dono 
 
 ```bash
 docker compose up -d          # MySQL + RabbitMQ + api-consumers
-cd apps/api && php artisan serve
-cd apps/client && npm run dev
+npm install                   # scripts da raiz (API + client juntos)
+npm run dev
 ```
+
+Workers (opcional): `docker compose --profile stack up -d --build`. Labs de treino: [Validar os workers](docs/RUN-PROJECT.md#validar-os-workers).
 
 | Tópico | Arquivo no repositório |
 |--------|-------------------------|

@@ -8,7 +8,7 @@
 
 O browser nunca vê o token Sanctum: cookie http-only no BFF.
 
-A extensao Chrome/Edge (`apps/extension`) esta **fora de uso**. Login autenticado do DAST: [TARGET-SESSION.md](api/TARGET-SESSION.md) (credenciais no sistema).
+A extensão Chrome/Edge (`apps/extension`) está **fora de uso**. Login autenticado do DAST: [TARGET-SESSION.md](api/TARGET-SESSION.md) (credenciais no sistema).
 
 ## Recursos no client web
 
@@ -24,4 +24,4 @@ A extensao Chrome/Edge (`apps/extension`) esta **fora de uso**. Login autenticad
 | Sidebar | GraphQL — `/configuracoes/navegacao` |
 | Notificações | Sininho + `/notificacoes` |
 | Arsenal manual | `/projetos/.../arsenal` |
-| Login do scanner | Card na pagina do sistema (usuario/senha do alvo) |
+| Login do scanner | Card na página do sistema (usuário/senha do alvo) |

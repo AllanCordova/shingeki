@@ -64,8 +64,8 @@ nav:
     - Client: architecture/shingeki-client.md
     - DAST worker: architecture/shingeki-dast-worker.md
     - SAST worker: architecture/shingeki-sast-worker.md
-    - Lab (alvo vulnerável): architecture/shingeki-vulnerable-target.md
-    - Treino (Juice Shop): architecture/shingeki-juice-shop.md
+    - Lab PHP (treino): architecture/shingeki-vulnerable-target.md
+    - Juice Shop (treino): architecture/shingeki-juice-shop.md
   - API:
     - Visão geral: API.md
     - Conta e recursos:
@@ -76,7 +76,7 @@ nav:
       - Capas: api/COVERS.md
     - Scan e segurança:
       - Aceite de responsabilidade: api/ATTACK-ACKNOWLEDGMENT.md
-      - Sessão do alvo: api/TARGET-SESSION.md
+      - Login do scanner: api/TARGET-SESSION.md
       - Ataques e resultados: api/ATTACKS-AND-RESULTS.md
       - Arsenal manual: api/MANUAL-PROXY.md
       - Notificações: api/NOTIFICATIONS.md

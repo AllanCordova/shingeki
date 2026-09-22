@@ -4,7 +4,9 @@ Guia específico do `apps/client`. Setup da stack e seed: [RUN-PROJECT.md](RUN-P
 
 ## Subir o client
 
-Com a API em `http://127.0.0.1:8000`:
+Com a API em `http://127.0.0.1:8000`. Preferência: na **raiz** do monorepo, `npm run dev` sobe API e client juntos — [RUN-PROJECT.md](RUN-PROJECT.md#desenvolvimento).
+
+Só o Next.js:
 
 ```bash
 cd apps/client

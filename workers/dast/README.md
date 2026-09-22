@@ -4,11 +4,11 @@ Worker Go (DAST) do monorepo Shingeki.
 
 **Arquitetura:** [docs/architecture/shingeki-dast-worker.md](../../docs/architecture/shingeki-dast-worker.md) · [site](https://allancordova.github.io/shingeki/architecture/shingeki-dast-worker/)
 
-**Stack e laboratório:** [docs/RUN-PROJECT.md](../../docs/RUN-PROJECT.md) · [docs/api/ATTACKS-AND-RESULTS.md](../../docs/api/ATTACKS-AND-RESULTS.md)
+**Como rodar:** [docs/RUN-PROJECT.md](../../docs/RUN-PROJECT.md) · validar com labs: [Validar os workers](../../docs/RUN-PROJECT.md#validar-os-workers)
 
 ## Teste rápido (sem UI)
 
-O dispatch pela UI faz crawl Rod (~5 min). Para treinar evidência/catálogo contra o Juice Shop, pule o discovery:
+O dispatch pela UI faz crawl Rod (~5 min). Para treinar evidência/catálogo contra o Juice Shop, pule o discovery (o Juice Shop precisa estar no ar — profile `labs`):
 
 ```bash
 # na raiz

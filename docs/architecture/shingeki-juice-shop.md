@@ -1,21 +1,13 @@
 # Treino DAST — OWASP Juice Shop
 
-Alvo **Node + Angular SPA + Express + SQLite** para treinar o worker DAST além do lab PHP. Auto-hospedado, intencionalmente vulnerável, gabarito público. Não é produção e não substitui [vulnerable-target](shingeki-vulnerable-target.md).
+Alvo **Node + Angular SPA + Express + SQLite** para treinar evidência e catálogo além do lab PHP. Auto-hospedado, intencionalmente vulnerável, gabarito público. **Não** faz parte da arquitetura do worker e não substitui [vulnerable-target](shingeki-vulnerable-target.md).
 
-## Como subir
-
-Mesmo profile `stack` do lab PHP (porta **3001** para não colidir com o client Next.js em `:3000`):
-
-```bash
-docker compose --profile stack up -d
-```
+Como subir (profile `labs`) e o que cadastrar no sistema: [Validar os workers](../RUN-PROJECT.md#validar-os-workers).
 
 | Contexto | URL |
 |----------|-----|
 | Navegador / sistema no Shingeki | `http://127.0.0.1:3001` (`JUICE_SHOP_URL`) |
 | Container | `http://juice-shop:3000` |
-
-O worker Docker reescreve `localhost` / `127.0.0.1` para `host.docker.internal` (`TARGET_LOCALHOST_REWRITE`). Cadastre **só** a URL do browser.
 
 Seed: sistema **OWASP Juice Shop** no projeto **Pentest Lab** (`JuiceShopSeeder`), stacks `express` (primária) e `angular`. Login Shingeki: [RUN-PROJECT.md](../RUN-PROJECT.md#credenciais-do-seed).
 
@@ -59,7 +51,7 @@ npm run test:dast-juice
 # equivalente: go run -C workers/dast ./cmd/harness -target http://127.0.0.1:3001
 ```
 
-Re-seede o catálogo depois de puxar payloads novos: `php artisan db:seed --class=AttackCatalogSeeder`. Rebuild do worker para a UI: `docker compose --profile stack up -d --build dast-worker`.
+Re-seede o catálogo depois de puxar payloads novos: `php artisan db:seed --class=AttackCatalogSeeder` em `apps/api`. Rebuild do worker para a UI: `docker compose --profile stack up -d --build dast-worker`.
 
 | Challenge / vetor | Rota | Categoria | Esperado |
 |-------------------|------|-----------|----------|
@@ -129,6 +121,6 @@ Teto do worker: `ATTACK_MAX_JOBS` (2500). O catálogo desta rodada usa poucas va
 
 ## Relação com o lab PHP
 
-O lab em `:8090` continua o teste de regressão do pipeline (form login, `search.php?q=`, `../storage/secret.txt`). Os payloads genéricos incluem esses valores **sem** `field`/`parameter` lock. XSS refletido em HTTP no lab continua a ser confirmado pelo regex, sem precisar do Chromium.
+O lab PHP em `:8090` continua o teste de regressão de form login, `search.php?q=` e path traversal. Os payloads genéricos incluem esses valores **sem** `field`/`parameter` lock. XSS refletido em HTTP no lab continua a ser confirmado pelo regex, sem precisar do Chromium. Subir os dois alvos: [Validar os workers](../RUN-PROJECT.md#validar-os-workers).
 
 Contrato de dispatch: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULTS.md). Worker: [shingeki-dast-worker.md](shingeki-dast-worker.md).

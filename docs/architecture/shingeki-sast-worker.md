@@ -71,4 +71,4 @@ Ver [`workers/sast/.env.example`](https://github.com/AllanCordova/shingeki/blob/
 
 ## Docker
 
-Serviço `sast-worker` no [`docker-compose.yml`](https://github.com/AllanCordova/shingeki/blob/main/docker-compose.yml): imagem com Go + Git + Semgrep (pip), sem Chromium.
+Serviço `sast-worker` no [`docker-compose.yml`](https://github.com/AllanCordova/shingeki/blob/main/docker-compose.yml), profile `stack`: imagem com Go + Git + Semgrep (pip), sem Chromium. Como subir: [RUN-PROJECT.md](../RUN-PROJECT.md).

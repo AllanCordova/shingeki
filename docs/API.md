@@ -61,7 +61,7 @@ Exemplo de validação:
 | Módulo | Guia |
 |--------|------|
 | Aceite de responsabilidade | [api/ATTACK-ACKNOWLEDGMENT.md](api/ATTACK-ACKNOWLEDGMENT.md) |
-| Sessão do alvo | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
+| Login do scanner | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Ataques, probes, resultados, comparar, PDF | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
 | Arsenal manual (proxy) | [api/MANUAL-PROXY.md](api/MANUAL-PROXY.md) |
 | Notificações in-app | [api/NOTIFICATIONS.md](api/NOTIFICATIONS.md) |

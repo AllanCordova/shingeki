@@ -1,12 +1,14 @@
 # Lab — alvo vulnerável (`labs/vulnerable-target`)
 
-Aplicação **PHP** intencionalmente vulnerável para validar o pipeline DAST em ambiente de laboratório. Não é produção — expõe vetores fixos alinhados ao catálogo de ataques da API.
+Aplicação **PHP** intencionalmente vulnerável para **treino local** do pipeline DAST. Não é produção e **não** faz parte da arquitetura do worker — o DAST só vê o `target_url` do dispatch.
 
-## Papel no monorepo
+Como subir este alvo (profile `labs`): [Validar os workers](../RUN-PROJECT.md#validar-os-workers). Desenho do worker: [shingeki-dast-worker.md](shingeki-dast-worker.md).
 
-- Alvo HTTP referenciado pelo sistema **Vulnerable PHP Target** (seed da API).
-- Usado pelo worker DAST após o dispatch (aceite de responsabilidade na API — ver [ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md)).
-- URLs usadas pelo worker dependem do contexto (host vs rede Docker) — ver [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULTS.md) para o mapa host/Docker; este documento descreve apenas o desenho do alvo.
+## Papel
+
+- Seed da API: sistema **Vulnerable PHP Target** no projeto **Pentest Lab**.
+- O worker autentica com **login do scanner** (usuário/senha no sistema), não com captura de cookie. Contrato: [TARGET-SESSION.md](../api/TARGET-SESSION.md).
+- Aceite de responsabilidade no dispatch: [ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md).
 
 ## Vetores expostos
 
@@ -20,15 +22,13 @@ Aplicação **PHP** intencionalmente vulnerável para validar o pipeline DAST em
 
 ### Rotas autenticadas (sessão PHP)
 
-Requer login e, no Shingeki, **sessão do alvo** importada ([TARGET-SESSION.md](../api/TARGET-SESSION.md)) para o worker DAST acessar com cookie.
+Requer login no alvo. No Shingeki, grave as credenciais no card **Login do scanner**.
 
 | Categoria | Endpoint | Vetor |
 |-----------|----------|--------|
 | `SQL_INJECTION` / `FORM` | `POST /profile.php` | campo `email` (UPDATE vulnerável) |
 | `XSS` / `QUERY_PARAMETER` | `GET /notes.php?q=` | reflexão sem encoding |
 | `PATH_TRAVERSAL` / `URL_PATH` | `GET /app/browse/{file}` | leitura em `storage/` sem sanitização |
-
-Fluxo de captura externa: popup abre `login.php?next=/shingeki-capture.php?ticket=...` → login define `PHPSESSID` → redirect captura cookie para a API.
 
 Credenciais demo (fonte única — não repetir em outros guias):
 
@@ -41,19 +41,18 @@ O vhost Apache (`apache-vhost.conf`) usa `AllowEncodedSlashes NoDecode` para o v
 
 Cada endpoint existe para disparar um tipo de evidência que o worker valida (erro SQL, script refletido, conteúdo de arquivo).
 
-## Integração com a stack
+## URLs de treino
 
-| Contexto | URL típica do alvo |
-|----------|-------------------|
-| API/worker no host (`php artisan serve`) | `http://127.0.0.1:8090` |
-| Rede Docker (`docker compose`) | `http://vulnerable-target` |
+| Contexto | URL |
+|----------|-----|
+| Navegador / sistema no Shingeki | `http://127.0.0.1:8090` |
+| Rede Docker (só dentro da compose) | `http://vulnerable-target` |
 
-O seed do Laravel aponta o sistema de laboratório para a URL adequada ao modo de execução. O worker DAST acessa o mesmo `target_url` recebido no batch RabbitMQ.
+Cadastre a URL do browser. O worker em Docker reescreve loopback via `TARGET_LOCALHOST_REWRITE`.
 
 ## Limites de escopo
 
-- Login PHP com sessão (`PHPSESSID`) para rotas autenticadas de laboratório; integração com captura Shingeki via `/shingeki-capture.php`.
-- Sessão do alvo autoriza rotas protegidas no DAST; o dispatch na API exige aceite de responsabilidade (não depende de meta tag no alvo).
-- O HTML ainda pode emitir `<meta name="shingeki-signature">` se `SHINGEKI_SIGNATURE_TOKEN` estiver no container — residual; a API **não** valida essa meta. Ver [ATTACK-ACKNOWLEDGMENT.md](../api/ATTACK-ACKNOWLEDGMENT.md).
+- Login PHP com sessão (`PHPSESSID`) para rotas autenticadas; o scanner usa form no Chromium.
+- `public/shingeki-capture.php` é residual da captura antiga — o produto não usa mais.
+- O HTML ainda pode emitir `<meta name="shingeki-signature">` se `SHINGEKI_SIGNATURE_TOKEN` estiver no container — residual; a API **não** valida essa meta.
 - Vulnerabilidades fixas e documentadas; não simula aplicação real completa.
-- Evidências pensadas para testes automatizados do [DAST worker](shingeki-dast-worker.md).
