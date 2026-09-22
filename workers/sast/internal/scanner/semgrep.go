@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"unicode"
 
 	"github.com/shingeki/sast-worker/internal/config"
 )
@@ -71,7 +70,7 @@ func (s *SemgrepScanner) languagesToScan(override []string) []string {
 		return override
 	}
 	if len(s.cfg.Languages) == 0 {
-		return []string{"php", "typescript", "javascript"}
+		return []string{"php", "typescript", "javascript", "python", "go", "java", "ruby"}
 	}
 	return s.cfg.Languages
 }
@@ -92,23 +91,23 @@ func langConfig(language string) (string, bool) {
 		language = "typescript"
 	case "js":
 		language = "javascript"
+	case "py":
+		language = "python"
+	case "go", "golang":
+		return "p/golang", true
+	case "rb":
+		language = "ruby"
 	}
-	if !validLanguage(language) {
+	switch language {
+	case "php", "javascript", "typescript", "python", "java", "ruby":
+		return "p/" + language, true
+	default:
 		return "", false
 	}
-	return "p/" + language, true
 }
 
-func validLanguage(language string) bool {
-	if language == "" {
-		return false
-	}
-	for _, r := range language {
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
+func LanguagePack(language string) (string, bool) {
+	return langConfig(language)
 }
 
 type semgrepReport struct {

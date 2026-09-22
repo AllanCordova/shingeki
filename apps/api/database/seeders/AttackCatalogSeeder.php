@@ -55,7 +55,7 @@ class AttackCatalogSeeder extends Seeder
      */
     public static function definitions(): array
     {
-        $dast = [];
+        $attacks = [];
         foreach (self::dastPacks() as $pack) {
             $values = $pack['values'];
             $payload = [
@@ -65,7 +65,7 @@ class AttackCatalogSeeder extends Seeder
             if (! empty($pack['field'])) {
                 $payload['field'] = $pack['field'];
             }
-            $dast[] = [
+            $attacks[] = [
                 'scan_type' => AttackScanType::Dast,
                 'category' => $pack['category'],
                 'target_location' => $pack['location'],
@@ -74,15 +74,47 @@ class AttackCatalogSeeder extends Seeder
             ];
         }
 
-        $dast[] = [
-            'scan_type' => AttackScanType::Sast,
-            'category' => AttackCategory::SqlInjection,
-            'target_location' => AttackTargetLocation::SourceCode,
-            'risk_level' => AttackRiskLevel::High,
-            'payload' => ['languages' => ['php', 'typescript', 'javascript']],
-        ];
+        foreach (self::sastPacks() as $pack) {
+            $attacks[] = [
+                'scan_type' => AttackScanType::Sast,
+                'category' => $pack['category'],
+                'target_location' => AttackTargetLocation::SourceCode,
+                'risk_level' => $pack['risk'],
+                'payload' => ['languages' => self::sastLanguages()],
+            ];
+        }
 
-        return $dast;
+        return $attacks;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function sastLanguages(): array
+    {
+        return ['php', 'typescript', 'javascript', 'python', 'go', 'java', 'ruby'];
+    }
+
+    /**
+     * @return list<array{category: AttackCategory, risk: AttackRiskLevel}>
+     */
+    private static function sastPacks(): array
+    {
+        return [
+            ['category' => AttackCategory::SqlInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Xss, 'risk' => AttackRiskLevel::Medium],
+            ['category' => AttackCategory::PathTraversal, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::CommandInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Ssrf, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Xxe, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Ssti, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::OpenRedirect, 'risk' => AttackRiskLevel::Medium],
+            ['category' => AttackCategory::NosqlInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::LdapInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::JwtConfusion, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Csrf, 'risk' => AttackRiskLevel::Medium],
+            ['category' => AttackCategory::Idor, 'risk' => AttackRiskLevel::High],
+        ];
     }
 
     /**

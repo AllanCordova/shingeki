@@ -94,6 +94,15 @@ func (p *Publisher) Close() error {
 	return err
 }
 
+func (p *Publisher) PublishProbe(ctx context.Context, probe contracts.ProbeMessage) error {
+	return p.publishJSON(ctx, probe.MarshalJSONBytes, "published probe",
+		"attack_id", probe.AttackID,
+		"system_id", probe.SystemID,
+		"route", probe.Route,
+		"outcome", probe.Outcome,
+	)
+}
+
 func (p *Publisher) PublishResult(ctx context.Context, result contracts.ResultMessage) error {
 	return p.publishJSON(ctx, result.MarshalJSONBytes, "published result",
 		"attack_id", result.AttackID,

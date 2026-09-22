@@ -65,3 +65,40 @@ func TestAttackIDForFindingMatchesCategoryAndLanguage(t *testing.T) {
 		t.Fatalf("expected sqli-1, got %s", got)
 	}
 }
+
+func TestAttackIDForFindingSkipsUnselectedCategory(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "xss-1",
+				Category: "XSS",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+			{
+				AttackID: "path-1",
+				Category: "PATH_TRAVERSAL",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "php.lang.security.injection.tainted-sql-string.tainted-sql-string",
+		Path:    "login.php",
+	})
+	if got != "" {
+		t.Fatalf("sql finding must not map onto xss/path catalog items, got %s", got)
+	}
+}
+
+func TestCategoryForCheckID(t *testing.T) {
+	if got := mapper.CategoryForCheckID("php.lang.security.injection.echoed-request.echoed-request"); got != mapper.CategoryXSS {
+		t.Fatalf("xss=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("javascript.express.security.audit.express-open-redirect"); got != mapper.CategoryOpenRedirect {
+		t.Fatalf("redirect=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("python.lang.security.audit.sqli.psycopg-sqli"); got != mapper.CategorySQLInjection {
+		t.Fatalf("sqli=%s", got)
+	}
+}
