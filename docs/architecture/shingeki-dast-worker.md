@@ -16,8 +16,8 @@ flowchart LR
 1. **Consumer** lê mensagem batch da fila de entrada.
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
 3. **Attack** aplica injectors conforme categoria e local do vetor.
-4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, timing, dialog/DOM XSS no Chromium; diff de corpo só para categorias sem validador específico).
-5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed` com `status` `completed` ou `failed`.
+4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, CSRF só com token esvaziado ou `Origin`/`Referer` cross-site, timing, dialog/DOM XSS no Chromium; diff de corpo só para categorias sem validador específico).
+5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed` com `status` `completed` ou `failed`. A API só grava `completed_at` em sucesso; falha preenche `failed_at`.
 
 ## Pacotes `internal/`
 
@@ -32,7 +32,7 @@ flowchart LR
 | `discovery/bfs` | Fila de prioridade de URLs (score) e filtros de origem/blocklist |
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
-| `evidence` | Motor de validação (regex, markers de path traversal, timing, DOM XSS via Rod; diff genérico limitado) |
+| `evidence` | Motor de validação (regex, markers de path traversal, CSRF conservador, timing, DOM XSS via Rod; diff genérico limitado) |
 | `orchestrator` | Liga discovery → attack → evidence → publish |
 
 ## Filas RabbitMQ
@@ -65,7 +65,7 @@ flowchart LR
 
 `depth` (`quick` | `full`) ajusta discovery: **quick** usa limites menores e desliga Rod; **full** (padrão) usa `DISCOVERY_MAX_*`.
 
-`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica.
+`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica. Com `start_path`, o worker **não** acrescenta vetores SPA/REST de treino (`/#/search`, login JSON, basket, `/ftp`, redirect) — esses rotas site-wide furariam o recorte.
 
 ### Saída: `attacks.results`
 
@@ -112,7 +112,7 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 - **Sessão**: o worker faz login com `auth.type=credentials` (`login_url`, usuario, senha). Tenta JSON (`/rest/user/login`) e, se precisar, preenche o form no Chromium. Cookies e tokens colhidos depois do login vão para a fase HTTP. Sem credenciais, o crawl é só a superfície pública. Com credenciais, se o login falhar o dispatch termina `failed` — não cai para crawl anônimo.
 - **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless (lab). `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair por um proxy.
 - **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML.
-- **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
+- **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Com `start_path`, vetores SPA de treino não são semeados. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
 
 ### Variáveis úteis (discovery)
 

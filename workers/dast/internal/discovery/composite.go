@@ -108,16 +108,22 @@ func (e *CompositeEngine) Discover(
 		)
 	}
 
-	beforeSPA := len(vectors)
-	vectors = AppendSPASearchVectors(targetURL, vectors)
-	vectors = AppendSPALoginVectors(targetURL, vectors)
-	vectors = AppendSPAAuthenticatedVectors(targetURL, vectors, auth)
-	vectors = AppendSPACoverageVectors(targetURL, vectors)
-	if len(vectors) > beforeSPA {
-		e.logger.Info("added SPA/REST training vectors",
-			"added", len(vectors)-beforeSPA,
-			"total", len(vectors),
+	if opts.HasStartPath() {
+		e.logger.Info("skipped SPA/REST training vectors because start_path scopes the crawl",
+			"start_path", opts.StartPath,
 		)
+	} else {
+		beforeSPA := len(vectors)
+		vectors = AppendSPASearchVectors(targetURL, vectors)
+		vectors = AppendSPALoginVectors(targetURL, vectors)
+		vectors = AppendSPAAuthenticatedVectors(targetURL, vectors, auth)
+		vectors = AppendSPACoverageVectors(targetURL, vectors)
+		if len(vectors) > beforeSPA {
+			e.logger.Info("added SPA/REST training vectors",
+				"added", len(vectors)-beforeSPA,
+				"total", len(vectors),
+			)
+		}
 	}
 
 	if len(vectors) == 0 {

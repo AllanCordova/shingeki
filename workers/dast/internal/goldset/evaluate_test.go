@@ -40,6 +40,9 @@ func TestClassify(t *testing.T) {
 	if Classify("http://shop/ftp/", "PATH_TRAVERSAL") != ChallengeFTPFile {
 		t.Fatal("ftp")
 	}
+	if Classify("http://shop/rest/user/change-password", "CSRF") != ChallengeCSRF {
+		t.Fatal("csrf")
+	}
 	if Classify("http://shop/rest/languages", "SQL_INJECTION") != "" {
 		t.Fatal("unknown must be empty")
 	}
@@ -54,8 +57,23 @@ func TestVectorsAndCatalog(t *testing.T) {
 		t.Fatalf("catalog=%d", len(Catalog()))
 	}
 	auth := AuthVectors("http://127.0.0.1:3001/", Session{Email: DefaultAdminEmail, Bid: "1", Token: "t"})
-	if len(auth) != 3 {
+	if len(auth) != 4 {
 		t.Fatalf("auth vectors=%d", len(auth))
+	}
+	hasJimBasket := false
+	for _, vector := range auth {
+		if strings.Contains(vector.Route, "/rest/basket/2") {
+			hasJimBasket = true
+		}
+	}
+	if !hasJimBasket {
+		t.Fatal("auth gold set must seed jim basket /rest/basket/2")
+	}
+	if len(CoverageVectors("http://127.0.0.1:3001/", Session{Token: "t"})) != 4 {
+		t.Fatalf("coverage vectors=%d", len(CoverageVectors("http://127.0.0.1:3001/", Session{Token: "t"})))
+	}
+	if len(CoverageCatalog()) != 4 {
+		t.Fatalf("coverage catalog=%d", len(CoverageCatalog()))
 	}
 	if len(AuthCatalog()) != 2 {
 		t.Fatalf("auth catalog=%d", len(AuthCatalog()))
@@ -207,5 +225,62 @@ func TestEvaluateHitsAuthGoldSetOnFakeShop(t *testing.T) {
 	}
 	if missing := report.Missing(); len(missing) != 0 {
 		t.Fatalf("missing auth gold set: %v", missing)
+	}
+}
+
+func TestEvaluateHitsCoverageGoldSetOnFakeShop(t *testing.T) {
+	jwt := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIn0.signaturepad"
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		switch {
+		case r.Method == http.MethodPost && strings.Contains(path, "/rest/user/login"):
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `{"authentication":{"token":"`+jwt+`","bid":1,"umail":"admin@juice-sh.op"}}`)
+		case strings.Contains(path, "/redirect"):
+			w.Header().Set("Location", "https://evil.invalid/phish")
+			w.WriteHeader(http.StatusFound)
+		case strings.Contains(path, "/ftp"):
+			if strings.Contains(path, "acquisitions.md") {
+				_, _ = io.WriteString(w, "This document is confidential!\nPlanned acquisitions")
+				return
+			}
+			_, _ = io.WriteString(w, "index of /ftp")
+		case strings.Contains(strings.ToLower(path), "/api/users"):
+			auth := r.Header.Get("Authorization")
+			if strings.Contains(auth, "invalid-signature") {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `{"status":"success","data":[{"id":1,"email":"admin@juice-sh.op","role":"admin"}]}`)
+		case strings.Contains(path, "/rest/user/change-password"):
+			if r.Header.Get("Authorization") == "" {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = io.WriteString(w, `{"user":{"password":"ok"}}`)
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
+
+	report, err := Evaluate(context.Background(), server.URL, Options{
+		Coverage: true,
+		Timeout:  10 * time.Second,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, hit := range report.Hits {
+		got[hit.Challenge] = true
+	}
+	if !got[ChallengeOpenRedirect] || !got[ChallengeJWTNone] || !got[ChallengeFTPFile] || !got[ChallengeCSRF] {
+		t.Fatalf("expected coverage gold set, hits=%#v missing=%v", report.Hits, report.Missing())
+	}
+	if missing := report.Missing(); len(missing) != 0 {
+		t.Fatalf("missing coverage gold set: %v", missing)
 	}
 }
