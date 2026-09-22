@@ -208,6 +208,40 @@ describe('POST /api/projects/{project}/systems', function () {
             ->assertJsonPath('system.name', 'Main API');
     });
 
+    test('stores scanner login credentials without returning the password', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+
+        Sanctum::actingAs($user);
+
+        $response = postSystem($project, [
+            'login_url' => 'https://app.example.com/login',
+            'login_username' => 'scanner@example.com',
+            'login_password' => 'secret-pass-123',
+            'logged_in_indicator' => 'Logout',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('system.login_url', 'https://app.example.com/login')
+            ->assertJsonPath('system.login_username', 'scanner@example.com')
+            ->assertJsonPath('system.login_configured', true)
+            ->assertJsonPath('system.logged_in_indicator', 'Logout')
+            ->assertJsonMissingPath('system.login_password');
+
+        $system = System::query()->where('project_id', $project->id)->first();
+
+        expect($system)->not->toBeNull()
+            ->and($system->hasScannerLogin())->toBeTrue()
+            ->and($system->queueAuth())->toMatchArray([
+                'type' => 'credentials',
+                'username' => 'scanner@example.com',
+                'password' => 'secret-pass-123',
+                'login_url' => 'https://app.example.com/login',
+                'logged_in_indicator' => 'Logout',
+            ]);
+    });
+
     test('rejects invalid target_url', function () {
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
@@ -356,6 +390,70 @@ describe('PUT /api/projects/{project}/systems/{system}', function () {
             ->assertOk()
             ->assertJsonPath('system.name', 'Updated Name')
             ->assertJsonPath('system.target_url', 'https://keep.example.com');
+    });
+
+    test('updates scanner login and keeps the password when omitted', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'login_url' => 'https://app.example.com/login',
+            'login_username' => 'old@example.com',
+            'login_password' => 'old-pass-123',
+            'logged_in_indicator' => 'Logout',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->putJson(systemUrl($project, $system), [
+            'login_username' => 'new@example.com',
+            'logged_in_indicator' => 'Sair',
+        ])
+            ->assertOk()
+            ->assertJsonPath('system.login_username', 'new@example.com')
+            ->assertJsonPath('system.logged_in_indicator', 'Sair')
+            ->assertJsonPath('system.login_configured', true)
+            ->assertJsonMissingPath('system.login_password');
+
+        $system->refresh();
+
+        expect($system->queueAuth())->toMatchArray([
+            'type' => 'credentials',
+            'username' => 'new@example.com',
+            'password' => 'old-pass-123',
+            'login_url' => 'https://app.example.com/login',
+            'logged_in_indicator' => 'Sair',
+        ]);
+    });
+
+    test('clears scanner login when username is blank', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'login_url' => 'https://app.example.com/login',
+            'login_username' => 'scanner@example.com',
+            'login_password' => 'secret-pass-123',
+            'logged_in_indicator' => 'Logout',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->putJson(systemUrl($project, $system), [
+            'login_url' => '',
+            'login_username' => '',
+            'login_password' => '',
+            'logged_in_indicator' => '',
+        ])
+            ->assertOk()
+            ->assertJsonPath('system.login_url', null)
+            ->assertJsonPath('system.login_username', null)
+            ->assertJsonPath('system.logged_in_indicator', null)
+            ->assertJsonPath('system.login_configured', false)
+            ->assertJsonMissingPath('system.login_password');
+
+        $system->refresh();
+
+        expect($system->hasScannerLogin())->toBeFalse()
+            ->and($system->queueAuth())->toBeNull();
     });
 
     test('returns not found when system belongs to another project', function () {

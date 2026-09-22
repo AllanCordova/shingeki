@@ -38,7 +38,7 @@ class SendManualProxyRequest extends FormRequest
 
     public function useTargetSession(): bool
     {
-        return $this->boolean('use_target_session', true);
+        return $this->boolean('use_target_session', false);
     }
 
     /**

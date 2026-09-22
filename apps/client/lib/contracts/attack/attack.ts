@@ -47,9 +47,17 @@ export interface Attack extends Timestamps {
 export type DispatchStatus = "pending" | "completed" | "failed";
 
 export function dispatchStatusLabel(status: DispatchStatus): string {
-  if (status === "completed") return "Concluido";
+  if (status === "completed") return "Concluído";
   if (status === "failed") return "Falhou";
   return "Processando";
+}
+
+export function dispatchFailureCopy(reason?: string | null): string {
+  const text = (reason ?? "").toLowerCase();
+  if (text.includes("scanner login")) {
+    return "O scanner não conseguiu entrar no alvo. Verifique usuário, senha e a URL de login, depois dispare novamente.";
+  }
+  return "O scan não foi concluído. Tente disparar novamente.";
 }
 
 export function dispatchStatusTone(

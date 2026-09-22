@@ -29,7 +29,7 @@ lib/
   stores/            # Zustand — tema e UI
 components/
   ui/ landing/ cover/ projects/ systems/ attack/ results/
-  remediation/ notifications/ manual-proxy/ catalog/ target-session/ auth/
+  remediation/ notifications/ manual-proxy/ catalog/ system/ auth/
 ```
 
 ## BFF (Backend for Frontend)
@@ -86,4 +86,4 @@ components/
 | Guia inicial | Abre sozinho sem projetos se o usuário ainda não dispensou |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` |
 | Notificações | Sininho no header (poll 20s) + `/notificacoes` |
-| Sessão do alvo | Painel no sistema/arsenal; extensão em `apps/extension` |
+| Login do scanner | Card na pagina do sistema (usuario/senha do alvo) |

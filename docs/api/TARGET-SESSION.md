@@ -1,216 +1,60 @@
-# API — Sessao do alvo (DAST autenticado)
+# API — Login do scanner (DAST autenticado)
 
-Conecta a sessao autenticada do alvo para o worker DAST acessar rotas protegidas. Voltar ao [indice da API](../API.md).
+O worker DAST entra no alvo **com o Chromium dele**, usando usuario e senha gravados no sistema. A sessao nasce no scan. Nao ha copia de cookie/token do Chrome da pessoa.
 
-## Fluxos de captura
+A extensao Chrome (`apps/extension`) e o fluxo `target-session/capture` **estao fora de uso**. Rotas antigas ainda existem no backend, mas o client nao as chama.
 
-### 1. Extensao Chrome/Edge (recomendado para SaaS)
+Voltar ao [indice da API](../API.md).
 
-Pacote [`apps/extension`](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md).
+## Configurar no sistema
 
-1. Client chama `POST .../target-session/connect/start`.
-2. Se a extensao estiver instalada e o modo for `external`, o client **arma** a extensao (`ticket`, `capture_api_base`, `target_origin`, `openUrl`) e a extensao abre o login em **aba normal** (nao popup).
-3. Usuario faz login na aba do alvo.
-4. Na extensao: **Capturar sessao** → a extensao resolve a aba do `target_origin` (mesmo se a aba ativa for outra) → `POST /api/target-session/capture/{ticket}`.
-5. O client atualiza o status via polling (2s / 120s) ou mensagem da extensao.
-
-Download da extensão empacotada pelo client: `/extensions/shingeki-target-session.zip`. Como gerar o ZIP e carregar no Chrome: [README da extensão](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md).
-
-### 2. Popup cooperativo (lab)
-
-1. Client chama `POST .../target-session/connect/start` com `client_origin`.
-2. Abre `popup_url` em janela separada.
-3. Usuario faz login no alvo.
-4. Sessao e capturada automaticamente:
-   - **Mesma origem** (`target_url` = URL do client): pagina `/conectar-alvo`.
-   - **Alvo externo cooperativo**: redirect para `/shingeki-capture.php?ticket=...` no alvo (incluido no lab).
-5. Popup fecha e o client atualiza o status via `postMessage`.
-
-### 3. Importacao manual
-
-`POST .../target-session` com cookie ou Bearer (UI avancada no painel).
-
-Base: `/api/projects/{project}/systems/{system}/target-session`
-
-## POST .../target-session/connect/start
-
-Inicia captura via popup e/ou extensao.
-
-**Body (JSON):**
+`POST /api/projects/{project}/systems` e `PUT .../systems/{system}` aceitam:
 
 | Campo | Regras |
 |-------|--------|
-| `client_origin` | URL do client (ex.: `http://localhost:3000`) |
+| `login_url` | Opcional. URL da pagina de login |
+| `login_username` | Opcional. E-mail ou usuario do alvo |
+| `login_password` | Opcional. Write-only; nunca volta na API |
+| `logged_in_indicator` | Opcional. Texto visivel so depois do login |
 
-**Resposta `200`:**
+A resposta do sistema inclui `login_configured: true|false` e `login_username`. Sem `login_password`.
 
-```json
-{
-  "message": "Target session capture started.",
-  "ticket": "uuid",
-  "mode": "same_origin",
-  "popup_url": "http://localhost:3000/conectar-alvo?ticket=...",
-  "open_url": "http://localhost:3000/conectar-alvo?ticket=...",
-  "capture_callback_url": null,
-  "capture_api_base": "http://127.0.0.1:8000/api",
-  "target_origin": "http://localhost:3000",
-  "client_origin": "http://localhost:3000",
-  "extension_supported": true,
-  "expires_at": "2026-07-14T12:00:00+00:00"
-}
-```
+`login_username` vazio no PUT limpa usuario e senha. Sem credenciais o DAST mapeia so a superficie publica.
 
-| Campo | Uso |
-|-------|-----|
-| `popup_url` | Lab / same_origin: URL aberta pelo fluxo antigo (pode incluir `next` no lab) |
-| `open_url` | URL limpa para abrir com extensao (login sem depender do capture PHP) |
-| `capture_api_base` | Base da API usada pela extensao no POST publico |
-| `extension_supported` | Sempre `true` neste contrato (a UI decide se a extensao esta instalada) |
+Se o login estiver configurado e o worker nao conseguir entrar, o dispatch **falha** (`status: failed`, `failure_reason` com `scanner login`). Nao ha crawl anonimo silencioso.
 
-Para alvos externos, `mode` e `external` e `capture_callback_url` aponta para `/shingeki-capture.php` no alvo (fluxo lab).
+## Dispatch
 
-No lab, o popup redireciona para `/shingeki-capture.php?ticket=...` após o login. Vetores autenticados e credenciais: [shingeki-vulnerable-target.md](../architecture/shingeki-vulnerable-target.md).
-
-## POST /api/target-session/capture/{ticket}
-
-Rota publica (sem Sanctum). Finaliza a captura usando o ticket de curta duracao (15 min, uso unico).
-
-Usada pelo lab (`shingeki-capture.php`), pela pagina `/conectar-alvo` e pela **extensao**.
-
-**Body (JSON):** `cookie` **ou** `authorization` **ou** `cookies[]`. Campos opcionais da extensão:
-
-| Campo | Papel |
-|-------|--------|
-| `cookies` | Lista estruturada (`name`, `value`, `domain`, `path`, `secure`, `httpOnly`, `sameSite`, `hostOnly`, `partitionKey`) — replay CDP fiel |
-| `local_storage` / `session_storage` | Mapas string→string (até 50 chaves, 8 KiB) |
-| `origins` | Storage por origem (iframes / hosts do SPA) |
-| `routes` | Superfície XHR/fetch gravada enquanto o ticket está armado (até 200) |
-| `user_agent` | UA do Chrome que capturou, reaplicado no Rod |
-
-CORS: origins de lab + padroes `chrome-extension://…` e localhost (ver `config/cors.php`).
-
-## GET .../target-session
-
-Retorna se existe sessao ativa importada pelo usuario autenticado.
-
-**Resposta `200` (desconectado):**
-
-```json
-{
-  "connected": false
-}
-```
-
-**Resposta `200` (conectado):**
-
-```json
-{
-  "connected": true,
-  "auth_type": "cookie",
-  "header_names": ["Cookie"],
-  "replay": {
-    "cookie_count": 8,
-    "route_count": 12,
-    "has_storage": true,
-    "has_user_agent": true
-  },
-  "expires_at": null,
-  "updated_at": "..."
-}
-```
-
-Os valores dos headers **nunca** sao retornados na API. `replay` so tem contagens.
-
-## POST .../target-session
-
-Importa ou atualiza a sessao do alvo.
-
-**Body (JSON):**
-
-| Campo | Regras |
-|-------|--------|
-| `auth_type` | `cookie` ou `bearer` |
-| `credential` | Valor do header Cookie ou token Bearer (com ou sem prefixo `Bearer`) |
-| `expires_at` | Opcional; ISO 8601 |
-
-**Resposta `201`:**
-
-```json
-{
-  "message": "Target session imported successfully.",
-  "connected": true,
-  "auth_type": "cookie",
-  "header_names": ["Cookie"],
-  "expires_at": null,
-  "updated_at": "..."
-}
-```
-
-## DELETE .../target-session
-
-Remove a sessao importada.
-
-**Resposta `200`:** sessao removida.
-
-**Resposta `404`:** nenhuma sessao encontrada.
-
-## Uso no dispatch DAST
-
-Quando existe sessao ativa, o batch publicado em `attacks.dispatch` inclui:
+`POST .../attacks/dispatch` publica `auth` no batch quando o login esta configurado:
 
 ```json
 {
   "auth": {
-    "type": "cookie",
-    "headers": {
-      "Cookie": "laravel_session=..."
-    },
-    "storage": {
-      "local": {
-        "access_token": "..."
-      },
-      "session": {},
-      "origins": [
-        {
-          "origin": "https://www.example.com",
-          "local": { "access_token": "..." },
-          "session": {}
-        }
-      ]
-    },
-    "cookies": [
-      {
-        "name": "PHPSESSID",
-        "value": "...",
-        "domain": ".example.com",
-        "path": "/",
-        "secure": true,
-        "httpOnly": true,
-        "sameSite": "lax"
-      }
-    ],
-    "user_agent": "Mozilla/5.0 ...",
-    "routes": [
-      { "method": "POST", "url": "https://www.example.com/utils/requestMethods.php", "type": "xmlhttprequest" }
-    ]
+    "type": "credentials",
+    "login_url": "https://alvo.exemplo.com/login",
+    "username": "scanner@example.com",
+    "password": "...",
+    "logged_in_indicator": "Logout"
   }
 }
 ```
 
-`storage`, `cookies`, `user_agent` e `routes` são omitidos quando a captura não os trouxe.
+A resposta inclui `scanner_login_configured: true|false`.
 
-O worker injeta cookies **estruturados** (domain/path/SameSite/partition), `Authorization`, storage por origem e o User-Agent da captura. Rotas gravadas pela extensão entram no mapa mesmo se o Chromium headless for redirecionado ao login. Na fase de ataque HTTP, se não houver Bearer, sintetiza a partir de chaves conhecidas no storage (`access_token`, `jwt`, `token`, …).
+O worker:
 
-A resposta do dispatch inclui `target_session_connected: true|false`. O GET da sessão inclui `replay` só com contagens (nunca valores).
+1. Tenta login JSON (`POST /rest/user/login` e formatos `{token,access_token}`).
+2. Se falhar, preenche o form no Chromium.
+3. Crawla autenticado (links, cliques, XHR).
+4. Reaproveita cookies/Bearer colhidos no browser para os ataques HTTP.
 
-## Client web
+Se JSON e form falharem, o job termina como `failed`. O client mostra: "O scanner nao conseguiu entrar no alvo…".
 
-Na pagina do sistema: **Conectar ao alvo**.
+## Labs
 
-- Com extensao: login no site → Capturar na extensao.
-- Sem extensao / lab: popup automatico quando o alvo coopere.
-- Fallback: import manual Cookie/Bearer.
+Seeders gravam credenciais de treino:
 
-Campo opcional `login_url` no sistema sobrescreve a URL de login (`open_url` / base do popup externo). Ver [PROJECTS-AND-SYSTEMS.md](PROJECTS-AND-SYSTEMS.md).
-
-Env opcional do client: `NEXT_PUBLIC_SHINGEKI_EXTENSION_ID` (só se quiser messaging direto; o content script em localhost não precisa). Detalhes de empacotamento: [README da extensão](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md).
+| Alvo | Login | Usuario | Senha |
+|------|-------|---------|-------|
+| Juice Shop | `{target}/#/login` | `admin@juice-sh.op` | `admin123` |
+| Vulnerable PHP | `{target}/login.php` | `guest@vuln.local` | `guest123` |

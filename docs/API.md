@@ -87,7 +87,7 @@ Não é REST. Schema e regra de uso: [architecture/shingeki-api.md](architecture
 - `GET /api/auth/google/redirect`
 - `GET /api/auth/google/callback`
 - `POST /api/auth/google/exchange`
-- `POST /api/target-session/capture/{ticket}`
+- `POST /api/target-session/capture/{ticket}` (legado; fora do fluxo do client)
 
 ### Protegidas (`auth:sanctum`)
 
@@ -109,7 +109,8 @@ Não é REST. Schema e regra de uso: [architecture/shingeki-api.md](architecture
 - `GET /api/projects/{project}/dashboard`
 - `GET|POST /api/projects/{project}/systems`
 - `GET|PUT|DELETE /api/projects/{project}/systems/{system}`
-- `GET|POST|DELETE .../target-session` · `POST .../target-session/connect/start`
+- `GET|POST|DELETE .../target-session` · `POST .../target-session/connect/start` (legado)
+- Login do scanner: `login_url` / `login_username` / `login_password` no sistema — [TARGET-SESSION.md](api/TARGET-SESSION.md)
 - `GET .../attack-acknowledgment`
 - `POST .../attacks/dispatch` (DAST) · `POST .../attacks/dispatch/sast` (SAST)
 - `GET|POST .../manual-proxy/send` e CRUD `/manual-proxy/routes` (`ADMIN`, `SPECIALIST`)

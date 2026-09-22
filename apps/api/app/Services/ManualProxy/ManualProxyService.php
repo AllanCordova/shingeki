@@ -5,7 +5,6 @@ namespace App\Services\ManualProxy;
 use App\Enums\Attack\AttackTargetLocation;
 use App\Models\System\System;
 use App\Models\User\User;
-use App\Services\TargetSession\TargetSessionService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -17,7 +16,6 @@ class ManualProxyService
     public function __construct(
         private readonly ManualProxyUrlGuard $urlGuard,
         private readonly ManualProxyPayloadInjector $payloadInjector,
-        private readonly TargetSessionService $targetSessionService,
     ) {}
 
     /**
@@ -38,6 +36,8 @@ class ManualProxyService
         bool $useTargetSession,
         ?array $payload,
     ): array {
+        unset($user, $useTargetSession);
+
         $method = strtoupper($method);
         $url = $this->urlGuard->resolve($system, $path);
         $url = $this->payloadInjector->mergeQuery($url, $query);
@@ -57,10 +57,6 @@ class ManualProxyService
             $url = $injected['url'];
             $headers = $injected['headers'];
             $body = $injected['body'];
-        }
-
-        if ($useTargetSession) {
-            $headers = $this->mergeTargetSessionHeaders($user, $system, $headers);
         }
 
         $started = hrtime(true);
@@ -92,30 +88,6 @@ class ManualProxyService
             'response_body_truncated' => $truncated,
             'duration_ms' => $durationMs,
         ];
-    }
-
-    /**
-     * @param  array<string, string>  $headers
-     * @return array<string, string>
-     */
-    private function mergeTargetSessionHeaders(User $user, System $system, array $headers): array
-    {
-        $auth = $this->targetSessionService->resolveQueueAuth($user, $system);
-        if ($auth === null) {
-            return $headers;
-        }
-
-        foreach ($auth['headers'] as $name => $value) {
-            if (strtolower($name) === 'cookie' && isset($headers['Cookie'])) {
-                $headers['Cookie'] = $headers['Cookie'].'; '.$value;
-
-                continue;
-            }
-
-            $headers[$name] = $value;
-        }
-
-        return $headers;
     }
 
     /**

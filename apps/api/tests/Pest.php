@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 /*
@@ -51,4 +52,9 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+function fakeCover(): UploadedFile
+{
+    return UploadedFile::fake()->create('cover.jpg', 100, 'image/jpeg');
 }

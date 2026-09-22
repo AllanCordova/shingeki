@@ -83,7 +83,7 @@ export function SystemForm({
         label="URL alvo"
         htmlFor="target_url"
         error={errors.target_url?.message}
-        hint="URL base do alvo, acessível no navegador para assinatura e sessão."
+        hint="URL base do alvo, acessível no navegador."
       >
         <Input
           id="target_url"
@@ -94,7 +94,7 @@ export function SystemForm({
       </Field>
 
       <Field
-        label="URL do repositorio"
+        label="URL do repositório"
         htmlFor="repository_url"
         error={errors.repository_url?.message}
       >

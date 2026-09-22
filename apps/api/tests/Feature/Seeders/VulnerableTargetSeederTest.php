@@ -45,7 +45,9 @@ test('vulnerable target seeder creates lab project and system for test and admin
         expect($system)->not->toBeNull()
             ->and($project->cover_path)->toBe('/storage/covers/pentest-lab.jpg')
             ->and($system->cover_path)->toBe('/storage/covers/vulnerable-php-target.jpg')
-            ->and($system->target_url)->toBe('http://127.0.0.1:8090');
+            ->and($system->target_url)->toBe('http://127.0.0.1:8090')
+            ->and($system->login_url)->toBe('http://127.0.0.1:8090/login.php')
+            ->and($system->hasScannerLogin())->toBeTrue();
 
         expect($system->fresh()->stacks)->toHaveCount(1)
             ->and($system->stacks->first()->id)->toBe($vanillaPhp->id)

@@ -41,23 +41,7 @@ func originFromURL(raw string) string {
 }
 
 func hasSessionAuth(auth *contracts.TargetAuth) bool {
-	if auth == nil {
-		return false
-	}
-	headers := contracts.EffectiveAuthHeaders(auth)
-	if hasCookieAuth(auth) {
-		return true
-	}
-	if headerValue(headers, "Authorization") != "" {
-		return true
-	}
-	if auth.Storage == nil {
-		return false
-	}
-	if len(auth.Storage.Local) > 0 || len(auth.Storage.Session) > 0 || len(auth.Storage.Origins) > 0 {
-		return true
-	}
-	return false
+	return auth.HasSession()
 }
 
 func headerValue(headers map[string]string, name string) string {

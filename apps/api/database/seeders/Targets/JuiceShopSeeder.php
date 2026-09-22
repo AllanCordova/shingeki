@@ -48,6 +48,10 @@ class JuiceShopSeeder extends Seeder
             [
                 'cover_path' => $this->publishSeedCover(self::SYSTEM_COVER_FILE),
                 'target_url' => $targetUrl,
+                'login_url' => $targetUrl.'/#/login',
+                'login_username' => 'admin@juice-sh.op',
+                'login_password' => 'admin123',
+                'logged_in_indicator' => 'admin@juice-sh.op',
                 'repository_url' => 'https://github.com/juice-shop/juice-shop',
             ],
         );

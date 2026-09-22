@@ -26,11 +26,6 @@ function validProjectFields(array $overrides = []): array
     ], $overrides);
 }
 
-function fakeCover(): UploadedFile
-{
-    return UploadedFile::fake()->create('cover.jpg', 100, 'image/jpeg');
-}
-
 /**
  * @param  array<string, mixed>  $fields
  */

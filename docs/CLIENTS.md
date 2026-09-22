@@ -5,9 +5,10 @@
 | Client | Documento |
 |--------|-----------|
 | Web (Next.js + BFF) | Arquitetura: [shingeki-client.md](architecture/shingeki-client.md). Desenvolvimento: [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md). |
-| Extensão Chrome/Edge | Contrato: [TARGET-SESSION.md](api/TARGET-SESSION.md). Empacotamento: [apps/extension/README.md](https://github.com/AllanCordova/shingeki/blob/main/apps/extension/README.md). |
 
 O browser nunca vê o token Sanctum: cookie http-only no BFF.
+
+A extensao Chrome/Edge (`apps/extension`) esta **fora de uso**. Login autenticado do DAST: [TARGET-SESSION.md](api/TARGET-SESSION.md) (credenciais no sistema).
 
 ## Recursos no client web
 
@@ -23,4 +24,4 @@ O browser nunca vê o token Sanctum: cookie http-only no BFF.
 | Sidebar | GraphQL — `/configuracoes/navegacao` |
 | Notificações | Sininho + `/notificacoes` |
 | Arsenal manual | `/projetos/.../arsenal` |
-| Sessão do alvo | Painel no sistema; extensão ou popup/lab |
+| Login do scanner | Card na pagina do sistema (usuario/senha do alvo) |

@@ -10,7 +10,7 @@ import {
 } from "@/lib/hooks/system/use-systems";
 import { CoverUpdateModal } from "@/components/cover/cover-update-modal";
 import { SystemForm } from "@/components/system/system-form";
-import { TargetSessionPanel } from "@/components/target-session/target-session-panel";
+import { ScannerLoginCard } from "@/components/system/scanner-login-card";
 import { SystemDetailHero } from "@/components/system/system-detail-hero";
 import { AttackForm } from "@/components/attack/attack-form";
 import { useMe } from "@/lib/hooks/auth/use-auth";
@@ -110,10 +110,22 @@ export default function SystemDetailPage() {
       </div>
 
       <div id="guided-target-session" className="guided-setup-section">
-        <TargetSessionPanel
-          projectId={projectId}
-          systemId={systemId}
-          systemName={system.name}
+        <ScannerLoginCard
+          system={system}
+          isLoading={updateSystem.isLoading}
+          error={updateSystem.error}
+          onSave={async (values) => {
+            const cleared = !values.login_username;
+            const result = await notify.run(
+              () => updateSystem.updateSystem(values),
+              {
+                success: cleared
+                  ? "Login do scanner removido."
+                  : "Login do scanner salvo.",
+              },
+            );
+            return result !== undefined;
+          }}
         />
       </div>
 

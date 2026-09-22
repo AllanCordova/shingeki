@@ -41,11 +41,11 @@ export const GUIDED_SETUP_STEPS: Record<
   },
   system: {
     title: "Cadastrar sistema",
-    description: "Informe URL alvo, stacks e repositorio quando aplicável.",
+    description: "Informe URL alvo, stacks e repositório quando aplicável.",
   },
   target: {
-    title: "Conectar alvo",
-    description: "Capture a sessão autenticada para o DAST ir mais fundo.",
+    title: "Login do scanner",
+    description: "Informe usuário e senha do alvo para o DAST autenticar sozinho.",
     anchorId: "guided-target-session",
   },
   dast: {

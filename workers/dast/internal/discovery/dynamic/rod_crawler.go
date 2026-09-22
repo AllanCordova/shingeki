@@ -76,6 +76,18 @@ func (r *RodCrawler) Discover(
 		r.logger.Warn("stealth profile incomplete", "error", err)
 	}
 
+	if auth.HasCredentials() {
+		if err := authenticateBrowser(exploreCtx, browser, page, targetURL, auth, r.settle); err != nil {
+			if auth.HasSession() {
+				r.logger.Warn("browser login incomplete; using existing session", "error", err)
+			} else {
+				return nil, fmt.Errorf("%w: %v", contracts.ErrScannerLogin, err)
+			}
+		} else {
+			r.logger.Info("scanner login established a session for dynamic discovery")
+		}
+	}
+
 	var mu sync.Mutex
 	vectors := make(map[string]contracts.AttackVector)
 	record := func(vector contracts.AttackVector) {
@@ -110,14 +122,16 @@ func (r *RodCrawler) Discover(
 		if auth != nil {
 			storage = auth.Storage
 		}
-		r.logger.Info("applied target session for dynamic discovery",
+		r.logger.Info("applied authenticated session for dynamic discovery",
 			"has_cookie_header", hasCookieAuth(auth),
 			"has_authorization", headerValue(authHeaders, "Authorization") != "",
 			"has_storage", storage != nil && (len(storage.Local) > 0 || len(storage.Session) > 0 || len(storage.Origins) > 0),
 			"structured_cookies", auth != nil && len(auth.Cookies) > 0,
-			"recorded_routes", auth != nil && len(auth.Routes) > 0,
 			"has_user_agent", userAgent != "",
+			"has_credentials", auth.HasCredentials(),
 		)
+	} else if auth.HasCredentials() {
+		return nil, fmt.Errorf("%w: credentials did not establish a session", contracts.ErrScannerLogin)
 	} else {
 		r.logger.Warn("dynamic discovery running without auth; authenticated SPA routes may redirect to login")
 	}
@@ -182,7 +196,7 @@ func (r *RodCrawler) Discover(
 			continue
 		}
 		if looksLikeLoginURL(currentURL) && hasSession {
-			r.logger.Warn("page looks like login; session replay may have been rejected — continuing with recorded routes",
+			r.logger.Warn("page looks like login; scanner session may have been rejected",
 				"seed", item.URL,
 				"landed", currentURL,
 			)
