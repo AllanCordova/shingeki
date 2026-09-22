@@ -82,10 +82,7 @@ func AttackIDForFinding(batch contracts.DispatchBatch, finding scanner.Finding) 
 	if want != "" && bestScore < 5 {
 		return ""
 	}
-	if bestID != "" {
-		return bestID
-	}
-	return batch.Attacks[0].AttackID
+	return bestID
 }
 
 func normalizeCategory(category string) string {

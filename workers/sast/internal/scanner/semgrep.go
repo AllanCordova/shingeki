@@ -79,6 +79,7 @@ func (s *SemgrepScanner) Scan(ctx context.Context, repoDir string, languages []s
 	if parseErr != nil {
 		return nil, parseErr
 	}
+	HydrateSnippets(repoDir, findings)
 	return findings, nil
 }
 

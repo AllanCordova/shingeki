@@ -83,3 +83,23 @@ func TestDetectRepoLanguages(t *testing.T) {
 		t.Fatalf("detected=%v", got)
 	}
 }
+
+func TestHydrateSnippetsReplacesRequiresLogin(t *testing.T) {
+	dir := t.TempDir()
+	workflow := filepath.Join(dir, "test.yml")
+	content := "name: ci\nsteps:\n  - uses: actions/checkout@v4\n"
+	if err := os.WriteFile(workflow, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	findings := []scanner.Finding{{
+		Path:    workflow,
+		Line:    3,
+		EndLine: 3,
+		Snippet: "requires login",
+	}}
+	scanner.HydrateSnippets(dir, findings)
+	if findings[0].Snippet != "- uses: actions/checkout@v4" {
+		t.Fatalf("snippet=%q", findings[0].Snippet)
+	}
+}

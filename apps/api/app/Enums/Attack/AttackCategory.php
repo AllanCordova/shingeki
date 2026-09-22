@@ -17,4 +17,5 @@ enum AttackCategory: string
     case OpenRedirect = 'OPEN_REDIRECT';
     case Ssti = 'SSTI';
     case JwtConfusion = 'JWT_CONFUSION';
+    case SupplyChain = 'SUPPLY_CHAIN';
 }
