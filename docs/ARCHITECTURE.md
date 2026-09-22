@@ -32,7 +32,6 @@ O worker DAST ataca o `target_url` do dispatch — qualquer origem autorizada no
 |--------|-----------|
 | `apps/api` | [architecture/shingeki-api.md](architecture/shingeki-api.md) |
 | `apps/client` | [architecture/shingeki-client.md](architecture/shingeki-client.md) |
-| `apps/extension` | Fora de uso. Login do scanner: [TARGET-SESSION](api/TARGET-SESSION.md) |
 | `workers/dast` | [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md) |
 | `workers/sast` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
 | `labs/vulnerable-target` | Treino local — [architecture/shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |

@@ -52,7 +52,6 @@ Cadastre a URL do browser. O worker em Docker reescreve loopback via `TARGET_LOC
 
 ## Limites de escopo
 
-- Login PHP com sessão (`PHPSESSID`) para rotas autenticadas; o scanner usa form no Chromium.
-- `public/shingeki-capture.php` é residual da captura antiga — o produto não usa mais.
+- Login PHP com sessão (`PHPSESSID`) para rotas autenticadas; o scanner faz POST no form (`login.php`) mesmo sem Chromium (`depth=quick`).
 - O HTML ainda pode emitir `<meta name="shingeki-signature">` se `SHINGEKI_SIGNATURE_TOKEN` estiver no container — residual; a API **não** valida essa meta.
 - Vulnerabilidades fixas e documentadas; não simula aplicação real completa.
