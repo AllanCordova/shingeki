@@ -92,3 +92,38 @@ test('attack catalog seeder creates generic dast payloads for every category', f
         ->and($csrfHeader->payload['field'])->toBe('Origin')
         ->and($csrfHeader->payload['values'])->toEqual(AttackCatalogPayloads::csrfOrigin());
 });
+
+test('attack catalog seeder creates a sast source-code attack per category', function () {
+    $this->seed(AttackCatalogSeeder::class);
+
+    $admin = User::query()->where('email', config('attacks.catalog_admin_email'))->firstOrFail();
+
+    $sast = Attack::query()
+        ->where('user_id', $admin->id)
+        ->where('scan_type', AttackScanType::Sast)
+        ->get();
+
+    expect($sast)->toHaveCount(13);
+
+    $categories = $sast->pluck('category')->map(fn ($c) => $c->value)->unique()->sort()->values();
+    expect($categories->all())->toEqualCanonicalizing([
+        AttackCategory::SqlInjection->value,
+        AttackCategory::Xss->value,
+        AttackCategory::PathTraversal->value,
+        AttackCategory::CommandInjection->value,
+        AttackCategory::Ssrf->value,
+        AttackCategory::Xxe->value,
+        AttackCategory::Ssti->value,
+        AttackCategory::OpenRedirect->value,
+        AttackCategory::NosqlInjection->value,
+        AttackCategory::LdapInjection->value,
+        AttackCategory::JwtConfusion->value,
+        AttackCategory::Csrf->value,
+        AttackCategory::Idor->value,
+    ]);
+
+    foreach ($sast as $attack) {
+        expect($attack->target_location)->toBe(AttackTargetLocation::SourceCode)
+            ->and($attack->payload['languages'])->toEqual(AttackCatalogSeeder::sastLanguages());
+    }
+});

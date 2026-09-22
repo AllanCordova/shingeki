@@ -55,11 +55,15 @@ func AttackIDForFinding(batch contracts.DispatchBatch, finding scanner.Finding) 
 
 	check := strings.ToLower(finding.CheckID)
 	path := strings.ToLower(finding.Path)
-	bestID := batch.Attacks[0].AttackID
+	want := normalizeCategory(CategoryForCheckID(finding.CheckID))
+	bestID := ""
 	bestScore := 0
 
 	for _, attack := range batch.Attacks {
 		score := 0
+		if want != "" && normalizeCategory(attack.Category) == want {
+			score += 5
+		}
 		for _, lang := range attack.PayloadLanguages() {
 			lang = strings.ToLower(strings.TrimSpace(lang))
 			if lang == "" {
@@ -69,16 +73,15 @@ func AttackIDForFinding(batch contracts.DispatchBatch, finding scanner.Finding) 
 				score += 2
 			}
 		}
-		category := normalizeCategory(attack.Category)
-		if category != "" && strings.Contains(check, category) {
-			score += 3
-		}
 		if score > bestScore {
 			bestScore = score
 			bestID = attack.AttackID
 		}
 	}
 
+	if want != "" && bestScore < 5 {
+		return ""
+	}
 	return bestID
 }
 
@@ -96,6 +99,14 @@ func languageMatchesPath(language, path string) bool {
 		return strings.HasSuffix(path, ".js") || strings.HasSuffix(path, ".jsx") || strings.HasSuffix(path, ".mjs")
 	case "typescript", "ts":
 		return strings.HasSuffix(path, ".ts") || strings.HasSuffix(path, ".tsx")
+	case "python", "py":
+		return strings.HasSuffix(path, ".py")
+	case "go", "golang":
+		return strings.HasSuffix(path, ".go")
+	case "java":
+		return strings.HasSuffix(path, ".java")
+	case "ruby", "rb":
+		return strings.HasSuffix(path, ".rb") || strings.HasSuffix(path, ".erb")
 	default:
 		return false
 	}

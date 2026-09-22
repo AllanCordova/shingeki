@@ -14,6 +14,7 @@ import (
 
 type stubPublisher struct {
 	results     []contracts.ResultMessage
+	probes      []contracts.ProbeMessage
 	completions []contracts.DispatchCompletionMessage
 	resultErr   error
 }
@@ -23,6 +24,11 @@ func (s *stubPublisher) PublishResult(_ context.Context, result contracts.Result
 		return s.resultErr
 	}
 	s.results = append(s.results, result)
+	return nil
+}
+
+func (s *stubPublisher) PublishProbe(_ context.Context, probe contracts.ProbeMessage) error {
+	s.probes = append(s.probes, probe)
 	return nil
 }
 
@@ -136,6 +142,9 @@ func TestRunPublishesCompletionOnCloneFailure(t *testing.T) {
 	if publisher.completions[0].FindingsCount != 0 {
 		t.Fatalf("expected 0 findings, got %d", publisher.completions[0].FindingsCount)
 	}
+	if publisher.completions[0].Status != contracts.CompletionStatusFailed {
+		t.Fatalf("expected failed status, got %q", publisher.completions[0].Status)
+	}
 }
 
 func TestRunPublishesCompletionAfterPartialPublish(t *testing.T) {
@@ -179,5 +188,48 @@ func TestRunPublishesFindingsAndCompletion(t *testing.T) {
 	}
 	if publisher.completions[0].FindingsCount != 1 {
 		t.Fatalf("expected findings_count 1, got %d", publisher.completions[0].FindingsCount)
+	}
+	if publisher.completions[0].Status != contracts.CompletionStatusCompleted {
+		t.Fatalf("expected completed status, got %q", publisher.completions[0].Status)
+	}
+	if len(publisher.probes) != 0 {
+		t.Fatalf("matched attack should not emit a clean probe, got %d", len(publisher.probes))
+	}
+}
+
+func TestRunPublishesCleanProbeForUnmatchedCatalogAttack(t *testing.T) {
+	t.Parallel()
+
+	publisher := &stubPublisher{}
+	batch := testBatch()
+	batch.Attacks = append(batch.Attacks, contracts.AttackItem{
+		AttackID:       "atk-xss",
+		Category:       "XSS",
+		TargetLocation: "SOURCE_CODE",
+		Payload:        json.RawMessage(`{"languages":["php"]}`),
+	})
+	p := &Pipeline{
+		cloner: stubCloner{dir: "/tmp/repo"},
+		scanner: stubScanner{findings: []scanner.Finding{
+			{CheckID: "php.lang.security.sql-injection", Path: "app.php", Line: 10, Message: "sqli"},
+		}},
+		publisher: publisher,
+		logger:    slog.Default(),
+	}
+
+	if err := p.Run(context.Background(), batch); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(publisher.results) != 1 {
+		t.Fatalf("expected 1 finding, got %d", len(publisher.results))
+	}
+	if publisher.results[0].AttackID != "atk-1" {
+		t.Fatalf("expected sqli attack, got %s", publisher.results[0].AttackID)
+	}
+	if len(publisher.probes) != 1 || publisher.probes[0].AttackID != "atk-xss" {
+		t.Fatalf("expected clean probe for xss, got %#v", publisher.probes)
+	}
+	if publisher.completions[0].ProbesCount != 1 {
+		t.Fatalf("expected probes_count 1, got %d", publisher.completions[0].ProbesCount)
 	}
 }

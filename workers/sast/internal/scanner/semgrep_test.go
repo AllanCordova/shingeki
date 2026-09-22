@@ -34,6 +34,20 @@ func TestParseSemgrepOutput(t *testing.T) {
 	}
 }
 
+func TestLangConfigAllowlist(t *testing.T) {
+	got, ok := scanner.LanguagePack("go")
+	if !ok || got != "p/golang" {
+		t.Fatalf("go=%q ok=%v", got, ok)
+	}
+	got, ok = scanner.LanguagePack("python")
+	if !ok || got != "p/python" {
+		t.Fatalf("python=%q ok=%v", got, ok)
+	}
+	if _, ok := scanner.LanguagePack("cobol"); ok {
+		t.Fatal("unknown languages must not reach semgrep --config")
+	}
+}
+
 func TestParseSemgrepOutputIgnoresLeadingNoise(t *testing.T) {
 	raw := []byte(`Some warning
 {"results": []}`)
