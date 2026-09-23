@@ -15,9 +15,10 @@ flowchart LR
 
 1. **Consumer** lê mensagem batch da fila de entrada.
 2. **Discovery** mapeia rotas/formulários/parâmetros no `target_url`.
-3. **Attack** aplica injectors conforme categoria e local do vetor.
-4. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, CSRF só com token esvaziado ou `Origin`/`Referer` cross-site, timing, dialog/DOM XSS no Chromium; diff de corpo só para categorias sem validador específico).
-5. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed` com `status` `completed` ou `failed`. A API só grava `completed_at` em sucesso; falha preenche `failed_at`.
+3. **SECRET_LEAK** (passivo) varre HTML, JSON same-origin, `/api/config` e scripts JS por tokens comuns (`sk_live_`, `ghp_`, JWT, AWS, Slack…). Não injeta payload.
+4. **Attack** aplica injectors conforme categoria e local do vetor.
+5. **Evidence** confirma vulnerabilidade (regex, markers de path traversal, CSRF só com token esvaziado ou `Origin`/`Referer` cross-site, timing, dialog/DOM XSS no Chromium; diff de corpo só para categorias sem validador específico).
+6. **Publisher** envia uma mensagem por **probe** (`attack.probe`, outcome `vulnerable` / `clean` / `error`) e uma por **achado** confirmado; ao terminar, publica `attack.dispatch.completed` com `status` `completed` ou `failed`. A API só grava `completed_at` em sucesso; falha preenche `failed_at`.
 
 ## Pacotes `internal/`
 
@@ -33,7 +34,8 @@ flowchart LR
 | `attack` | Engine, worker pool, mapeamento vetor → injector |
 | `attack/injectors` | SQLi, XSS, path traversal, etc. |
 | `evidence` | Motor de validação (regex, markers de path traversal, CSRF conservador, timing, DOM XSS via Rod; diff genérico limitado) |
-| `orchestrator` | Liga discovery → attack → evidence → publish |
+| `secrets` | Varredura passiva de tokens vazados no tráfego same-origin |
+| `orchestrator` | Liga discovery → secret leak → attack → evidence → publish |
 
 ## Filas RabbitMQ
 

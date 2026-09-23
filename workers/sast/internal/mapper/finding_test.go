@@ -154,4 +154,7 @@ func TestCategoryForCheckID(t *testing.T) {
 	if got := mapper.CategoryForCheckID("yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag"); got != mapper.CategorySupplyChain {
 		t.Fatalf("supply=%s", got)
 	}
+	if got := mapper.CategoryForCheckID("generic.secrets.security.detected-generic-secret"); got != mapper.CategorySecretLeak {
+		t.Fatalf("secret=%s", got)
+	}
 }

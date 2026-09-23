@@ -58,6 +58,7 @@ export const ATTACK_CATEGORIES = [
   "SSTI",
   "JWT_CONFUSION",
   "SUPPLY_CHAIN",
+  "SECRET_LEAK",
 ] as const;
 
 export const ATTACK_TARGET_LOCATIONS = [
