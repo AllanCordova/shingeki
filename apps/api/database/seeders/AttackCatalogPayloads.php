@@ -234,4 +234,12 @@ final class AttackCatalogPayloads
             'NONE',
         ];
     }
+
+    /**
+     * @return list<string>
+     */
+    public static function secretLeak(): array
+    {
+        return ['passive'];
+    }
 }

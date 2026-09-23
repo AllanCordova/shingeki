@@ -17,6 +17,7 @@ const (
 	CategoryCSRF             = "CSRF"
 	CategoryIDOR             = "IDOR"
 	CategorySupplyChain      = "SUPPLY_CHAIN"
+	CategorySecretLeak       = "SECRET_LEAK"
 )
 
 type categoryHint struct {
@@ -39,6 +40,7 @@ var checkIDCategoryHints = []categoryHint{
 	{CategoryCSRF, []string{"csrf", "cors-misconfig"}},
 	{CategoryIDOR, []string{"idor", "broken-access", "mass-assignment", "insecure-direct-object"}},
 	{CategorySupplyChain, []string{"github-actions", "mutable-action-tag", "unpinned-action", "third-party-action", "supply-chain"}},
+	{CategorySecretLeak, []string{"hardcoded-secret", "detected-secret", "generic-secret", "exposed-secret", "aws-access-key", "stripe", "github-pat", "api-key"}},
 }
 
 func CategoryForCheckID(checkID string) string {

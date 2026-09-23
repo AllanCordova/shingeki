@@ -29,6 +29,7 @@ export type AttackCategory =
   | "XSS"
   | "PATH_TRAVERSAL"
   | "SUPPLY_CHAIN"
+  | "SECRET_LEAK"
   | string;
 
 export type AttackRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;

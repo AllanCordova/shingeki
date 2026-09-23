@@ -18,4 +18,5 @@ enum AttackCategory: string
     case Ssti = 'SSTI';
     case JwtConfusion = 'JWT_CONFUSION';
     case SupplyChain = 'SUPPLY_CHAIN';
+    case SecretLeak = 'SECRET_LEAK';
 }

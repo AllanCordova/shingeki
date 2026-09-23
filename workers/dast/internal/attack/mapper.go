@@ -14,6 +14,9 @@ func MapVectorsToJobs(vectors []contracts.AttackVector, attacks []contracts.Atta
 	var jobs []types.Job
 	for _, vector := range vectors {
 		for _, attackItem := range attacks {
+			if strings.EqualFold(strings.TrimSpace(attackItem.Category), "SECRET_LEAK") {
+				continue
+			}
 			if !locationCompatible(vector.TargetLocation, attackItem.TargetLocation) {
 				continue
 			}
