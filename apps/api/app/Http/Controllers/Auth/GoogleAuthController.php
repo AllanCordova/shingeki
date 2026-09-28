@@ -19,7 +19,12 @@ class GoogleAuthController extends Controller
 {
     private const FRONTEND_ORIGIN_COOKIE = 'shingeki_google_frontend_origin';
 
-    private const LOGIN_NONCE_COOKIE = 'shingeki_google_login_nonce';
+    /**
+     * Kept separate from the Next.js cookie `shingeki_google_login_nonce`.
+     * Production serves both apps on one host, so this cookie must not
+     * overwrite or clear the nonce the BFF sends to /auth/google/exchange.
+     */
+    private const LOGIN_NONCE_COOKIE = 'shingeki_google_api_nonce';
 
     public function __construct(
         private readonly GoogleAuthService $googleAuth,

@@ -50,7 +50,9 @@ Abre **http://127.0.0.1:8001/shingeki/**
 Build local (pasta `site/`, gerada e ignorada pelo git):
 
 ```bash
-mkdocs build
+mkdocs build --strict
 ```
+
+O workflow de documentação, no push para `main`, usa esse comando. Link relativo com extensão para um arquivo fora de `docs/` vira aviso e derruba o build. Aponte esses arquivos com URL do GitHub ou deixe o caminho em código.
 
 Convenção de fontes únicas: [index.md](../index.md#fontes-de-verdade).

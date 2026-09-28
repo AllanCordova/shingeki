@@ -29,7 +29,7 @@ A documentação canônica vive em `docs/` (este site). Cada tópico tem **um** 
 | Tópico | Fonte única |
 |--------|-------------|
 | Como subir o monorepo | [RUN-PROJECT.md](RUN-PROJECT.md) |
-| Deploy para testes (sem labs) | [DEPLOY.md](DEPLOY.md) |
+| Deploy para testes (client, API e workers) | [DEPLOY.md](DEPLOY.md) |
 | Visão do monorepo e fluxo DAST | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Desenho de cada pacote | [architecture/](ARCHITECTURE.md) |
 | Índice de rotas HTTP | [API.md](API.md) |
