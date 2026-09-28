@@ -26,7 +26,7 @@ flowchart TB
 
 O browser fala só com o BFF (`apps/client/app/api/*`). O token Sanctum fica em cookie http-only; o BFF encaminha Bearer para a Laravel. GraphQL (`POST /graphql`) entra pelo BFF em `/api/graphql` e hoje cobre só a sidebar.
 
-O worker DAST ataca o `target_url` do dispatch — qualquer origem autorizada no sistema. Os labs PHP e Juice Shop **não** entram neste grafo; são treino local. Como exercitá-los: [Validar os workers](RUN-PROJECT.md#validar-os-workers).
+O worker DAST ataca o `target_url` do dispatch — qualquer origem autorizada no sistema. Treino de evidência: [goldset in-process](architecture/shingeki-dast-goldset.md).
 
 | Pacote | Documento |
 |--------|-----------|
@@ -34,8 +34,7 @@ O worker DAST ataca o `target_url` do dispatch — qualquer origem autorizada no
 | `apps/client` | [architecture/shingeki-client.md](architecture/shingeki-client.md) |
 | `workers/dast` | [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md) |
 | `workers/sast` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
-| `labs/vulnerable-target` | Treino local — [architecture/shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |
-| Juice Shop | Treino local — [architecture/shingeki-juice-shop.md](architecture/shingeki-juice-shop.md) |
+| Goldset DAST | [architecture/shingeki-dast-goldset.md](architecture/shingeki-dast-goldset.md) |
 
 ## Fluxo de um disparo DAST
 

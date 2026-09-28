@@ -12,6 +12,10 @@ use InvalidArgumentException;
 
 class AttackResultProcessor
 {
+    public function __construct(
+        private readonly WorkerTargetUrlResolver $targetUrlResolver,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $message
      */
@@ -52,14 +56,31 @@ class AttackResultProcessor
             }
         }
 
+        $display = (string) $system->target_url;
+        $route = $this->canonicalSinkRoute(
+            $this->targetUrlResolver->rewritePublicText($payload['vulnerable_route'], $display),
+        );
+
+        if (is_string($dispatchId)) {
+            $existing = SystemResult::query()
+                ->where('attack_dispatch_id', $dispatchId)
+                ->where('attack_id', $attack->id)
+                ->where('vulnerable_route', $route)
+                ->first();
+
+            if ($existing !== null) {
+                return $existing;
+            }
+        }
+
         return SystemResult::create([
             'system_id' => $system->id,
             'attack_dispatch_id' => $dispatchId,
             'attack_id' => $attack->id,
-            'vulnerable_route' => $payload['vulnerable_route'],
+            'vulnerable_route' => $route,
             'payload_used' => $payload['payload_used'],
-            'evidence' => $payload['evidence'],
-            'http_request' => $payload['http_request'],
+            'evidence' => $this->targetUrlResolver->rewritePublicText($payload['evidence'], $display),
+            'http_request' => $this->targetUrlResolver->rewritePublicText($payload['http_request'], $display),
             ...$this->optionalLocationFields($payload),
         ]);
     }
@@ -108,5 +129,52 @@ class AttackResultProcessor
         }
 
         return $fields;
+    }
+
+    private function canonicalSinkRoute(string $route): string
+    {
+        $parts = parse_url($route);
+        if ($parts === false || ! isset($parts['host'])) {
+            return $route;
+        }
+
+        $query = [];
+        if (isset($parts['query']) && is_string($parts['query']) && $parts['query'] !== '') {
+            parse_str($parts['query'], $query);
+            ksort($query);
+            foreach (array_keys($query) as $key) {
+                $query[$key] = '';
+            }
+        }
+
+        $fragment = $parts['fragment'] ?? null;
+        if (is_string($fragment) && str_contains($fragment, '?')) {
+            [$fragPath, $fragQueryString] = explode('?', $fragment, 2);
+            $fragQuery = [];
+            parse_str($fragQueryString, $fragQuery);
+            ksort($fragQuery);
+            foreach (array_keys($fragQuery) as $key) {
+                $fragQuery[$key] = '';
+            }
+            $fragment = $fragPath;
+            if ($fragQuery !== []) {
+                $fragment .= '?'.http_build_query($fragQuery);
+            }
+        }
+
+        $host = (string) $parts['host'];
+        if (isset($parts['port'])) {
+            $host .= ':'.$parts['port'];
+        }
+
+        $canonical = ($parts['scheme'] ?? 'http').'://'.$host.($parts['path'] ?? '');
+        if ($query !== []) {
+            $canonical .= '?'.http_build_query($query);
+        }
+        if (is_string($fragment) && $fragment !== '') {
+            $canonical .= '#'.$fragment;
+        }
+
+        return $canonical;
     }
 }

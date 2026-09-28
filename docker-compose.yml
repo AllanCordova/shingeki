@@ -70,6 +70,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RUN_DB_SEED: ${RUN_DB_SEED:-true}
+      ATTACKS_TARGET_LOCALHOST_REWRITE: ${ATTACKS_TARGET_LOCALHOST_REWRITE:-host.docker.internal}
     depends_on:
       mysql:
         condition: service_healthy
@@ -130,56 +131,12 @@ services:
       DISCOVERY_CDP_URL: ${DISCOVERY_CDP_URL:-}
       DISCOVERY_PROXY: ${DISCOVERY_PROXY:-}
       TARGET_LOCALHOST_REWRITE: host.docker.internal
+      ATTACK_REQUEST_TIMEOUT: ${ATTACK_REQUEST_TIMEOUT:-30s}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       rabbitmq:
         condition: service_healthy
-    networks:
-      - shingeki
-
-  juice-shop:
-    profiles: ["labs"]
-    image: bkimminich/juice-shop
-    container_name: shingeki-juice-shop
-    restart: unless-stopped
-    ports:
-      - "${JUICE_SHOP_PORT:-3001}:3000"
-    networks:
-      - shingeki
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://127.0.0.1:3000/', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 40s
-
-  vulnerable-target:
-    profiles: ["labs"]
-    build:
-      context: ./labs/vulnerable-target
-    container_name: shingeki-vulnerable-target
-    restart: unless-stopped
-    ports:
-      - "${VULNERABLE_TARGET_PORT:-8090}:80"
-    environment:
-      SHINGEKI_SIGNATURE_TOKEN: ${VULNERABLE_TARGET_SIGNATURE_TOKEN}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - vulnerable_data:/var/www/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1/ > /dev/null || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 12
-      start_period: 20s
     networks:
       - shingeki
 
@@ -189,6 +146,4 @@ networks:
 
 volumes:
   mysql_data:
-    driver: local
-  vulnerable_data:
     driver: local

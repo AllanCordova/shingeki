@@ -28,6 +28,20 @@ func TestSplitFragment(t *testing.T) {
 	}
 }
 
+func TestCanonicalSinkRouteBlanksQueryValues(t *testing.T) {
+	got := targeturl.CanonicalSinkRoute("http://127.0.0.1:3010/preview?q=hoje")
+	if got != "http://127.0.0.1:3010/preview?q=" {
+		t.Fatalf("got %q", got)
+	}
+	hash := targeturl.CanonicalSinkRoute("http://shop.test/#/search?q=apple")
+	if hash != "http://shop.test/#/search?q=" {
+		t.Fatalf("hash got %q", hash)
+	}
+	if same := targeturl.CanonicalSinkRoute("http://127.0.0.1:3010/preview?q="); same != got {
+		t.Fatalf("expected identical sinks, got %q vs %q", same, got)
+	}
+}
+
 func TestUsesFragmentQuery(t *testing.T) {
 	parsed, err := url.Parse("http://shop.test/#/search?q=")
 	if err != nil {

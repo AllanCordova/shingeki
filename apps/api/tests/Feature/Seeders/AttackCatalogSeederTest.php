@@ -90,7 +90,7 @@ test('attack catalog seeder creates generic dast payloads for every category', f
     );
 
     expect($redirect)->not->toBeNull()
-        ->and($redirect->payload['values'])->toContain('https://github.com/juice-shop/juice-shop.evil.invalid');
+        ->and($redirect->payload['values'])->toContain('https://evil.example');
 
     $csrfHeader = $dast->first(
         fn (Attack $attack) => $attack->category === AttackCategory::Csrf

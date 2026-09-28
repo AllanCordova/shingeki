@@ -144,7 +144,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_EXPLORE_SETTLE: %w", err)
 	}
 
-	reqTimeout, err := time.ParseDuration(getEnv("ATTACK_REQUEST_TIMEOUT", "15s"))
+	reqTimeout, err := time.ParseDuration(getEnv("ATTACK_REQUEST_TIMEOUT", "30s"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid ATTACK_REQUEST_TIMEOUT: %w", err)
 	}

@@ -199,7 +199,7 @@ final class AttackCatalogPayloads
             'http://evil.invalid',
             '//evil.invalid',
             '/\\evil.invalid',
-            'https://github.com/juice-shop/juice-shop.evil.invalid',
+            'https://evil.example',
             'https://example.com',
             'https://owasp.org',
             '//google.com',

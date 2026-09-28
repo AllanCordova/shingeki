@@ -142,6 +142,7 @@ func (e *CompositeEngine) Discover(
 	}
 
 	beforeFilter := len(vectors)
+	vectors = CanonicalizeQueryVectors(vectors)
 	vectors = FilterAttackable(targetURL, vectors)
 	if len(vectors) < beforeFilter {
 		e.logger.Info("filtered blocked discovery vectors",

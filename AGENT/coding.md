@@ -17,7 +17,6 @@ The repo is already in good shape. Do not reinvent architecture on every feature
 | `apps/api` | Laravel API (REST + Lighthouse GraphQL) |
 | `apps/client` | Next.js BFF + UI (React Query + Apollo where needed) |
 | `workers/dast`, `workers/sast` | Go queue consumers |
-| `labs/vulnerable-target` | Intentionally vulnerable PHP lab |
 
 ### Client (`apps/client`)
 

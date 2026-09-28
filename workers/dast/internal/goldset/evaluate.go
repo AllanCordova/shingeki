@@ -2,10 +2,8 @@ package goldset
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack"
@@ -13,18 +11,7 @@ import (
 	"github.com/shingeki/dast-worker/internal/config"
 	"github.com/shingeki/dast-worker/internal/contracts"
 	"github.com/shingeki/dast-worker/internal/evidence"
-	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
-
-type Options struct {
-	Rod      bool
-	Auth     bool
-	Coverage bool
-	Email    string
-	Password string
-	Timeout  time.Duration
-	Logger   *slog.Logger
-}
 
 type Finding struct {
 	Challenge string
@@ -42,6 +29,11 @@ type Report struct {
 	Unexpected []Finding
 }
 
+type jobPair struct {
+	vectors []contracts.AttackVector
+	catalog []contracts.AttackItem
+}
+
 func (r Report) Missing() []string {
 	found := map[string]struct{}{}
 	for _, hit := range r.Hits {
@@ -56,23 +48,8 @@ func (r Report) Missing() []string {
 	return missing
 }
 
-func Evaluate(ctx context.Context, targetURL string, opts Options) (Report, error) {
-	if err := targeturl.AssertHTTP(targetURL); err != nil {
-		return Report{}, fmt.Errorf("target url: %w", err)
-	}
-	timeout := opts.Timeout
-	if timeout <= 0 {
-		timeout = 45 * time.Second
-	}
-	logger := opts.Logger
-	if logger == nil {
-		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
-	}
-
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	cfg := config.Config{
+func harnessConfig() config.Config {
+	return config.Config{
 		Attack: config.AttackConfig{
 			Concurrency:    4,
 			RequestTimeout: 8 * time.Second,
@@ -85,73 +62,41 @@ func Evaluate(ctx context.Context, targetURL string, opts Options) (Report, erro
 			BodyDiffThreshold: 100,
 			TimingTolerance:   2 * time.Second,
 		},
-		Discovery: config.DiscoveryConfig{
-			RodEnabled:           opts.Rod,
-			RodHeadless:          true,
-			RodNoSandbox:         true,
-			BrowserLaunchTimeout: 20 * time.Second,
-			PageTimeout:          8 * time.Second,
-			ChromePath:           os.Getenv("CHROME_PATH"),
-		},
 	}
+}
 
+func newHarnessEngine() attack.Engine {
+	cfg := harnessConfig()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	return attack.NewRestyEngine(cfg.Attack, logger)
+}
+
+func mapPairs(engine attack.Engine, pairs []jobPair) []types.Job {
+	var jobs []types.Job
+	for _, pair := range pairs {
+		jobs = append(jobs, engine.MapVectorsToJobs(pair.vectors, pair.catalog)...)
+	}
+	return jobs
+}
+
+func executeJobs(
+	ctx context.Context,
+	origin string,
+	jobs []types.Job,
+	expected []string,
+	classify func(route, category string) string,
+) (Report, error) {
+	cfg := harnessConfig()
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	engine := attack.NewRestyEngine(cfg.Attack, logger)
 	validator := evidence.NewDefaultValidator(cfg, logger)
 	defer func() { _ = validator.Close() }()
 
-	vectors := Vectors(targetURL)
-	catalog := Catalog()
-	expected := ExpectedChallenges(opts.Rod)
-	if opts.Coverage {
-		session, err := Login(runCtx, targetURL, opts.Email, opts.Password)
-		if err != nil {
-			return Report{}, err
-		}
-		logger.Info("juice shop session", "email", session.Email, "bid", session.Bid, "mode", "coverage")
-		vectors = CoverageVectors(targetURL, session)
-		catalog = CoverageCatalog()
-		expected = ExpectedCoverageChallenges()
-		jobs := engine.MapVectorsToJobs(vectors, catalog)
-		jobs = attack.ApplyAuth(jobs, &contracts.TargetAuth{
-			Type:    "bearer",
-			Headers: BearerAuth(session),
-		})
-		return finishReport(runCtx, engine, validator, targetURL, jobs, expected)
-	}
-	if opts.Auth {
-		session, err := Login(runCtx, targetURL, opts.Email, opts.Password)
-		if err != nil {
-			return Report{}, err
-		}
-		logger.Info("juice shop session", "email", session.Email, "bid", session.Bid)
-		vectors = AuthVectors(targetURL, session)
-		catalog = AuthCatalog()
-		expected = ExpectedAuthChallenges()
-		jobs := engine.MapVectorsToJobs(vectors, catalog)
-		jobs = attack.ApplyAuth(jobs, &contracts.TargetAuth{
-			Type:    "bearer",
-			Headers: BearerAuth(session),
-		})
-		return finishReport(runCtx, engine, validator, targetURL, jobs, expected)
-	}
-
-	jobs := engine.MapVectorsToJobs(vectors, catalog)
-	return finishReport(runCtx, engine, validator, targetURL, jobs, expected)
-}
-
-func finishReport(
-	ctx context.Context,
-	engine attack.Engine,
-	validator evidence.Validator,
-	targetURL string,
-	jobs []types.Job,
-	expected []string,
-) (Report, error) {
 	start := time.Now()
 	responses := engine.ExecutePool(ctx, jobs)
 
 	report := Report{
-		Target:   targetURL,
+		Target:   origin,
 		Duration: time.Since(start),
 		Jobs:     len(jobs),
 		Expected: expected,
@@ -164,7 +109,7 @@ func finishReport(
 			continue
 		}
 		item := Finding{
-			Challenge: Classify(finding.VulnerableRoute, response.Job.Attack.Category),
+			Challenge: classify(finding.VulnerableRoute, response.Job.Attack.Category),
 			Route:     finding.VulnerableRoute,
 			Payload:   finding.PayloadUsed,
 			Evidence:  finding.Evidence,
