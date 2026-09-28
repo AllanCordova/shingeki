@@ -1,6 +1,9 @@
 package dynamic
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestShouldSkipDestructiveAndLoginForms(t *testing.T) {
 	logout := formCandidate{
@@ -49,6 +52,43 @@ func TestShouldSkipDestructiveAndLoginForms(t *testing.T) {
 	}
 	if !shouldSkipForm(destroy, true) {
 		t.Fatal("expected destructive form skip")
+	}
+}
+
+func TestVectorFromFormRecordsGetQueryParameter(t *testing.T) {
+	vector, ok := vectorFromForm("http://127.0.0.1:3010/preview", formCandidate{
+		Action: "/preview",
+		Method: "GET",
+		Fields: []formField{{Name: "q", Type: "text"}},
+	})
+	if !ok {
+		t.Fatal("expected vector")
+	}
+	if vector.TargetLocation != "QUERY_PARAMETER" {
+		t.Fatalf("location=%s", vector.TargetLocation)
+	}
+	if vector.Method != "GET" {
+		t.Fatalf("method=%s", vector.Method)
+	}
+	if _, ok := vector.Params["q"]; !ok {
+		t.Fatal("expected q param")
+	}
+	if !strings.Contains(vector.Route, "q=") {
+		t.Fatalf("route missing query: %s", vector.Route)
+	}
+}
+
+func TestVectorFromFormKeepsPostAsForm(t *testing.T) {
+	vector, ok := vectorFromForm("http://127.0.0.1:3010/login", formCandidate{
+		Action: "/login",
+		Method: "POST",
+		Fields: []formField{{Name: "email", Type: "email"}, {Name: "password", Type: "password"}},
+	})
+	if !ok {
+		t.Fatal("expected vector")
+	}
+	if vector.TargetLocation != "FORM" {
+		t.Fatalf("location=%s", vector.TargetLocation)
 	}
 }
 

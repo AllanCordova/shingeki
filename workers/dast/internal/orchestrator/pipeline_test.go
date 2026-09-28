@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
@@ -91,6 +92,23 @@ func testBatch() contracts.DispatchBatch {
 	}
 }
 
+func newTestPipeline(
+	discoveryEngine stubDiscovery,
+	attackEngine stubAttack,
+	evidenceEngine evidence.Validator,
+	publisher *stubPublisher,
+) *Pipeline {
+	pipeline := NewPipeline(
+		discoveryEngine,
+		attackEngine,
+		evidenceEngine,
+		publisher,
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+	)
+	pipeline.ping = func(context.Context, string) error { return nil }
+	return pipeline
+}
+
 func TestPipelinePublishesFindingProbeAndCompletion(t *testing.T) {
 	t.Parallel()
 
@@ -100,7 +118,7 @@ func TestPipelinePublishesFindingProbeAndCompletion(t *testing.T) {
 		Payload: types.PayloadSpec{Value: "' OR 1=1 --"},
 	}
 	publisher := &stubPublisher{}
-	pipeline := NewPipeline(
+	pipeline := newTestPipeline(
 		stubDiscovery{vectors: []contracts.AttackVector{job.Vector}},
 		stubAttack{
 			jobs: []types.Job{job},
@@ -114,7 +132,6 @@ func TestPipelinePublishesFindingProbeAndCompletion(t *testing.T) {
 		},
 		alwaysFinding{},
 		publisher,
-		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 
 	if err := pipeline.Run(context.Background(), testBatch()); err != nil {
@@ -138,12 +155,11 @@ func TestPipelinePublishesCompletionWhenDiscoveryFails(t *testing.T) {
 	t.Parallel()
 
 	publisher := &stubPublisher{}
-	pipeline := NewPipeline(
+	pipeline := newTestPipeline(
 		stubDiscovery{err: errors.New("offline")},
 		stubAttack{},
 		alwaysFinding{},
 		publisher,
-		slog.New(slog.NewTextHandler(io.Discard, nil)),
 	)
 
 	if err := pipeline.Run(context.Background(), testBatch()); err == nil {
@@ -160,11 +176,56 @@ func TestPipelinePublishesCompletionWhenDiscoveryFails(t *testing.T) {
 	}
 }
 
+func TestPipelineDedupesFindingsOnSameQuerySink(t *testing.T) {
+	t.Parallel()
+
+	attackItem := contracts.AttackItem{AttackID: "atk-xss", Category: "XSS", TargetLocation: "QUERY_PARAMETER"}
+	jobA := types.Job{
+		Attack:  attackItem,
+		Vector:  contracts.AttackVector{Route: "http://127.0.0.1:3010/preview?q=", Method: "GET", TargetLocation: "QUERY_PARAMETER"},
+		Payload: types.PayloadSpec{Value: "<script>alert(1)</script>"},
+	}
+	jobB := types.Job{
+		Attack:  attackItem,
+		Vector:  contracts.AttackVector{Route: "http://127.0.0.1:3010/preview?q=hoje", Method: "GET", TargetLocation: "QUERY_PARAMETER"},
+		Payload: types.PayloadSpec{Value: "<img src=x onerror=alert(1)>"},
+	}
+	publisher := &stubPublisher{}
+	pipeline := newTestPipeline(
+		stubDiscovery{vectors: []contracts.AttackVector{jobA.Vector, jobB.Vector}},
+		stubAttack{
+			jobs: []types.Job{jobA, jobB},
+			responses: []types.Response{
+				{Job: jobA, AttackStatus: 200, PayloadUsed: jobA.Payload.Value, RawRequest: "GET /preview?q="},
+				{Job: jobB, AttackStatus: 200, PayloadUsed: jobB.Payload.Value, RawRequest: "GET /preview?q=hoje"},
+			},
+		},
+		alwaysFinding{},
+		publisher,
+	)
+
+	if err := pipeline.Run(context.Background(), testBatch()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(publisher.results) != 1 {
+		t.Fatalf("expected 1 finding, got %d", len(publisher.results))
+	}
+	if publisher.results[0].VulnerableRoute != "http://127.0.0.1:3010/preview?q=" {
+		t.Fatalf("route=%s", publisher.results[0].VulnerableRoute)
+	}
+	if len(publisher.probes) != 2 {
+		t.Fatalf("expected both probes, got %d", len(publisher.probes))
+	}
+	if publisher.completions[0].FindingsCount != 1 {
+		t.Fatalf("findings_count=%d", publisher.completions[0].FindingsCount)
+	}
+}
+
 func TestPipelineRejectsUnsafeTargetURL(t *testing.T) {
 	t.Parallel()
 
 	publisher := &stubPublisher{}
-	pipeline := NewPipeline(stubDiscovery{}, stubAttack{}, alwaysFinding{}, publisher, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	pipeline := newTestPipeline(stubDiscovery{}, stubAttack{}, alwaysFinding{}, publisher)
 	batch := testBatch()
 	batch.TargetURL = "file:///etc/passwd"
 
@@ -173,5 +234,29 @@ func TestPipelineRejectsUnsafeTargetURL(t *testing.T) {
 	}
 	if len(publisher.completions) != 1 {
 		t.Fatalf("expected completion even for rejected url, got %d", len(publisher.completions))
+	}
+}
+
+func TestPipelineFailsWhenTargetUnreachable(t *testing.T) {
+	t.Parallel()
+
+	publisher := &stubPublisher{}
+	pipeline := newTestPipeline(stubDiscovery{vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("https://target.example/", "GET", "URL_PATH"),
+	}}, stubAttack{}, alwaysFinding{}, publisher)
+	pipeline.ping = func(context.Context, string) error {
+		return errors.New("target unreachable: connect: connection refused")
+	}
+
+	if err := pipeline.Run(context.Background(), testBatch()); err == nil {
+		t.Fatal("expected unreachable target error")
+	} else if !strings.Contains(err.Error(), "connection refused") {
+		t.Fatalf("error=%v", err)
+	}
+	if len(publisher.results) != 0 || len(publisher.probes) != 0 {
+		t.Fatalf("expected no probes on unreachable target, results=%d probes=%d", len(publisher.results), len(publisher.probes))
+	}
+	if len(publisher.completions) != 1 || publisher.completions[0].Status != contracts.CompletionStatusFailed {
+		t.Fatalf("expected failed completion, got %+v", publisher.completions)
 	}
 }

@@ -94,46 +94,23 @@ docker exec shingeki-rabbitmq rabbitmqctl list_queues name messages consumers
 
 ## 3. Validar os workers {#validar-os-workers}
 
-Os dois labs são **treino local**. Não entram na arquitetura do produto nem no grafo do worker: o DAST recebe um `target_url` qualquer no batch.
-
-Para exercitar o pipeline em casa, suba os alvos (PHP + Juice Shop) **sem** amarrá-los ao worker:
+O worker DAST ataca o `target_url` do dispatch. Para treinar evidência e catálogo **sem** UI e **sem** alvo Docker:
 
 ```bash
-docker compose --profile labs up -d
+npm run test:dast
 ```
 
-| Alvo | URL no browser / sistema Shingeki | Seed |
-|------|-----------------------------------|------|
-| Lab PHP | `http://127.0.0.1:8090` (`VULNERABLE_TARGET_PORT`) | **Vulnerable PHP Target** |
-| Juice Shop | `http://127.0.0.1:3001` (`JUICE_SHOP_PORT`) | **OWASP Juice Shop** |
+Gabarito: [goldset DAST](architecture/shingeki-dast-goldset.md). Contrato de dispatch: [ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 
-Cadastre **só** essas URLs de host. O worker em Docker reescreve `127.0.0.1` / `localhost` para `host.docker.internal` (`TARGET_LOCALHOST_REWRITE`). Não grave `http://vulnerable-target` nem `host.docker.internal` no sistema.
+Quando o worker corre em Docker contra um alvo no host, a API reescreve `127.0.0.1` / `localhost` para `host.docker.internal` (`ATTACKS_TARGET_LOCALHOST_REWRITE` / `TARGET_LOCALHOST_REWRITE`). Cadastre só URLs de browser (`127.0.0.1`), nunca `host.docker.internal`.
 
-Para disparar pela UI contra os labs, os workers também precisam estar no ar:
-
-```bash
-docker compose --profile stack --profile labs up -d --build
-```
-
-Login do scanner no seed (o worker entra sozinho; não há extensão nem captura de cookie): credenciais em [Juice Shop](architecture/shingeki-juice-shop.md) e [lab PHP](architecture/shingeki-vulnerable-target.md).
-
-Harness DAST no Juice Shop (sem crawl da UI, na raiz):
-
-```bash
-npm run test:dast-juice
-npm run test:dast-juice-auth
-npm run test:dast-juice-coverage
-```
-
-Gabarito e vetores: [Juice Shop](architecture/shingeki-juice-shop.md) · [lab PHP](architecture/shingeki-vulnerable-target.md). Contrato de dispatch: [ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
-
-**SAST:** o worker clona o `repository_url` do sistema. Defina `GITHUB_TOKEN` no `.env` da raiz para repositórios privados.
+**SAST:** o worker clona o `repository_url` do sistema. Defina `GITHUB_TOKEN` no `.env` da raiz para repositórios privados. Amostras de treino: [`workers/sast/testdata/goldset/`](../workers/sast/testdata/goldset/).
 
 ## Credenciais do seed {#credenciais-do-seed}
 
 | E-mail | Senha | Perfil |
 |--------|-------|--------|
-| `test@example.com` | `password` | `SPECIALIST` — **Pentest Lab** + projetos demo (Netflix, Mercado Livre, Nubank, iFood) |
+| `test@example.com` | `password` | `SPECIALIST` — projetos demo (Netflix, Mercado Livre, Nubank, iFood) |
 | `admin@admin.com` | `password` | `ADMIN` — catálogo global + mesmos projetos demo |
 
 Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
@@ -147,6 +124,10 @@ Não copie estes blocos para outros guias — só os nomes das variáveis e o li
 | Login Google | `GOOGLE_*` em `apps/api/.env` | [AUTHENTICATION.md](api/AUTHENTICATION.md) |
 | Remediação IA / PR GitHub | `AI_*`, `GEMINI_*` / `GROQ_*`, `GITHUB_*` na API | [REMEDIATION.md](api/REMEDIATION.md) |
 | Banco de imagens (Pexels) | `PEXELS_API_KEY` em `apps/client/.env.local` | [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md) |
+
+## Deploy para outras pessoas testarem
+
+Client, API e workers, sem os labs: [DEPLOY.md](DEPLOY.md).
 
 ## Referência
 

@@ -162,6 +162,47 @@ func TestIDORValidatorIgnoresReviewMessageInjection(t *testing.T) {
 	}
 }
 
+func TestIDORValidatorDetectsUnauthenticatedUserDirectory(t *testing.T) {
+	validator := evidence.NewIDORValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{Category: "IDOR"},
+			Vector: contracts.AttackVector{Route: "http://app.test/api/admin/users"},
+		},
+		BaselineStatus: 200,
+		AttackStatus:   200,
+		BaselineBody:   `{"users":[{"id":"1","email":"alice@example.com","role":"admin"},{"id":"2","email":"bob@example.com","role":"user"}]}`,
+		AttackBody:     `{"users":[{"id":"1","email":"alice@example.com","role":"admin"},{"id":"2","email":"bob@example.com","role":"user"}]}`,
+		PayloadUsed:    "2",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected missing-authorization finding")
+	}
+}
+
+func TestIDORValidatorDetectsMassAssignedRole(t *testing.T) {
+	validator := evidence.NewIDORValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack:   contracts.AttackItem{Category: "IDOR", TargetLocation: "JSON_BODY"},
+			ParamKey: "role",
+			Vector: contracts.AttackVector{
+				Route:   "http://app.test/api/profile",
+				Method:  "PATCH",
+				Headers: map[string]string{"Authorization": "Bearer tok"},
+			},
+		},
+		BaselineStatus: 200,
+		AttackStatus:   200,
+		BaselineBody:   `{"email":"alice@example.com","role":"user"}`,
+		AttackBody:     `{"email":"alice@example.com","role":"admin"}`,
+		PayloadUsed:    "admin",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected mass-assignment finding")
+	}
+}
+
 func TestIDORValidatorIgnoresSQLCategory(t *testing.T) {
 	validator := evidence.NewIDORValidator()
 	resp := types.Response{

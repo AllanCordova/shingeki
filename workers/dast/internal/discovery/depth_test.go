@@ -78,6 +78,25 @@ func TestCapVectorsQuick(t *testing.T) {
 	}
 }
 
+func TestCanonicalizeQueryVectorsMergesSameSink(t *testing.T) {
+	empty := contracts.NewAttackVector("http://127.0.0.1:3010/preview?q=", "GET", "QUERY_PARAMETER")
+	empty.Params["q"] = ""
+	filled := contracts.NewAttackVector("http://127.0.0.1:3010/preview?q=hoje", "GET", "QUERY_PARAMETER")
+	filled.Params["q"] = "hoje"
+	path := contracts.NewAttackVector("http://127.0.0.1:3010/preview", "GET", "URL_PATH")
+
+	got := discovery.CanonicalizeQueryVectors([]contracts.AttackVector{empty, filled, path})
+	if len(got) != 2 {
+		t.Fatalf("expected 2 vectors, got %d", len(got))
+	}
+	if got[0].Route != "http://127.0.0.1:3010/preview?q=" {
+		t.Fatalf("query route=%s", got[0].Route)
+	}
+	if got[0].Params["q"] != "" {
+		t.Fatalf("expected blank q, got %q", got[0].Params["q"])
+	}
+}
+
 func TestResolveSeedURL(t *testing.T) {
 	seed, err := discovery.ResolveSeedURL("https://app.example.com", "/products")
 	if err != nil {

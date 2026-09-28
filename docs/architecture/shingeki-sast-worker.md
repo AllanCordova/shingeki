@@ -70,6 +70,8 @@ Ver [`workers/sast/.env.example`](https://github.com/AllanCordova/shingeki/blob/
 | `GITHUB_TOKEN` | — | Clone de repositórios privados no GitHub |
 | `SAST_LAB_REPOSITORY_PATH` | — | Fallback dev-only quando `repository_url` está vazio |
 
+Amostras de anti-padrões para treino: [`workers/sast/testdata/goldset/`](../../workers/sast/testdata/goldset/).
+
 ## Docker
 
 Serviço `sast-worker` no [`docker-compose.yml`](https://github.com/AllanCordova/shingeki/blob/main/docker-compose.yml), profile `stack`: imagem com Go + Git + Semgrep (pip), sem Chromium. Como subir: [RUN-PROJECT.md](../RUN-PROJECT.md).

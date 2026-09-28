@@ -221,6 +221,9 @@ func (r *RodCrawler) Discover(
 		for _, link := range r.collectLinks(page, currentURL) {
 			if bfs.IsAttackableDiscoveryURL(targetURL, link) {
 				queue.Enqueue(link, item.Depth+1)
+				if vector, ok := queryVectorFromPageURL(link); ok {
+					record(vector)
+				}
 			}
 		}
 
@@ -286,6 +289,11 @@ func (r *RodCrawler) Discover(
 		if err != nil {
 			r.logger.Warn("collect forms failed", "url", currentURL, "error", err)
 			continue
+		}
+		for _, form := range forms {
+			if vector, ok := vectorFromForm(currentURL, form); ok {
+				record(vector)
+			}
 		}
 		for _, form := range forms {
 			if exploreCtx.Err() != nil || formSubmits >= maxForms {

@@ -2,15 +2,9 @@
 
 Disparo assíncrono via RabbitMQ e consulta de achados. Voltar ao [índice da API](../API.md).
 
-Requer workers e filas. API e Docker: [RUN-PROJECT.md](../RUN-PROJECT.md). Labs (treino local, opcional): [Validar os workers](../RUN-PROJECT.md#validar-os-workers).
+Requer workers e filas. API e Docker: [RUN-PROJECT.md](../RUN-PROJECT.md). Gabarito DAST: [goldset](../architecture/shingeki-dast-goldset.md).
 
-## Ambiente de laboratório
-
-Os labs **não** fazem parte do contrato HTTP. URLs, profiles Docker e harness: [Validar os workers](../RUN-PROJECT.md#validar-os-workers). Vetores e credenciais: [lab PHP](../architecture/shingeki-vulnerable-target.md), [Juice Shop](../architecture/shingeki-juice-shop.md).
-
-Cadastre no sistema a URL de **host** (`http://127.0.0.1:8090` ou `:3001`). Não use `host.docker.internal` nem `http://vulnerable-target` — esses nomes só existem dentro do Docker e quebram o navegador. A API reescreve loopback ao publicar o batch.
-
-### Aceite de responsabilidade
+## Aceite de responsabilidade
 
 Antes de disparar ataques, o client envia o aceite no body. A API valida e grava auditoria. Contrato completo (versão, GET de status, o que foi removido): [ATTACK-ACKNOWLEDGMENT.md](ATTACK-ACKNOWLEDGMENT.md).
 
@@ -218,4 +212,4 @@ curl -X POST "http://127.0.0.1:8000/api/projects/{projectId}/systems/{systemId}/
   -d "{\"accepted_responsibility\":true,\"accepted_legal_terms\":true,\"terms_version\":\"2026-07-13\"}"
 ```
 
-Substitua IDs após `GET /api/projects` (seed cria **Pentest Lab** / **Vulnerable PHP Target**).
+Substitua IDs após `GET /api/projects` (o seed cria projetos demo: Netflix, Mercado Livre, Nubank, iFood).

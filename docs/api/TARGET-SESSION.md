@@ -43,7 +43,7 @@ O worker:
 
 1. Se `login_url` for um endpoint JSON (`/rest/`, `/api/`, `/auth/` + login), faz `POST` JSON com `{email,password}` e `{username,password}` e lê `{token,access_token}` ou cookie.
 2. Se `login_url` for página HTML (`.php`, `.html`…), faz `POST` `application/x-www-form-urlencoded` e guarda a sessão (`PHPSESSID`).
-3. Em SPA sem path JSON (ex. Juice Shop `/#/login`), cai em `POST /rest/user/login`.
+3. Em SPA sem path JSON (ex. `/#/login`), cai em `POST /rest/user/login`.
 4. Se ainda não houver sessão e o Chromium estiver ligado, preenche o form no browser.
 5. Crawla autenticado (links, cliques, XHR) e reaproveita cookies/Bearer nos ataques HTTP.
 

@@ -32,11 +32,15 @@ func (v *IDORValidator) Analyze(ctx context.Context, response types.Response) *F
 	if !isIDORCategory(response.Job.Attack.Category) {
 		return nil
 	}
+
 	if !hasRequestAuth(response.Job.Vector.Headers) {
+		if missingAuthorization(response) {
+			return newFinding(response, "unauthenticated request accessed a privileged resource")
+		}
 		return nil
 	}
 
-	if finding := v.reviewPersistence(ctx, response); finding != nil {
+	if finding := v.massAssignment(ctx, response); finding != nil {
 		return finding
 	}
 	if userDirectoryIDOR(response) {
@@ -51,22 +55,38 @@ func (v *IDORValidator) Analyze(ctx context.Context, response types.Response) *F
 	return nil
 }
 
-func (v *IDORValidator) reviewPersistence(ctx context.Context, response types.Response) *Finding {
-	if !looksLikeReviewRoute(response.Job.Vector.Route) {
-		return nil
+func missingAuthorization(response types.Response) bool {
+	if !successStatus(response.AttackStatus) {
+		return false
 	}
-	if !isOwnerInjectKey(response.Job.ParamKey) {
+	if looksLikeUserDirectory(response.AttackBody) || looksLikeUserDirectory(response.BaselineBody) {
+		return true
+	}
+	return looksLikePrivilegedJSON(response.AttackBody)
+}
+
+func looksLikePrivilegedJSON(body string) bool {
+	lower := strings.ToLower(body)
+	if !strings.Contains(lower, `"email"`) {
+		return false
+	}
+	return strings.Contains(lower, `"role"`) || strings.Contains(lower, `"username"`)
+}
+
+func (v *IDORValidator) massAssignment(ctx context.Context, response types.Response) *Finding {
+	field := strings.TrimSpace(response.Job.ParamKey)
+	if !isOwnerInjectKey(field) {
 		return nil
 	}
 	payload := strings.TrimSpace(response.PayloadUsed)
-	if !strings.Contains(payload, "@") {
+	if payload == "" {
 		return nil
 	}
 	if !successStatus(response.AttackStatus) {
 		return nil
 	}
-	if jsonHasFieldValue(response.AttackBody, "author", payload) {
-		return newFinding(response, "review API accepted a foreign author in the JSON body")
+	if jsonHasFieldValue(response.AttackBody, field, payload) {
+		return newFinding(response, "API accepted a privileged field in the JSON body")
 	}
 	if v == nil || v.get == nil {
 		return nil
@@ -75,15 +95,16 @@ func (v *IDORValidator) reviewPersistence(ctx context.Context, response types.Re
 	if err != nil || !successStatus(status) {
 		return nil
 	}
-	if jsonHasFieldValue(body, "author", payload) {
-		return newFinding(response, "review API persisted a foreign author after JSON body IDOR")
+	if jsonHasFieldValue(body, field, payload) {
+		return newFinding(response, "API persisted a privileged field after JSON body assignment")
 	}
 	return nil
 }
 
 func isOwnerInjectKey(key string) bool {
 	switch strings.ToLower(strings.TrimSpace(key)) {
-	case "author", "userid", "user_id", "user":
+	case "author", "userid", "user_id", "user", "role", "price",
+		"is_admin", "isadmin", "admin", "tenant", "tenant_id", "tenantid":
 		return true
 	default:
 		return false
@@ -164,10 +185,6 @@ func hasRequestAuth(headers map[string]string) bool {
 		}
 	}
 	return false
-}
-
-func looksLikeReviewRoute(route string) bool {
-	return strings.Contains(strings.ToLower(route), "review")
 }
 
 func successStatus(status int) bool {

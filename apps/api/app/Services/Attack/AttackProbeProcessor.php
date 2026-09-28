@@ -14,6 +14,10 @@ class AttackProbeProcessor
 {
     public const EVENT = 'attack.probe';
 
+    public function __construct(
+        private readonly WorkerTargetUrlResolver $targetUrlResolver,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $message
      */
@@ -71,16 +75,22 @@ class AttackProbeProcessor
             throw new InvalidArgumentException('error_message is required when outcome is error.');
         }
 
+        $display = (string) $system->target_url;
+
         return DispatchProbe::create([
             'attack_dispatch_id' => $dispatch->id,
             'system_id' => $system->id,
             'attack_id' => $attack->id,
-            'route' => $payload['route'],
+            'route' => $this->targetUrlResolver->rewritePublicText($payload['route'], $display),
             'payload_used' => $payload['payload_used'],
-            'http_request' => $httpRequest,
+            'http_request' => is_string($httpRequest)
+                ? $this->targetUrlResolver->rewritePublicText($httpRequest, $display)
+                : $httpRequest,
             'outcome' => $outcomeEnum,
-            'evidence' => $payload['evidence'],
-            'error_message' => $errorMessage,
+            'evidence' => $this->targetUrlResolver->rewritePublicText($payload['evidence'], $display),
+            'error_message' => is_string($errorMessage)
+                ? $this->targetUrlResolver->rewritePublicText($errorMessage, $display)
+                : $errorMessage,
         ]);
     }
 }

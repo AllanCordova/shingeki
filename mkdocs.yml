@@ -58,14 +58,14 @@ nav:
   - Shingeki:
     - Início: index.md
     - Como rodar: RUN-PROJECT.md
+    - Deploy para testes: DEPLOY.md
   - Arquitetura:
     - Visão geral: ARCHITECTURE.md
     - API: architecture/shingeki-api.md
     - Client: architecture/shingeki-client.md
     - DAST worker: architecture/shingeki-dast-worker.md
     - SAST worker: architecture/shingeki-sast-worker.md
-    - Lab PHP (treino): architecture/shingeki-vulnerable-target.md
-    - Juice Shop (treino): architecture/shingeki-juice-shop.md
+    - Goldset DAST: architecture/shingeki-dast-goldset.md
   - API:
     - Visão geral: API.md
     - Conta e recursos:

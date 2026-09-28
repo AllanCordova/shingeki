@@ -4,51 +4,56 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"time"
 
 	"github.com/shingeki/dast-worker/internal/goldset"
-	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
 func main() {
-	target := flag.String("target", "http://127.0.0.1:3001", "Juice Shop base URL")
-	domXSS := flag.Bool("dom-xss", false, "also confirm DOM XSS in Chromium (still seconds, needs Chrome)")
-	auth := flag.Bool("auth", false, "authenticated gold set: IDOR basket, admin users, reviews")
-	coverage := flag.Bool("coverage", false, "coverage gold set: open redirect, JWT none, /ftp")
-	email := flag.String("email", goldset.DefaultAdminEmail, "Juice Shop login used with -auth/-coverage")
-	password := flag.String("password", goldset.DefaultAdminPassword, "Juice Shop password used with -auth/-coverage")
-	timeout := flag.Duration("timeout", 45*time.Second, "overall harness timeout")
+	fixture := flag.String("fixture", "", "in-process goldset: secrets | access | inject")
 	flag.Parse()
 
-	if os.Getenv("CHROME_PATH") == "" {
-		if _, err := os.Stat("/usr/bin/google-chrome"); err == nil {
-			_ = os.Setenv("CHROME_PATH", "/usr/bin/google-chrome")
-		} else if _, err := os.Stat("/usr/bin/chromium"); err == nil {
-			_ = os.Setenv("CHROME_PATH", "/usr/bin/chromium")
-		}
+	if *fixture == "" {
+		fmt.Fprintf(os.Stderr, "usage: harness -fixture secrets|access|inject\n")
+		os.Exit(2)
 	}
 
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	targetURL := targeturl.Normalize(*target)
+	var handler http.Handler
+	var evaluate func(ctx context.Context, origin string) (goldset.Report, error)
+	switch *fixture {
+	case "secrets":
+		handler = goldset.ReactLeakHandler()
+		evaluate = goldset.EvaluateReactLeaks
+	case "access":
+		handler = goldset.AccessHandler()
+		evaluate = goldset.EvaluateAccess
+	case "inject":
+		handler = goldset.InjectHandler()
+		evaluate = goldset.EvaluateInject
+	default:
+		fmt.Fprintf(os.Stderr, "unknown fixture %q (secrets|access|inject)\n", *fixture)
+		os.Exit(2)
+	}
 
-	fmt.Fprintf(os.Stderr, "dast harness → %s (dom-xss=%v auth=%v coverage=%v)\n", targetURL, *domXSS, *auth, *coverage)
+	server := httptest.NewServer(handler)
+	defer server.Close()
+	fmt.Fprintf(os.Stderr, "dast harness → fixture %s %s\n", *fixture, server.URL)
 
-	report, err := goldset.Evaluate(context.Background(), targetURL, goldset.Options{
-		Rod:      *domXSS && !*auth && !*coverage,
-		Auth:     *auth && !*coverage,
-		Coverage: *coverage,
-		Email:    *email,
-		Password: *password,
-		Timeout:  *timeout,
-		Logger:   logger,
-	})
+	report, err := evaluate(context.Background(), server.URL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "harness failed: %v\n", err)
 		os.Exit(2)
 	}
+	printReport(report)
+	if len(report.Missing()) > 0 {
+		os.Exit(1)
+	}
+}
 
+func printReport(report goldset.Report) {
 	fmt.Printf("target\t%s\n", report.Target)
 	fmt.Printf("jobs\t%d\n", report.Jobs)
 	fmt.Printf("duration\t%s\n", report.Duration.Round(time.Millisecond))
@@ -58,12 +63,7 @@ func main() {
 	for _, extra := range report.Unexpected {
 		fmt.Printf("EXTRA\t%s\t%s\n", extra.Route, extra.Evidence)
 	}
-	missing := report.Missing()
-	for _, name := range missing {
+	for _, name := range report.Missing() {
 		fmt.Printf("MISS\t%s\n", name)
-	}
-
-	if len(missing) > 0 {
-		os.Exit(1)
 	}
 }

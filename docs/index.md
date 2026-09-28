@@ -17,7 +17,6 @@ Plataforma para detecção automatizada e remediação interativa de vulnerabili
 - **API Laravel** (`apps/api`) — REST com Sanctum; GraphQL (Lighthouse) só na sidebar; dispatch DAST/SAST com aceite, resultados, probes, remediação e PR no GitHub.
 - **Workers** — DAST (Go) e SAST (Semgrep) via RabbitMQ.
 - **Client web** — Next.js com BFF (cookie http-only) e Apollo na navegação.
-- **Lab e Juice Shop** — treino local dos workers; não entram na arquitetura do produto. [Validar os workers](RUN-PROJECT.md#validar-os-workers).
 
 Diagrama e pacotes: [Arquitetura](ARCHITECTURE.md).
 
@@ -30,20 +29,20 @@ A documentação canônica vive em `docs/` (este site). Cada tópico tem **um** 
 | Tópico | Fonte única |
 |--------|-------------|
 | Como subir o monorepo | [RUN-PROJECT.md](RUN-PROJECT.md) |
+| Deploy para testes (sem labs) | [DEPLOY.md](DEPLOY.md) |
 | Visão do monorepo e fluxo DAST | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Desenho de cada pacote | [architecture/](ARCHITECTURE.md) |
 | Índice de rotas HTTP | [API.md](API.md) |
 | Contrato HTTP de um módulo | `docs/api/<módulo>.md` |
 | Papéis (`USER` / `SPECIALIST` / `ADMIN`) | [AUTHENTICATION.md](api/AUTHENTICATION.md) |
 | Aceite de responsabilidade no dispatch | [ATTACK-ACKNOWLEDGMENT.md](api/ATTACK-ACKNOWLEDGMENT.md) |
-| Vetores e credenciais do lab PHP | [shingeki-vulnerable-target.md](architecture/shingeki-vulnerable-target.md) |
-| Gold set Juice Shop (treino DAST) | [shingeki-juice-shop.md](architecture/shingeki-juice-shop.md) |
 | Login do scanner (DAST autenticado) | [TARGET-SESSION.md](api/TARGET-SESSION.md) |
-| Como validar workers com os labs | [RUN-PROJECT.md](RUN-PROJECT.md#validar-os-workers) |
+| Gabarito DAST (fixtures in-process) | [shingeki-dast-goldset.md](architecture/shingeki-dast-goldset.md) |
+| Como validar workers | [RUN-PROJECT.md](RUN-PROJECT.md#validar-os-workers) |
 | Jobs do CI | [ci/overview.md](ci/overview.md) |
 
 O que **não** compete com estes guias:
 
-- READMEs em `apps/`, `workers/` e `labs/` — ponteiros para `docs/`.
+- READMEs em `apps/` e `workers/` — ponteiros para `docs/`.
 - `AGENT/` — regras para o agente de código; não entra no MkDocs.
 - README da raiz — cartão de visita do repositório; aponta para cá.

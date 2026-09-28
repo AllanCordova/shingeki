@@ -2,6 +2,7 @@ package targeturl
 
 import (
 	"net/url"
+	"sort"
 	"strings"
 )
 
@@ -166,6 +167,42 @@ func StripFragment(raw string) string {
 	parsed.Fragment = ""
 	parsed.RawFragment = ""
 	return parsed.String()
+}
+
+func CanonicalSinkRoute(raw string) string {
+	raw = strings.TrimSpace(raw)
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Host == "" {
+		return raw
+	}
+	if parsed.RawQuery != "" {
+		parsed.RawQuery = blankQuery(parsed.Query()).Encode()
+	}
+	if path, query, ok := SplitFragment(parsed.Fragment); ok {
+		encoded := blankQuery(query).Encode()
+		if encoded == "" {
+			parsed.Fragment = path
+		} else {
+			parsed.Fragment = path + "?" + encoded
+		}
+	}
+	return parsed.String()
+}
+
+func blankQuery(values url.Values) url.Values {
+	if len(values) == 0 {
+		return values
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	out := url.Values{}
+	for _, key := range keys {
+		out.Set(key, "")
+	}
+	return out
 }
 
 func LooksLikeHTMLFormLogin(raw string) bool {

@@ -4,20 +4,8 @@ return [
 
     'catalog_admin_email' => env('ATTACKS_CATALOG_ADMIN_EMAIL', 'admin@admin.com'),
 
-    'vulnerable_target_url' => env('VULNERABLE_TARGET_URL', 'http://127.0.0.1:8090'),
-
-    'juice_shop_url' => env('JUICE_SHOP_URL', 'http://127.0.0.1:3001'),
-
-    // URL used in RabbitMQ batches when target_url points at the lab on localhost.
-    'vulnerable_target_worker_url' => env('VULNERABLE_TARGET_WORKER_URL', 'http://vulnerable-target'),
-
-    // Optional rewrite for other localhost targets (e.g. Next.js on :3000).
+    // Rewrite 127.0.0.1 / localhost when the DAST worker runs in Docker.
     'target_localhost_rewrite' => env('ATTACKS_TARGET_LOCALHOST_REWRITE'),
-
-    'vulnerable_target_signature_token' => env(
-        'VULNERABLE_TARGET_SIGNATURE_TOKEN',
-        'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-    ),
 
     'queues' => [
         'dispatch' => env('RABBITMQ_ATTACKS_DISPATCH_QUEUE', 'attacks.dispatch'),
