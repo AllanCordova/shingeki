@@ -49,6 +49,7 @@ services:
       HOSTNAME: 0.0.0.0
       PORT: "3000"
       API_BASE_URL: http://api/api
+      PUBLIC_URL: ${PUBLIC_URL:-http://127.0.0.1}
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       GOOGLE_OAUTH_PUBLIC_PATH: "true"
       PEXELS_API_KEY: ${PEXELS_API_KEY:-}
