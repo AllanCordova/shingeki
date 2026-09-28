@@ -115,6 +115,7 @@ class AttackCatalogSeeder extends Seeder
             ['category' => AttackCategory::Csrf, 'risk' => AttackRiskLevel::Medium],
             ['category' => AttackCategory::Idor, 'risk' => AttackRiskLevel::High],
             ['category' => AttackCategory::SupplyChain, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::SecretLeak, 'risk' => AttackRiskLevel::High],
         ];
     }
 
@@ -166,6 +167,7 @@ class AttackCatalogSeeder extends Seeder
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => $ssti],
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::Form, 'risk' => AttackRiskLevel::High, 'values' => $ssti],
             ['category' => AttackCategory::JwtConfusion, 'location' => AttackTargetLocation::Header, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::jwt()],
+            ['category' => AttackCategory::SecretLeak, 'location' => AttackTargetLocation::ApiEndpoint, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::secretLeak()],
         ];
     }
 }

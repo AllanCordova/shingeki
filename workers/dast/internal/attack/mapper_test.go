@@ -174,6 +174,29 @@ func TestCapJobsRoundRobinKeepsLateVectors(t *testing.T) {
 	}
 }
 
+func TestMapVectorsToJobsSkipsSecretLeak(t *testing.T) {
+	vectors := []contracts.AttackVector{
+		{
+			Route:          "https://example.com/api/config",
+			Method:         "GET",
+			TargetLocation: "API_ENDPOINT",
+		},
+	}
+	attacks := []contracts.AttackItem{
+		{
+			AttackID:       "atk-secret",
+			Category:       "SECRET_LEAK",
+			TargetLocation: "API_ENDPOINT",
+			Payload:        json.RawMessage(`{"value":"passive"}`),
+		},
+	}
+
+	jobs := attack.MapVectorsToJobs(vectors, attacks)
+	if len(jobs) != 0 {
+		t.Fatalf("SECRET_LEAK is passive and must not create inject jobs, got %d", len(jobs))
+	}
+}
+
 func TestCapJobsNoopWhenUnderMax(t *testing.T) {
 	jobs := []types.Job{{
 		Vector: contracts.AttackVector{Route: "http://shop.test/ftp/", Method: "GET", TargetLocation: "URL_PATH"},

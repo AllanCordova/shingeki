@@ -21,7 +21,7 @@ test('attack catalog seeder creates generic dast payloads for every category', f
         ->where('scan_type', AttackScanType::Dast)
         ->get();
 
-    expect($dast)->toHaveCount(28);
+    expect($dast)->toHaveCount(29);
 
     $categories = $dast->pluck('category')->map(fn ($c) => $c->value)->unique()->sort()->values();
     expect($categories->all())->toEqualCanonicalizing([
@@ -38,6 +38,7 @@ test('attack catalog seeder creates generic dast payloads for every category', f
         AttackCategory::OpenRedirect->value,
         AttackCategory::Ssti->value,
         AttackCategory::JwtConfusion->value,
+        AttackCategory::SecretLeak->value,
     ]);
 
     $sqlJson = $dast->first(
@@ -66,6 +67,14 @@ test('attack catalog seeder creates generic dast payloads for every category', f
     expect($jwt)->not->toBeNull()
         ->and($jwt->target_location)->toBe(AttackTargetLocation::Header)
         ->and($jwt->payload['values'])->toContain('none');
+
+    $secret = $dast->first(
+        fn (Attack $attack) => $attack->category === AttackCategory::SecretLeak,
+    );
+
+    expect($secret)->not->toBeNull()
+        ->and($secret->target_location)->toBe(AttackTargetLocation::ApiEndpoint)
+        ->and($secret->payload['values'])->toEqual(AttackCatalogPayloads::secretLeak());
 
     $path = $dast->first(
         fn (Attack $attack) => $attack->category === AttackCategory::PathTraversal
@@ -103,7 +112,7 @@ test('attack catalog seeder creates a sast source-code attack per category', fun
         ->where('scan_type', AttackScanType::Sast)
         ->get();
 
-    expect($sast)->toHaveCount(14);
+    expect($sast)->toHaveCount(15);
 
     $categories = $sast->pluck('category')->map(fn ($c) => $c->value)->unique()->sort()->values();
     expect($categories->all())->toEqualCanonicalizing([
@@ -121,6 +130,7 @@ test('attack catalog seeder creates a sast source-code attack per category', fun
         AttackCategory::Csrf->value,
         AttackCategory::Idor->value,
         AttackCategory::SupplyChain->value,
+        AttackCategory::SecretLeak->value,
     ]);
 
     foreach ($sast as $attack) {

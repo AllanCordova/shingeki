@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack"
@@ -12,6 +13,7 @@ import (
 	"github.com/shingeki/dast-worker/internal/contracts"
 	"github.com/shingeki/dast-worker/internal/discovery"
 	"github.com/shingeki/dast-worker/internal/evidence"
+	"github.com/shingeki/dast-worker/internal/secrets"
 	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
@@ -27,6 +29,7 @@ type Pipeline struct {
 	discovery discovery.Engine
 	attack    attack.Engine
 	evidence  evidence.Validator
+	secrets   secrets.Scanner
 	publisher resultPublisher
 	logger    *slog.Logger
 }
@@ -111,6 +114,13 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	}
 	vectorsDiscovered = len(vectors)
 	p.logger.Info("discovery finished", "vectors", vectorsDiscovered)
+
+	secretFindings, secretProbes, err := p.publishSecretLeaks(ctx, batch, targetURL, vectors)
+	if err != nil {
+		return err
+	}
+	findingsPublished += secretFindings
+	probesPublished += secretProbes
 
 	jobs := p.attack.MapVectorsToJobs(vectors, batch.Attacks)
 	jobs = attack.ApplyAuth(jobs, batch.Auth)
@@ -198,6 +208,76 @@ func (p *Pipeline) publishResult(result contracts.ResultMessage) error {
 		return fmt.Errorf("publish result: %w", err)
 	}
 	return nil
+}
+
+func (p *Pipeline) publishSecretLeaks(
+	ctx context.Context,
+	batch contracts.DispatchBatch,
+	targetURL string,
+	vectors []contracts.AttackVector,
+) (int, int, error) {
+	attackID := secretLeakAttackID(batch.Attacks)
+	if attackID == "" {
+		return 0, 0, nil
+	}
+
+	scanner := p.secrets
+	if scanner == nil {
+		scanner = secrets.NewHTTPScanner()
+	}
+	hits, err := scanner.Scan(ctx, targetURL, vectors, batch.Auth)
+	if err != nil {
+		p.logger.Warn("secret leak scan failed", "error", err)
+		return 0, 0, nil
+	}
+
+	findings := 0
+	for _, hit := range hits {
+		result := contracts.ResultMessage{
+			DispatchID:      batch.DispatchID,
+			AttackID:        attackID,
+			SystemID:        batch.SystemID,
+			VulnerableRoute: hit.Route,
+			PayloadUsed:     hit.Kind,
+			Evidence:        secrets.Evidence(hit),
+			HTTPRequest:     hit.Request,
+		}
+		if pubErr := p.publishResult(result); pubErr != nil {
+			return findings, 0, pubErr
+		}
+		findings++
+	}
+
+	outcome := "clean"
+	evidenceText := "Nenhum token comum vazado nas respostas same-origin."
+	if findings > 0 {
+		outcome = "vulnerable"
+		evidenceText = fmt.Sprintf("%d token(s) leaked in browser-reachable responses", findings)
+	}
+	probe := contracts.ProbeMessage{
+		Event:       contracts.EventAttackProbe,
+		DispatchID:  batch.DispatchID,
+		SystemID:    batch.SystemID,
+		AttackID:    attackID,
+		Route:       strings.TrimRight(targetURL, "/") + "/api/config",
+		PayloadUsed: "passive",
+		HTTPRequest: "GET " + targetURL,
+		Outcome:     outcome,
+		Evidence:    evidenceText,
+	}
+	if pubErr := p.publishProbe(probe); pubErr != nil {
+		return findings, 0, pubErr
+	}
+	return findings, 1, nil
+}
+
+func secretLeakAttackID(attacks []contracts.AttackItem) string {
+	for _, attackItem := range attacks {
+		if strings.EqualFold(strings.TrimSpace(attackItem.Category), "SECRET_LEAK") {
+			return attackItem.AttackID
+		}
+	}
+	return ""
 }
 
 func errorProbe(batch contracts.DispatchBatch, response types.Response) contracts.ProbeMessage {
