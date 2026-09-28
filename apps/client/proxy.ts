@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { publicOrigin } from "@/lib/auth/public-origin";
 import { AUTH_COOKIE } from "@/lib/config";
 
 const PUBLIC_ROUTES = ["/login", "/registro"];
@@ -16,13 +17,13 @@ export function proxy(request: NextRequest) {
   const isPublic = isPublicRoute(pathname);
 
   if (!hasSession && !isPublic) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/login", publicOrigin(request));
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   if (hasSession && PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL("/projetos", request.url));
+    return NextResponse.redirect(new URL("/projetos", publicOrigin(request)));
   }
 
   return NextResponse.next();

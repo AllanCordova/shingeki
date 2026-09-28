@@ -3,13 +3,14 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { AUTH_COOKIE, AUTH_COOKIE_MAX_AGE } from "@/lib/config";
 import type { AuthResponse } from "@/lib/contracts";
+import { authCookieSecure } from "@/lib/auth/cookie-secure";
 
 function cookieOptions() {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     path: "/",
-    secure: process.env.NODE_ENV === "production",
+    secure: authCookieSecure(),
     maxAge: AUTH_COOKIE_MAX_AGE,
   };
 }
