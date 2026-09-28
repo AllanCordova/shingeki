@@ -444,8 +444,8 @@ export function GuidedSetupFlow() {
     const name = values.name?.trim();
     const targetUrl = values.target_url?.trim();
     const repositoryUrl = values.repository_url?.trim();
-    const stackIds = values.stack_ids;
-    if (!name || !targetUrl || !repositoryUrl || !stackIds?.length) return;
+    const stackIds = values.stack_ids ?? [];
+    if (!name || !targetUrl || !repositoryUrl) return;
 
     const createdSystem = await notify.run(
       () =>

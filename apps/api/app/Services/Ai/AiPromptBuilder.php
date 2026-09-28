@@ -54,7 +54,7 @@ Rules:
 - Do not invent files, frameworks, or APIs not implied by the stack and excerpt.
 - suggested_fix.code must replace the ENTIRE vulnerable block from the source excerpt (from start line through end of statement/heredoc), not a single line insertion.
 - Do not leave placeholder comments such as "/* ... */" or duplicate old vulnerable code below the fix.
-- The substituted code must be valid PHP when merged back into the file.
+- The substituted code must be valid {$this->languageHint($stack)} when merged back into the file.
 - Prefer minimal, production-ready fixes aligned with the catalog example when present.
 - Set location.file and location.line from the finding when known.
 
@@ -67,5 +67,14 @@ Source context:
 Catalog examples for this stack:
 {$catalog}
 PROMPT;
+    }
+
+    private function languageHint(Stack $stack): string
+    {
+        return match ($stack->slug) {
+            'vanilla_php', 'laravel', 'symfony', 'codeigniter', 'cakephp', 'wordpress', 'livewire' => 'PHP',
+            Stack::GENERIC_SLUG => 'the language of the source excerpt',
+            default => $stack->name,
+        };
     }
 }

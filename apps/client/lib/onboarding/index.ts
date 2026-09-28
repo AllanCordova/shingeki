@@ -41,7 +41,7 @@ export const GUIDED_SETUP_STEPS: Record<
   },
   system: {
     title: "Cadastrar sistema",
-    description: "Informe URL alvo, stacks e repositório quando aplicável.",
+    description: "Informe URL alvo e repositório. A stack é opcional.",
   },
   target: {
     title: "Login do scanner",

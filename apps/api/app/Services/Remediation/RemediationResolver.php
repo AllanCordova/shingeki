@@ -14,6 +14,10 @@ class RemediationResolver
     /** @var array<string, SupportCollection<int, Remediation>> */
     private array $catalogByStackId = [];
 
+    private ?Stack $genericStack = null;
+
+    private bool $genericResolved = false;
+
     /**
      * @param  Collection<int, Stack>  $stacks
      * @return list<array<string, mixed>>
@@ -21,6 +25,17 @@ class RemediationResolver
     public function resolveForResult(SystemResult $result, Collection $stacks): array
     {
         $result->loadMissing(['attack', 'attackDispatch']);
+
+        if ($stacks->isEmpty()) {
+            $generic = $this->genericStack();
+
+            if ($generic === null) {
+                return [];
+            }
+
+            $stacks = new Collection([$generic]);
+        }
+
         $this->warmCatalog($stacks);
 
         $resolved = [];
@@ -33,6 +48,10 @@ class RemediationResolver
             }
 
             $resolved[] = $this->formatRemediation($remediation, $stack);
+        }
+
+        if ($resolved === []) {
+            $resolved = $this->genericFallback($result, $stacks);
         }
 
         return $resolved;
@@ -124,6 +143,14 @@ class RemediationResolver
             str_ends_with($path, '.php') => 'php',
             str_ends_with($path, '.ts') || str_ends_with($path, '.tsx') => 'typescript',
             str_ends_with($path, '.js') || str_ends_with($path, '.jsx') => 'javascript',
+            str_ends_with($path, '.py') => 'python',
+            str_ends_with($path, '.rb') => 'ruby',
+            str_ends_with($path, '.java') => 'java',
+            str_ends_with($path, '.cs') || str_ends_with($path, '.razor') => 'csharp',
+            str_ends_with($path, '.go') => 'go',
+            str_ends_with($path, '.kt') || str_ends_with($path, '.kts') => 'kotlin',
+            str_ends_with($path, '.ex') || str_ends_with($path, '.exs') => 'elixir',
+            str_ends_with($path, '.vue') || str_ends_with($path, '.svelte') => 'javascript',
             default => null,
         };
     }
@@ -131,6 +158,38 @@ class RemediationResolver
     /**
      * @return array<string, mixed>
      */
+    /**
+     * @param  Collection<int, Stack>  $stacks
+     * @return list<array<string, mixed>>
+     */
+    private function genericFallback(SystemResult $result, Collection $stacks): array
+    {
+        $generic = $this->genericStack();
+
+        if ($generic === null || $stacks->contains(fn (Stack $stack): bool => $stack->id === $generic->id)) {
+            return [];
+        }
+
+        $this->warmCatalog(new Collection([$generic]));
+        $remediation = $this->findRemediation($result, $generic);
+
+        if ($remediation === null) {
+            return [];
+        }
+
+        return [$this->formatRemediation($remediation, $generic)];
+    }
+
+    private function genericStack(): ?Stack
+    {
+        if (! $this->genericResolved) {
+            $this->genericResolved = true;
+            $this->genericStack = Stack::query()->where('slug', Stack::GENERIC_SLUG)->first();
+        }
+
+        return $this->genericStack;
+    }
+
     private function formatRemediation(Remediation $remediation, Stack $stack): array
     {
         return [

@@ -17,6 +17,7 @@ Lista stacks disponíveis para o formulário do sistema (requer `auth:sanctum`).
       "id": "uuid",
       "slug": "laravel",
       "name": "Laravel",
+      "kind": "framework",
       "languages": ["php"]
     }
   ]
@@ -25,9 +26,10 @@ Lista stacks disponíveis para o formulário do sistema (requer `auth:sanctum`).
 
 | Campo | Descrição |
 |-------|-----------|
-| `slug` | Identificador estável (`laravel`, `vanilla_php`, …) |
+| `slug` | Identificador estável (`laravel`, `vanilla_php`, `generic`, …) |
 | `name` | Nome exibido no client |
-| `languages` | Idiomas suportados pela stack (usado no fallback SAST da remediação) |
+| `kind` | `language`, `framework` ou `generic` |
+| `languages` | Idiomas suportados pela stack (usado no fallback SAST da remediação). Vazio na stack genérica, que vale para qualquer arquivo |
 
 ## Associação ao sistema
 
@@ -40,37 +42,31 @@ Um sistema pode ter **várias** stacks via pivot `system_stack`:
 
 Na API:
 
-- **Create:** `stack_ids` obrigatório (array de UUIDs, mínimo 1)
-- **Update:** `stack_ids` opcional (substitui a lista com `sync()`)
-- **Resposta:** cada sistema inclui `stacks[]` com `id`, `slug`, `name`, `languages`
+- **Create:** `stack_ids` opcional (array de UUIDs; pode ser omitido ou vazio)
+- **Update:** `stack_ids` opcional (substitui a lista com `sync()`, inclusive lista vazia)
+- **Resposta:** cada sistema inclui `stacks[]` com `id`, `slug`, `name`, `kind`, `languages`, `is_primary`
 
-Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID.
+Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID. Para limpar a seleção, envie `stack_ids` vazio.
+
+A stack `generic` não entra no formulário do sistema. Ela guarda as remediações curingas usadas quando o sistema não tem stack, ou quando a stack escolhida não tem snippet para aquela vulnerabilidade.
 
 ## Modelo `stacks`
 
 | Coluna | Exemplo |
 |--------|---------|
-| `slug` | `laravel`, `vanilla_php`, `express` |
-| `name` | Laravel, PHP |
-| `languages` | `["php"]`, `["typescript", "javascript"]` |
+| `slug` | `laravel`, `vanilla_php`, `express`, `generic` |
+| `name` | Laravel, PHP, Genérica |
+| `kind` | `language`, `framework`, `generic` |
+| `languages` | `["php"]`, `["typescript", "javascript"]`, `[]` |
 
 ## Seed inicial
 
-`StackCatalogSeeder` cria:
+`StackCatalogSeeder` é a fonte da lista. Além de `generic`, o catálogo cobre linguagens web (PHP, JavaScript, TypeScript, Python, Ruby, Java, C#, Go, Kotlin, Elixir) e frameworks (Laravel, Symfony, CodeIgniter, CakePHP, WordPress, Livewire, Express, NestJS, Fastify, Hono, React, Next.js, Angular, Vue, Nuxt, Svelte, SvelteKit, Remix, Astro, htmx, Django, Flask, FastAPI, Ruby on Rails, Spring Boot, Ktor, ASP.NET, Blazor, Gin, Phoenix).
 
-| `slug` | Nome | `languages` |
-|--------|------|---------------|
-| `laravel` | Laravel | `php` |
-| `vanilla_php` | PHP | `php` |
-| `express` | Express | `javascript` |
-| `react` | React | `typescript`, `javascript` |
-| `angular` | Angular | `typescript`, `javascript` |
-| `nextjs` | Next.js | `typescript`, `javascript` |
-
-O alvo de laboratório (**Vulnerable PHP Target**) é associado somente à stack `vanilla_php` pelo `VulnerableTargetSeeder`. O alvo de treino (**OWASP Juice Shop**) usa `express` + `angular` (`JuiceShopSeeder`) — [shingeki-juice-shop.md](../architecture/shingeki-juice-shop.md).
+O seed associa stacks aos sistemas demo (`DemoProjectsSeeder`). O treino DAST não usa alvos Docker; o gabarito é [goldset](../architecture/shingeki-dast-goldset.md).
 
 ## Uso na remediação
 
-O endpoint `POST .../remediate` exige pelo menos uma stack no sistema. Para cada achado, o `RemediationResolver` busca snippets no catálogo `remediations` filtrando por `stack_id` das stacks do sistema.
+O endpoint `POST .../remediate` não exige stack. Sem stacks, o `RemediationResolver` usa a stack `generic`. Com stacks, busca o snippet da stack escolhida e, se não houver match, cai na remediação genérica da mesma categoria.
 
 Detalhes do fluxo e do lookup: [REMEDIATION.md](REMEDIATION.md).

@@ -22,6 +22,7 @@ class SystemCreate extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->prepareScannerLogin();
+        $this->normalizeStackIds();
     }
 
     /**
@@ -36,8 +37,17 @@ class SystemCreate extends FormRequest
             'target_url' => $this->browserTargetUrlRules(),
             'login_url' => $this->browserLoginUrlRules(),
             'repository_url' => ['required', 'url', 'max:2048'],
-            'stack_ids' => ['required', 'array', 'min:1'],
+            'stack_ids' => ['sometimes', 'array'],
             'stack_ids.*' => ['uuid', 'exists:stacks,id'],
         ];
+    }
+
+    private function normalizeStackIds(): void
+    {
+        if (! $this->exists('stack_ids') || is_array($this->input('stack_ids'))) {
+            return;
+        }
+
+        $this->merge(['stack_ids' => []]);
     }
 }

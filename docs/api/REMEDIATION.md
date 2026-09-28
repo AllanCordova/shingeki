@@ -17,7 +17,7 @@ Gera snippets de correção para os achados de um disparo concluído.
 **Fluxo:**
 
 1. Autoriza acesso (`remediate` na policy do sistema).
-2. Exige pelo menos uma stack em `system_stack` (ver [STACKS.md](STACKS.md)).
+2. Usa as stacks do sistema. Se não houver nenhuma, usa a stack genérica (ver [STACKS.md](STACKS.md)).
 3. Resolve o disparo (informado ou último concluído).
 4. Carrega `SystemResult` desse disparo.
 5. Para cada achado, `RemediationResolver` busca snippets em `remediations` × stacks do sistema.
@@ -68,7 +68,6 @@ Gera snippets de correção para os achados de um disparo concluído.
 | Status | Situação |
 |--------|----------|
 | `403` | Sem permissão |
-| `422` | Sistema sem stacks configuradas |
 | `422` | Nenhum disparo concluído disponível |
 | `422` | Nenhum achado para o disparo selecionado |
 
@@ -88,10 +87,11 @@ O catálogo associa cada snippet a uma `stack_id`, critérios de match e `user_i
 **Prioridade de match:**
 
 1. **SAST:** `semgrep_rule_id` + `stack_id`
-2. **SAST (fallback):** `attack_category` + `stack_id` + linguagem inferido da extensão do arquivo
+2. **SAST (fallback):** `attack_category` + `stack_id` + linguagem inferida da extensão do arquivo
 3. **DAST:** `attack.category` + `stack_id`
+4. **Curinga:** se nenhuma stack do sistema casar, usa a entrada `generic` da mesma categoria
 
-Um achado pode retornar múltiplos snippets (um por stack do sistema que tiver entrada no catálogo).
+Um achado pode retornar múltiplos snippets (um por stack do sistema que tiver entrada no catálogo). Sem stack, volta só o curinga.
 
 Catálogo populado por `RemediationCatalogSeeder` (ex.: `PATH_TRAVERSAL` + `vanilla_php` para o alvo de laboratório).
 
@@ -111,7 +111,7 @@ Gera sugestões de correção via LLM (Gemini ou Groq) com contexto de código e
 
 **Pré-requisitos:**
 
-- Pelo menos uma stack no sistema.
+- Stack opcional. Sem stack, o prompt cai em `default.md` e o catálogo genérico.
 - Disparo concluído com achados.
 - Variável de ambiente `GEMINI_API_KEY` ou `GROQ_API_KEY` (ver `config/ai.php` e `.env.example`).
 
@@ -209,6 +209,7 @@ Abre um pull request no GitHub com correções geradas pela IA para achados **SA
 
 **Pré-requisitos:**
 
+- Pelo menos uma stack no sistema (o patch precisa da linguagem; sem stack, use as sugestões genéricas)
 - `repository_url` do sistema apontando para GitHub
 - `GITHUB_TOKEN` com escopo `repo` (ou permissões de conteúdo + PR no repositório)
 - `GEMINI_API_KEY` ou `GROQ_API_KEY` (mesmo fluxo de `remediate/ai`)
@@ -253,8 +254,8 @@ Abre um pull request no GitHub com correções geradas pela IA para achados **SA
 | Variável | Descrição |
 |----------|-----------|
 | `GITHUB_TOKEN` | Personal access token ou token de GitHub App |
-| `GITHUB_DEFAULT_BRANCH` | Branch base para PR (padrão `main`; repo [AllanCordova/vulnerable-target](https://github.com/AllanCordova/vulnerable-target) usa `master`) |
-| `GITHUB_REPOSITORY_SOURCE_PREFIX` | Prefixo no repo GitHub quando o SAST escaneia só a subpasta (ex.: `labs/vulnerable-target`) |
+| `GITHUB_DEFAULT_BRANCH` | Branch base para PR (padrão `main`) |
+| `GITHUB_REPOSITORY_SOURCE_PREFIX` | Prefixo no repo GitHub quando o SAST escaneia só a subpasta (ex.: `apps/web`) |
 | `GITHUB_REMEDIATION_BRANCH_PREFIX` | Prefixo da branch (padrão `fix-security`) |
 
 ## Historico do sistema
@@ -284,7 +285,7 @@ Timeline unificada de eventos do sistema (ataques, remediacoes e PRs do fluxo Sh
 
 ## Client web
 
-No formulario do sistema, selecione as stacks. Na pagina do sistema ou do disparo:
+No formulario do sistema, a stack é opcional. Sem ela, as correções do catálogo são genéricas. Na pagina do sistema ou do disparo:
 
 - **Gerar correcoes** — catalogo sincrono (`POST .../remediate`).
 - **Sugerir com IA** — LLM com toggle entre visoes *Shingeki remediacoes* e *IA*.

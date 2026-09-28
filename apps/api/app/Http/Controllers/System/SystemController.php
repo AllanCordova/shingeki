@@ -41,7 +41,7 @@ class SystemController extends Controller
             ),
         ]);
 
-        $system->stacks()->sync($this->stackSyncPayload($request->validated('stack_ids')));
+        $system->stacks()->sync($this->stackSyncPayload($request->validated('stack_ids') ?? []));
         $system->load('stacks');
 
         return response()->json([
@@ -102,8 +102,8 @@ class SystemController extends Controller
             $system->update($data);
         }
 
-        if ($request->has('stack_ids')) {
-            $system->stacks()->sync($this->stackSyncPayload($request->validated('stack_ids')));
+        if ($request->exists('stack_ids')) {
+            $system->stacks()->sync($this->stackSyncPayload($request->validated('stack_ids') ?? []));
         }
 
         $system->load('stacks');
@@ -166,6 +166,8 @@ class SystemController extends Controller
                         'id' => $stack->id,
                         'slug' => $stack->slug,
                         'name' => $stack->name,
+                        'kind' => $stack->kind?->value,
+                        'languages' => $stack->languages ?? [],
                         'is_primary' => (bool) $stack->pivot->is_primary,
                     ])
                     ->values()
