@@ -147,4 +147,6 @@ Callback do Google Cloud. Troca o `code`, exige `id_token`, verifica o JWT, upse
 
 **Resposta `200`:** mesmo formato de login (`user` + `token`).
 
-Configuração: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` (ex.: `http://127.0.0.1:8000/api/auth/google/callback`). `FRONTEND_URL` + origens allowlisted para o retorno (`localhost` / `127.0.0.1`). Usuários só-Google podem ter `password` nulo; login email/senha exige senha.
+Configuração: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`. Em desenvolvimento o redirect aponta para a API (`http://127.0.0.1:8000/api/auth/google/callback`). No deploy, o browser e a API compartilham o host público: o valor cadastrado no Google Cloud é `{PUBLIC_URL}/oauth/google/callback`, e o Caddy encaminha `/oauth/google/*` para a API. `FRONTEND_URL` e as origens allowlisted definem para onde o callback volta (`localhost` e `127.0.0.1` no dev; `PUBLIC_URL` em produção).
+
+O nonce do BFF fica no cookie `shingeki_google_login_nonce`. A API grava o dela em `shingeki_google_api_nonce`. No host único do deploy, o mesmo nome faria a API apagar o nonce do BFF ao voltar do Google. Usuários só-Google podem ter `password` nulo; login email/senha exige senha. Deploy: [DEPLOY.md](../DEPLOY.md).

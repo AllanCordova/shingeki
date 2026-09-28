@@ -44,7 +44,7 @@ components/
 
 - Token Sanctum em cookie **http-only** (`app/api/auth/*`).
 - O browser não lê o token; cookies vão nas chamadas ao BFF.
-- Google: BFF `/api/auth/google*` + OIDC na API (ID Token + nonce anti CSRF). Contrato: [AUTHENTICATION.md](../api/AUTHENTICATION.md).
+- Google: BFF `/api/auth/google*` + OIDC na API (ID Token + nonce anti CSRF). No deploy, o retorno do Google entra por `/oauth/google/*` (Caddy → API) e volta ao BFF. Contrato: [AUTHENTICATION.md](../api/AUTHENTICATION.md).
 
 ## Estado e dados
 

@@ -93,7 +93,7 @@ O catálogo associa cada snippet a uma `stack_id`, critérios de match e `user_i
 
 Um achado pode retornar múltiplos snippets (um por stack do sistema que tiver entrada no catálogo). Sem stack, volta só o curinga.
 
-Catálogo populado por `RemediationCatalogSeeder` (ex.: `PATH_TRAVERSAL` + `vanilla_php` para o alvo de laboratório).
+Catálogo populado por `RemediationCatalogSeeder`: cada categoria de ataque tem uma remediação na stack `generic`, e as stacks concretas trazem snippets da linguagem.
 
 ## POST .../remediate/ai
 

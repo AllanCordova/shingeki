@@ -61,13 +61,12 @@ Scripts da raiz (`package.json`): `dev` (API + client), `dev:api`, `dev:client`.
 | Consumers (`attacks:consume-results`, `catalog:consume-imports`) | Docker (`api-consumers`) |
 | MySQL + RabbitMQ | Docker |
 | Workers DAST/SAST | Docker, profile `stack` — opcional, só para disparar scans |
-| Labs de treino | Docker, profile `labs` — opcional, só para validar workers |
 
 **Sem Docker para consumers** (tudo no host): use `composer dev:with-consumers` em `apps/api` no lugar do `dev:api` do `npm run dev`.
 
 ### Workers DAST/SAST (ataques na UI)
 
-Os workers **não** dependem dos labs. Eles atacam o `target_url` do sistema cadastrado.
+Os workers atacam o `target_url` do sistema cadastrado. Treino de evidência, sem alvo Docker: [goldset](architecture/shingeki-dast-goldset.md).
 
 ```bash
 docker compose --profile stack up -d --build
@@ -127,7 +126,7 @@ Não copie estes blocos para outros guias — só os nomes das variáveis e o li
 
 ## Deploy para outras pessoas testarem
 
-Client, API e workers, sem os labs: [DEPLOY.md](DEPLOY.md).
+Client, API e workers para outras pessoas testarem: [DEPLOY.md](DEPLOY.md).
 
 ## Referência
 

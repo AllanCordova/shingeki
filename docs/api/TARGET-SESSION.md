@@ -48,5 +48,3 @@ O worker:
 5. Crawla autenticado (links, cliques, XHR) e reaproveita cookies/Bearer nos ataques HTTP.
 
 Se JSON e form falharem, o job termina como `failed`. O client mostra: "O scanner não conseguiu entrar no alvo…".
-
-Labs de treino (credenciais do seed): [Validar os workers](../RUN-PROJECT.md#validar-os-workers).
