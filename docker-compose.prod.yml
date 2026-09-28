@@ -1,0 +1,249 @@
+# Production stack: client, API (web + queue consumers), DAST and SAST workers.
+# Labs stay out of this file. Do not publish MySQL or RabbitMQ.
+#
+#   cp .env.production.example .env.production
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# Home machine, stable hostname (home IP may change; the name does not):
+#   docker compose --env-file .env.production -f docker-compose.prod.yml --profile share up -d --build
+
+name: shingeki-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: shingeki-prod-caddy
+    restart: unless-stopped
+    ports:
+      - "${HTTP_BIND:-127.0.0.1:80}:80"
+      - "${HTTPS_BIND:-127.0.0.1:443}:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro,Z
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      client:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  client:
+    build:
+      context: ./apps/client
+      dockerfile: Dockerfile
+    container_name: shingeki-prod-client
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: "3000"
+      API_BASE_URL: http://api/api
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      GOOGLE_OAUTH_PUBLIC_PATH: "true"
+      PEXELS_API_KEY: ${PEXELS_API_KEY:-}
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.status<500?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: shingeki-prod-api
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: ${PUBLIC_URL:-http://127.0.0.1}
+      FRONTEND_URL: ${PUBLIC_URL:-http://127.0.0.1}
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE}
+      DB_USERNAME: ${DB_USERNAME:-root}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_DRIVER: database
+      CACHE_STORE: database
+      QUEUE_CONNECTION: rabbitmq
+      MAIL_MAILER: log
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RUN_DB_SEED: ${RUN_DB_SEED:-true}
+    volumes:
+      - api_storage:/var/www/html/storage
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "php -r 'exit(@fsockopen(\"127.0.0.1\", 80) ? 0 : 1);'",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 120s
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  mysql:
+    image: mysql:8.4
+    container_name: shingeki-prod-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_DATABASE: ${DB_DATABASE}
+    command:
+      - --innodb-buffer-pool-size=256M
+      - --performance-schema=OFF
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h 127.0.0.1 -uroot $${MYSQL_ROOT_PASSWORD:+-p$$MYSQL_ROOT_PASSWORD} || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 40s
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  rabbitmq:
+    image: rabbitmq:3-alpine
+    container_name: shingeki-prod-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "rabbitmqctl await_startup && rabbitmq-diagnostics -q check_port_connectivity",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 8
+      start_period: 40s
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  sast-worker:
+    build:
+      context: ./workers/sast
+      dockerfile: deployments/Dockerfile
+    container_name: shingeki-prod-sast-worker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_ATTACKS_DISPATCH_QUEUE: attacks.sast.dispatch
+      RABBITMQ_ATTACKS_RESULTS_QUEUE: attacks.results
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  dast-worker: &dast-worker
+    build:
+      context: ./workers/dast
+      dockerfile: deployments/Dockerfile
+    image: shingeki-prod-dast-worker
+    container_name: shingeki-prod-dast-worker-1
+    restart: unless-stopped
+    init: true
+    shm_size: "512mb"
+    mem_limit: 1536m
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: ${RABBITMQ_USER}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RABBITMQ_ATTACKS_DISPATCH_QUEUE: attacks.dispatch
+      RABBITMQ_ATTACKS_RESULTS_QUEUE: attacks.results
+      DISCOVERY_ROD_ENABLED: "true"
+      CHROME_PATH: /usr/bin/chromium
+      DISCOVERY_ROD_NO_SANDBOX: "true"
+      DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
+      ATTACK_REQUEST_TIMEOUT: 30s
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - shingeki
+    logging: *default-logging
+
+  dast-worker-2:
+    <<: *dast-worker
+    container_name: shingeki-prod-dast-worker-2
+
+  cloudflared:
+    profiles: ["share"]
+    image: cloudflare/cloudflared:latest
+    container_name: shingeki-prod-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - caddy
+    networks:
+      - shingeki
+    logging: *default-logging
+
+networks:
+  shingeki:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  api_storage:
+  caddy_data:
+  caddy_config:

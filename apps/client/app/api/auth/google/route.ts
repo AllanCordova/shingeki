@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { authCookieSecure } from "@/lib/auth/cookie-secure";
 import { safeAppPath } from "@/lib/auth/safe-redirect";
 import {
   API_BASE_URL,
@@ -14,14 +15,19 @@ export async function GET(request: Request) {
     crypto.randomUUID().replaceAll("-", "") +
     crypto.randomUUID().replaceAll("-", "");
 
-  const target = new URL(`${API_BASE_URL}/auth/google/redirect`);
+  // Local dev talks to the API on :8000. Production uses one public host:
+  // Caddy sends /oauth/google/* to Laravel so it does not collide with the BFF.
+  const target =
+    process.env.GOOGLE_OAUTH_PUBLIC_PATH === "true"
+      ? new URL("/oauth/google/redirect", url.origin)
+      : new URL(`${API_BASE_URL}/auth/google/redirect`);
   target.searchParams.set("origin", url.origin);
   target.searchParams.set("nonce", nonce);
 
   const response = NextResponse.redirect(target.toString());
   const cookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: authCookieSecure(),
     sameSite: "lax" as const,
     path: "/",
     maxAge: GOOGLE_REDIRECT_COOKIE_MAX_AGE,

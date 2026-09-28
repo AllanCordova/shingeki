@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: appRoot,
   },
+  output: "standalone",
   outputFileTracingRoot: appRoot,
   // Allow both localhost and 127.0.0.1 in dev (HMR / client hydration).
   allowedDevOrigins: ["127.0.0.1", "localhost"],
