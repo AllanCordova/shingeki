@@ -3,7 +3,9 @@
 use App\Enums\User\UserRole;
 use App\Models\User\User;
 use App\Services\Auth\GoogleAuthService;
+use App\Socialite\GoogleOidcProvider;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
 describe('GoogleAuthService', function () {
@@ -91,6 +93,30 @@ describe('GoogleAuthService', function () {
 
         $service->consumeHandoff($handoff['code'], 'wrong-nonce-value-here!!!!!!');
     })->throws(RuntimeException::class, 'Invalid Google login nonce.');
+});
+
+describe('GET /api/auth/google/redirect', function () {
+    test('stores the api nonce without using the bff cookie name', function () {
+        $driver = Mockery::mock(GoogleOidcProvider::class);
+        $driver->shouldReceive('stateless')->once()->andReturnSelf();
+        $driver->shouldReceive('redirect')->once()->andReturn(
+            redirect()->away('https://accounts.google.com/o/oauth2/v2/auth'),
+        );
+
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturn($driver);
+
+        $response = $this->get('/api/auth/google/redirect?'.http_build_query([
+            'origin' => 'http://127.0.0.1:3000',
+            'nonce' => str_repeat('a', 64),
+        ]));
+
+        $response->assertRedirect('https://accounts.google.com/o/oauth2/v2/auth');
+
+        $names = collect($response->headers->getCookies())->map->getName()->all();
+
+        expect($names)->toContain('shingeki_google_api_nonce')
+            ->and($names)->not->toContain('shingeki_google_login_nonce');
+    });
 });
 
 describe('POST /api/auth/google/exchange', function () {
