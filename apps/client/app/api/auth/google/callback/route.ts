@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { forwardToApi } from "@/lib/api/server";
+import { publicOrigin } from "@/lib/auth/public-origin";
 import { attachAuthCookie } from "@/lib/auth/session-cookie";
 import { safeAppPath } from "@/lib/auth/safe-redirect";
 import {
@@ -12,7 +13,7 @@ import type { AuthResponse } from "@/lib/contracts";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
-  const origin = url.origin;
+  const origin = publicOrigin(request);
   const jar = await cookies();
   const redirectParam = jar.get(GOOGLE_REDIRECT_COOKIE)?.value;
   const nonce = jar.get(GOOGLE_LOGIN_NONCE_COOKIE)?.value;
