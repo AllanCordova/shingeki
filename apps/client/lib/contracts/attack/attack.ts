@@ -28,6 +28,8 @@ export type AttackCategory =
   | "SQL_INJECTION"
   | "XSS"
   | "PATH_TRAVERSAL"
+  | "SUPPLY_CHAIN"
+  | "SECRET_LEAK"
   | string;
 
 export type AttackRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | string;

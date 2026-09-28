@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack"
@@ -12,6 +13,8 @@ import (
 	"github.com/shingeki/dast-worker/internal/contracts"
 	"github.com/shingeki/dast-worker/internal/discovery"
 	"github.com/shingeki/dast-worker/internal/evidence"
+	"github.com/shingeki/dast-worker/internal/secrets"
+	"github.com/shingeki/dast-worker/pkg/httputil"
 	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
@@ -27,8 +30,10 @@ type Pipeline struct {
 	discovery discovery.Engine
 	attack    attack.Engine
 	evidence  evidence.Validator
+	secrets   secrets.Scanner
 	publisher resultPublisher
 	logger    *slog.Logger
+	ping      func(ctx context.Context, rawURL string) error
 }
 
 func NewPipeline(
@@ -47,6 +52,7 @@ func NewPipeline(
 		evidence:  evidenceEngine,
 		publisher: publisher,
 		logger:    logger,
+		ping:      httputil.CheckReachable,
 	}
 }
 
@@ -60,6 +66,7 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	probesPublished := 0
 	vectorsDiscovered := 0
 	jobsPlanned := 0
+	publishedFindings := map[string]struct{}{}
 
 	defer func() {
 		status := contracts.CompletionStatusCompleted
@@ -103,6 +110,11 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	if targetURL != batch.TargetURL {
 		p.logger.Info("normalized target url for worker reachability", "from", batch.TargetURL, "to", targetURL)
 	}
+	if p.ping != nil {
+		if err = p.ping(ctx, targetURL); err != nil {
+			return err
+		}
+	}
 
 	var vectors []contracts.AttackVector
 	vectors, err = p.discovery.Discover(ctx, targetURL, batch.Auth, discovery.OptionsFromBatch(batch))
@@ -111,6 +123,13 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	}
 	vectorsDiscovered = len(vectors)
 	p.logger.Info("discovery finished", "vectors", vectorsDiscovered)
+
+	secretFindings, secretProbes, err := p.publishSecretLeaks(ctx, batch, targetURL, vectors)
+	if err != nil {
+		return err
+	}
+	findingsPublished += secretFindings
+	probesPublished += secretProbes
 
 	jobs := p.attack.MapVectorsToJobs(vectors, batch.Attacks)
 	jobs = attack.ApplyAuth(jobs, batch.Auth)
@@ -147,12 +166,17 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 		if finding != nil {
 			outcome = "vulnerable"
 			evidenceText = finding.Evidence
+			finding.VulnerableRoute = targeturl.CanonicalSinkRoute(finding.VulnerableRoute)
 
-			result := finding.ToResultMessage(batch.DispatchID, batch.SystemID)
-			if err = p.publishResult(result); err != nil {
-				return err
+			key := findingIdentity(finding.AttackID, finding.VulnerableRoute)
+			if _, exists := publishedFindings[key]; !exists {
+				result := finding.ToResultMessage(batch.DispatchID, batch.SystemID)
+				if err = p.publishResult(result); err != nil {
+					return err
+				}
+				publishedFindings[key] = struct{}{}
+				findingsPublished++
 			}
-			findingsPublished++
 		}
 
 		probe := contracts.ProbeMessage{
@@ -198,6 +222,101 @@ func (p *Pipeline) publishResult(result contracts.ResultMessage) error {
 		return fmt.Errorf("publish result: %w", err)
 	}
 	return nil
+}
+
+func (p *Pipeline) publishSecretLeaks(
+	ctx context.Context,
+	batch contracts.DispatchBatch,
+	targetURL string,
+	vectors []contracts.AttackVector,
+) (int, int, error) {
+	attackID := secretLeakAttackID(batch.Attacks)
+	if attackID == "" {
+		return 0, 0, nil
+	}
+
+	scanner := p.secrets
+	if scanner == nil {
+		scanner = secrets.NewHTTPScanner()
+	}
+	hits, err := scanner.Scan(ctx, targetURL, vectors, batch.Auth)
+	if err != nil {
+		p.logger.Warn("secret leak scan failed", "error", err)
+		probe := contracts.ProbeMessage{
+			Event:        contracts.EventAttackProbe,
+			DispatchID:   batch.DispatchID,
+			SystemID:     batch.SystemID,
+			AttackID:     attackID,
+			Route:        strings.TrimRight(targetURL, "/") + "/api/config",
+			PayloadUsed:  "passive",
+			HTTPRequest:  "GET " + targetURL,
+			Outcome:      "error",
+			Evidence:     "Falha ao executar teste",
+			ErrorMessage: err.Error(),
+		}
+		if pubErr := p.publishProbe(probe); pubErr != nil {
+			return 0, 0, pubErr
+		}
+		return 0, 1, nil
+	}
+
+	findings := 0
+	seenToken := map[string]struct{}{}
+	for _, hit := range hits {
+		tokenKey := hit.Kind + "\x00" + hit.Value
+		if _, exists := seenToken[tokenKey]; exists {
+			continue
+		}
+		seenToken[tokenKey] = struct{}{}
+		result := contracts.ResultMessage{
+			DispatchID:      batch.DispatchID,
+			AttackID:        attackID,
+			SystemID:        batch.SystemID,
+			VulnerableRoute: hit.Route,
+			PayloadUsed:     hit.Kind,
+			Evidence:        secrets.Evidence(hit),
+			HTTPRequest:     hit.Request,
+		}
+		if pubErr := p.publishResult(result); pubErr != nil {
+			return findings, 0, pubErr
+		}
+		findings++
+	}
+
+	outcome := "clean"
+	evidenceText := "Nenhum token comum vazado nas respostas same-origin."
+	if findings > 0 {
+		outcome = "vulnerable"
+		evidenceText = fmt.Sprintf("%d token(s) leaked in browser-reachable responses", findings)
+	}
+	probe := contracts.ProbeMessage{
+		Event:       contracts.EventAttackProbe,
+		DispatchID:  batch.DispatchID,
+		SystemID:    batch.SystemID,
+		AttackID:    attackID,
+		Route:       strings.TrimRight(targetURL, "/") + "/api/config",
+		PayloadUsed: "passive",
+		HTTPRequest: "GET " + targetURL,
+		Outcome:     outcome,
+		Evidence:    evidenceText,
+	}
+	if pubErr := p.publishProbe(probe); pubErr != nil {
+		return findings, 0, pubErr
+	}
+	return findings, 1, nil
+}
+
+func secretLeakAttackID(attacks []contracts.AttackItem) string {
+	for _, attackItem := range attacks {
+		if strings.EqualFold(strings.TrimSpace(attackItem.Category), "SECRET_LEAK") {
+			return attackItem.AttackID
+		}
+	}
+	return ""
+}
+
+func findingIdentity(attackID, route string) string {
+	return attackID + "\x00" + targeturl.CanonicalSinkRoute(route)
 }
 
 func errorProbe(batch contracts.DispatchBatch, response types.Response) contracts.ProbeMessage {

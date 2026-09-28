@@ -28,6 +28,20 @@ func TestSplitFragment(t *testing.T) {
 	}
 }
 
+func TestCanonicalSinkRouteBlanksQueryValues(t *testing.T) {
+	got := targeturl.CanonicalSinkRoute("http://127.0.0.1:3010/preview?q=hoje")
+	if got != "http://127.0.0.1:3010/preview?q=" {
+		t.Fatalf("got %q", got)
+	}
+	hash := targeturl.CanonicalSinkRoute("http://shop.test/#/search?q=apple")
+	if hash != "http://shop.test/#/search?q=" {
+		t.Fatalf("hash got %q", hash)
+	}
+	if same := targeturl.CanonicalSinkRoute("http://127.0.0.1:3010/preview?q="); same != got {
+		t.Fatalf("expected identical sinks, got %q vs %q", same, got)
+	}
+}
+
 func TestUsesFragmentQuery(t *testing.T) {
 	parsed, err := url.Parse("http://shop.test/#/search?q=")
 	if err != nil {
@@ -71,6 +85,35 @@ func TestJSONLoginURL(t *testing.T) {
 	got := targeturl.JSONLoginURL("http://shop.test/#/")
 	if got != "http://shop.test/rest/user/login" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestCredentialJSONLoginURL(t *testing.T) {
+	shop := targeturl.CredentialJSONLoginURL("http://shop.test/#/", "http://shop.test/#/login")
+	if shop != "http://shop.test/rest/user/login" {
+		t.Fatalf("juice shop=%q", shop)
+	}
+	api := targeturl.CredentialJSONLoginURL("https://app.example/", "https://app.example/api/v1/auth/login")
+	if api != "https://app.example/api/v1/auth/login" {
+		t.Fatalf("api=%q", api)
+	}
+	php := targeturl.CredentialJSONLoginURL("http://lab.test/", "http://lab.test/login.php")
+	if php != "" {
+		t.Fatalf("php lab must skip json login, got %q", php)
+	}
+	fallback := targeturl.CredentialJSONLoginURL("http://shop.test/", "")
+	if fallback != "http://shop.test/rest/user/login" {
+		t.Fatalf("empty login_url=%q", fallback)
+	}
+}
+
+func TestHTMLFormLoginURL(t *testing.T) {
+	got := targeturl.HTMLFormLoginURL("http://lab.test/", "http://lab.test/login.php")
+	if got != "http://lab.test/login.php" {
+		t.Fatalf("got %q", got)
+	}
+	if targeturl.HTMLFormLoginURL("http://shop.test/", "http://shop.test/#/login") != "" {
+		t.Fatal("hash login is not an HTML form")
 	}
 }
 

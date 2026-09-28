@@ -7,10 +7,14 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-	"unicode"
 
 	"github.com/shingeki/sast-worker/internal/config"
 )
+
+var securityPacks = []string{
+	"p/default",
+	"p/owasp-top-ten",
+}
 
 type Finding struct {
 	CheckID string
@@ -33,21 +37,19 @@ func (s *SemgrepScanner) Scan(ctx context.Context, repoDir string, languages []s
 	scanCtx, cancel := context.WithTimeout(ctx, s.cfg.ScanTimeout)
 	defer cancel()
 
+	configs := s.scanConfigs(repoDir, languages)
+	if len(configs) == 0 {
+		return nil, fmt.Errorf("semgrep scan: no valid rule packs")
+	}
+
 	args := []string{
 		"scan",
 		"--json",
 		"--quiet",
 		"--metrics=off",
 	}
-	for _, lang := range s.languagesToScan(languages) {
-		cfg, ok := langConfig(lang)
-		if !ok {
-			continue
-		}
+	for _, cfg := range configs {
 		args = append(args, "--config", cfg)
-	}
-	if !hasLangConfig(args) {
-		return nil, fmt.Errorf("semgrep scan: no valid languages")
 	}
 	args = append(args, repoDir)
 
@@ -56,14 +58,54 @@ func (s *SemgrepScanner) Scan(ctx context.Context, repoDir string, languages []s
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
+
+	findings, report, parseErr := parseSemgrepReport(stdout.Bytes())
+	if fatal := fatalConfigErrors(report); len(fatal) > 0 {
+		return nil, fmt.Errorf("semgrep scan: %s", strings.Join(fatal, "; "))
+	}
 	if err != nil {
 		exitErr, ok := err.(*exec.ExitError)
 		if !ok || exitErr.ExitCode() != 1 {
-			return nil, fmt.Errorf("semgrep scan: %w: %s", err, strings.TrimSpace(stderr.String()))
+			detail := strings.TrimSpace(stderr.String())
+			if parseErr != nil && detail == "" {
+				detail = parseErr.Error()
+			}
+			if detail == "" {
+				detail = err.Error()
+			}
+			return nil, fmt.Errorf("semgrep scan: %s", detail)
 		}
 	}
+	if parseErr != nil {
+		return nil, parseErr
+	}
+	HydrateSnippets(repoDir, findings)
+	return findings, nil
+}
 
-	return ParseSemgrepOutput(stdout.Bytes())
+func (s *SemgrepScanner) scanConfigs(repoDir string, languages []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, 8)
+	add := func(cfg string) {
+		cfg = strings.TrimSpace(cfg)
+		if cfg == "" {
+			return
+		}
+		if _, ok := seen[cfg]; ok {
+			return
+		}
+		seen[cfg] = struct{}{}
+		out = append(out, cfg)
+	}
+	for _, pack := range securityPacks {
+		add(pack)
+	}
+	for _, lang := range filterLanguagesByRepo(repoDir, s.languagesToScan(languages)) {
+		if cfg, ok := langConfig(lang); ok {
+			add(cfg)
+		}
+	}
+	return out
 }
 
 func (s *SemgrepScanner) languagesToScan(override []string) []string {
@@ -71,18 +113,9 @@ func (s *SemgrepScanner) languagesToScan(override []string) []string {
 		return override
 	}
 	if len(s.cfg.Languages) == 0 {
-		return []string{"php", "typescript", "javascript"}
+		return []string{"php", "typescript", "javascript", "python", "go", "java", "ruby"}
 	}
 	return s.cfg.Languages
-}
-
-func hasLangConfig(args []string) bool {
-	for i, arg := range args {
-		if arg == "--config" && i+1 < len(args) {
-			return true
-		}
-	}
-	return false
 }
 
 func langConfig(language string) (string, bool) {
@@ -92,27 +125,34 @@ func langConfig(language string) (string, bool) {
 		language = "typescript"
 	case "js":
 		language = "javascript"
+	case "py":
+		language = "python"
+	case "go", "golang":
+		return "p/golang", true
+	case "rb":
+		language = "ruby"
 	}
-	if !validLanguage(language) {
+	switch language {
+	case "php", "javascript", "typescript", "python", "java", "ruby":
+		return "p/" + language, true
+	default:
 		return "", false
 	}
-	return "p/" + language, true
 }
 
-func validLanguage(language string) bool {
-	if language == "" {
-		return false
-	}
-	for _, r := range language {
-		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
-			return false
-		}
-	}
-	return true
+func LanguagePack(language string) (string, bool) {
+	return langConfig(language)
 }
 
 type semgrepReport struct {
 	Results []semgrepResult `json:"results"`
+	Errors  []semgrepError  `json:"errors"`
+}
+
+type semgrepError struct {
+	Code    int    `json:"code"`
+	Level   string `json:"level"`
+	Message string `json:"message"`
 }
 
 type semgrepResult struct {
@@ -131,6 +171,11 @@ type semgrepResult struct {
 }
 
 func ParseSemgrepOutput(output []byte) ([]Finding, error) {
+	findings, _, err := parseSemgrepReport(output)
+	return findings, err
+}
+
+func parseSemgrepReport(output []byte) ([]Finding, semgrepReport, error) {
 	output = bytes.TrimSpace(output)
 	if start := bytes.IndexByte(output, '{'); start >= 0 {
 		if end := bytes.LastIndexByte(output, '}'); end >= start {
@@ -140,7 +185,7 @@ func ParseSemgrepOutput(output []byte) ([]Finding, error) {
 
 	var report semgrepReport
 	if err := json.Unmarshal(output, &report); err != nil {
-		return nil, fmt.Errorf("parse semgrep json: %w", err)
+		return nil, report, fmt.Errorf("parse semgrep json: %w", err)
 	}
 
 	findings := make([]Finding, 0, len(report.Results))
@@ -160,5 +205,24 @@ func ParseSemgrepOutput(output []byte) ([]Finding, error) {
 		})
 	}
 
-	return findings, nil
+	return findings, report, nil
+}
+
+func fatalConfigErrors(report semgrepReport) []string {
+	var out []string
+	for _, item := range report.Errors {
+		if strings.EqualFold(item.Level, "warn") {
+			continue
+		}
+		msg := strings.TrimSpace(item.Message)
+		if msg == "" {
+			continue
+		}
+		if item.Code == 2 || item.Code == 7 ||
+			strings.Contains(msg, "Failed to download") ||
+			strings.Contains(msg, "invalid configuration") {
+			out = append(out, msg)
+		}
+	}
+	return out
 }

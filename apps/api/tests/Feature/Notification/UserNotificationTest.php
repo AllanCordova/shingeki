@@ -310,4 +310,37 @@ describe('notification lifecycle integration', function () {
             ->assertJsonPath('notifications.0.status', 'completed')
             ->assertJsonPath('notifications.0.title', fn ($title) => str_contains((string) $title, 'finalizado'));
     });
+
+    test('listing reconciles pending attack notifications after the dispatch failed', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => null,
+            'failed_at' => now()->subMinutes(5),
+            'failure_reason' => 'discovery: chrome missing',
+            'duration_ms' => 800,
+            'findings_count' => 0,
+        ]);
+
+        UserNotification::query()->create([
+            'user_id' => $user->id,
+            'type' => UserNotificationType::AttackDispatch,
+            'status' => UserNotificationStatus::Pending,
+            'subject_type' => 'App\\Models\\AttackDispatch',
+            'subject_id' => $dispatch->id,
+            'title' => 'Scan DAST em andamento',
+            'body' => $system->name,
+            'action_url' => '/projetos/'.$project->id.'/sistemas/'.$system->id.'/resultados/'.$dispatch->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(NOTIFICATIONS)
+            ->assertOk()
+            ->assertJsonPath('pending_count', 0)
+            ->assertJsonPath('unread_count', 1)
+            ->assertJsonPath('notifications.0.status', 'failed')
+            ->assertJsonPath('notifications.0.title', fn ($title) => str_contains((string) $title, 'falhou'));
+    });
 });

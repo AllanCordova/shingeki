@@ -90,7 +90,7 @@ func Load() (Config, error) {
 			SemgrepBinary:     getEnv("SEMGREP_BINARY", "semgrep"),
 			CloneTimeout:      cloneTimeout,
 			ScanTimeout:       scanTimeout,
-			Languages:         parseCSV(getEnv("SAST_LANGUAGES", "php,typescript,javascript")),
+			Languages:         parseCSV(getEnv("SAST_LANGUAGES", "php,typescript,javascript,python,go,java,ruby")),
 			CloneHosts:        parseCSV(getEnv("SAST_CLONE_HOSTS", "github.com")),
 			GitHubToken:       getEnv("GITHUB_TOKEN", ""),
 			LabRepositoryPath: getEnv("SAST_LAB_REPOSITORY_PATH", ""),

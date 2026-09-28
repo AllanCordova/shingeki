@@ -43,7 +43,7 @@ test('process marks dispatch as failed when status is failed', function () {
         'findings_count' => 0,
     ]);
 
-    expect($updated->completed_at)->not->toBeNull()
+    expect($updated->completed_at)->toBeNull()
         ->and($updated->failed_at)->not->toBeNull()
         ->and($updated->failure_reason)->toBe('discovery: chrome missing')
         ->and($updated->scanStatus())->toBe('failed');

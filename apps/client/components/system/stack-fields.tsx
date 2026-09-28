@@ -19,10 +19,10 @@ export function StackFields({
 
   return (
     <Field
-      label="Stacks tecnologicas"
+      label="Stacks tecnológicas"
       htmlFor="stack_ids"
       error={errors.stack_ids?.message}
-      hint="Selecione as tecnologias usadas pelo sistema para sugerir correções adequadas."
+      hint="Opcional. Se você não souber a stack, deixe em branco: as sugestões usam remediações genéricas."
     >
       {isLoading ? (
         <Loading label="Carregando stacks..." />

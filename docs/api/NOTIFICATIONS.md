@@ -47,7 +47,7 @@ Base: `/api/notifications` — exige `auth:sanctum` (qualquer papel autenticado)
       "type": "attack_dispatch",
       "status": "completed",
       "title": "Scan DAST finalizado",
-      "body": "Vulnerable PHP Target — 2 finding(s) em 1.5 s",
+      "body": "API de Catalogo — 2 finding(s) em 1.5 s",
       "action_url": "/projetos/{projectId}/sistemas/{systemId}/resultados/{dispatchId}",
       "payload": {},
       "read_at": null,

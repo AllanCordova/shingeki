@@ -1,0 +1,21 @@
+# SITE_ADDRESS examples:
+#   seudominio.com     automatic HTTPS (ports 80 and 443 must reach this host)
+#   :80                HTTP only (use behind Cloudflare Tunnel)
+{$SITE_ADDRESS::80} {
+	encode gzip zstd
+
+	# Laravel Google OIDC. Distinct from the Next.js BFF at /api/auth/google/*.
+	@google path /oauth/google/redirect /oauth/google/callback
+	handle @google {
+		uri replace /oauth/google /api/auth/google
+		reverse_proxy api:80
+	}
+
+	handle /storage/* {
+		reverse_proxy api:80
+	}
+
+	handle {
+		reverse_proxy client:3000
+	}
+}

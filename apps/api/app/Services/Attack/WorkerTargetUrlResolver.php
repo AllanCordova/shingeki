@@ -12,14 +12,6 @@ class WorkerTargetUrlResolver
     {
         $targetUrl = rtrim(trim($targetUrl), '/');
 
-        $workerOverride = config('attacks.vulnerable_target_worker_url');
-        if (is_string($workerOverride) && $workerOverride !== '') {
-            $canonical = rtrim((string) config('attacks.vulnerable_target_url'), '/');
-            if ($this->refersToSameLabTarget($targetUrl, $canonical)) {
-                return rtrim($workerOverride, '/');
-            }
-        }
-
         $rewriteHost = config('attacks.target_localhost_rewrite');
         if (is_string($rewriteHost) && $rewriteHost !== '') {
             return $this->rewriteLocalhostHost($targetUrl, $rewriteHost);
@@ -30,61 +22,67 @@ class WorkerTargetUrlResolver
 
     public function forManualProxy(string $targetUrl): string
     {
-        $targetUrl = rtrim(trim($targetUrl), '/');
-
-        $canonical = rtrim((string) config('attacks.vulnerable_target_url'), '/');
-        $workerOverride = config('attacks.vulnerable_target_worker_url');
-
-        if (
-            is_string($workerOverride)
-            && $workerOverride !== ''
-            && $canonical !== ''
-            && $this->refersToSameLabTarget($targetUrl, rtrim($workerOverride, '/'))
-        ) {
-            return $canonical;
-        }
-
-        return $targetUrl;
+        return rtrim(trim($targetUrl), '/');
     }
 
-    private function refersToSameLabTarget(string $left, string $right): bool
+    public function rewritePublicText(string $text, string $browserTargetUrl): string
     {
-        if ($left === '' || $right === '') {
-            return false;
+        if ($text === '') {
+            return $text;
         }
 
-        return $this->normalizeForComparison($left) === $this->normalizeForComparison($right);
+        $browserTargetUrl = rtrim(trim($browserTargetUrl), '/');
+        if ($browserTargetUrl === '') {
+            return $text;
+        }
+
+        $workerUrl = rtrim($this->forWorker($browserTargetUrl), '/');
+        if ($workerUrl !== '' && $workerUrl !== $browserTargetUrl) {
+            $text = str_replace($workerUrl, $browserTargetUrl, $text);
+        }
+
+        $fromHost = $this->hostWithPort($workerUrl);
+        $toHost = $this->hostWithPort($browserTargetUrl);
+        if ($fromHost !== '' && $toHost !== '' && $fromHost !== $toHost) {
+            $text = str_replace($fromHost, $toHost, $text);
+        }
+
+        $toHostName = $this->hostOnly($browserTargetUrl);
+        if ($toHostName !== '') {
+            foreach (['host.docker.internal'] as $workerHost) {
+                if (strcasecmp($workerHost, $toHostName) === 0) {
+                    continue;
+                }
+                $text = str_ireplace($workerHost, $toHostName, $text);
+            }
+        }
+
+        return $text;
     }
 
-    private function normalizeForComparison(string $url): string
+    private function hostWithPort(string $url): string
+    {
+        $host = $this->hostOnly($url);
+        if ($host === '') {
+            return '';
+        }
+
+        $parts = parse_url($url);
+        if (is_array($parts) && isset($parts['port'])) {
+            return $host.':'.$parts['port'];
+        }
+
+        return $host;
+    }
+
+    private function hostOnly(string $url): string
     {
         $parts = parse_url($url);
         if ($parts === false || ! isset($parts['host'])) {
-            return strtolower($url);
+            return '';
         }
 
-        $host = strtolower((string) $parts['host']);
-        $labHosts = ['localhost', '127.0.0.1', 'host.docker.internal', 'vulnerable-target'];
-        if (! in_array($host, $labHosts, true)) {
-            return strtolower($url);
-        }
-
-        if ($host === '127.0.0.1') {
-            $host = 'localhost';
-        }
-        if ($host === 'host.docker.internal' || $host === 'vulnerable-target') {
-            $host = 'localhost';
-        }
-
-        $scheme = strtolower((string) ($parts['scheme'] ?? 'http'));
-        $port = $parts['port'] ?? null;
-        $path = $parts['path'] ?? '';
-
-        if ($port === null) {
-            $port = $scheme === 'https' ? '443' : '80';
-        }
-
-        return $scheme.'://'.$host.':'.$port.rtrim($path, '/');
+        return (string) $parts['host'];
     }
 
     private function rewriteLocalhostHost(string $url, string $rewriteHost): string
@@ -99,7 +97,6 @@ class WorkerTargetUrlResolver
             return $url;
         }
 
-        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
         $parts['host'] = $rewriteHost;
 
         return $this->buildUrl($parts);

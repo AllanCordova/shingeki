@@ -19,7 +19,6 @@ return [
     ])),
 
     'allowed_origins_patterns' => [
-        '#^chrome-extension://[a-p]{32}$#',
         '#^http://localhost(:\d+)?$#',
         '#^http://127\.0\.0\.1(:\d+)?$#',
     ],

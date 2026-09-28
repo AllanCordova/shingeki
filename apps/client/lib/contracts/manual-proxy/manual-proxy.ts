@@ -22,7 +22,6 @@ export const manualProxySendSchema = z.object({
   headers_json: zJsonObjectString("Headers deve ser um objeto JSON valido.").default("{}"),
   body: z.string().optional(),
   content_type: z.string().optional(),
-  use_target_session: z.boolean().default(false),
   apply_payload: z.boolean().default(false),
   payload_target_location: z.enum(ATTACK_TARGET_LOCATIONS).optional(),
   payload_field: z.string().optional(),
@@ -38,7 +37,6 @@ export interface ManualProxySendPayload {
   headers?: Record<string, string>;
   body?: string;
   content_type?: string;
-  use_target_session?: boolean;
   payload?: {
     target_location: string;
     field?: string;
@@ -124,7 +122,6 @@ export function buildManualProxyPayload(input: ManualProxySendInput): ManualProx
     headers: parseJsonRecord(input.headers_json),
     body: input.body,
     content_type: input.content_type,
-    use_target_session: input.use_target_session,
   };
 
   if (input.apply_payload && input.payload_target_location) {
@@ -159,7 +156,6 @@ export function routeMapToSendInput(route: ManualRouteMap): ManualProxySendInput
     headers_json: recordToJson(route.headers),
     body: route.body ?? "",
     content_type: route.content_type ?? undefined,
-    use_target_session: false,
     apply_payload: false,
   };
 }

@@ -1,5 +1,7 @@
 package targeturl
 
+import "strings"
+
 func RESTBasketURL(targetURL, basketID string) string {
 	origin := Origin(targetURL)
 	if origin == "" {
@@ -52,4 +54,19 @@ func FileUploadURL(targetURL string) string {
 		return ""
 	}
 	return origin + "/file-upload"
+}
+
+func ChangePasswordURL(targetURL string) string {
+	origin := Origin(targetURL)
+	if origin == "" {
+		return ""
+	}
+	return origin + "/rest/user/change-password"
+}
+
+func ForeignBasketID(own string) string {
+	if strings.TrimSpace(own) == "2" {
+		return "1"
+	}
+	return "2"
 }

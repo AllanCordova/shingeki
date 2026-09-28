@@ -8,7 +8,7 @@ Rules for user-facing text in the Shingeki product (UI, emails, in-app help, cli
 - User-visible errors returned to the browser (API messages that surface in the client)
 - Onboarding / guided setup copy
 
-Does **not** replace engineering docs in `docs/` or package READMEs aimed at contributors — those may mention lab, Docker, Web Store publishing, and internal setup.
+Does **not** replace engineering docs in `docs/` or package READMEs aimed at contributors — those may mention lab, Docker, and internal setup.
 
 ## Principles
 
@@ -25,10 +25,9 @@ Does **not** replace engineering docs in `docs/` or package READMEs aimed at con
 
 | Avoid (internal) | Prefer (product) |
 |------------------|------------------|
-| Em producao o caminho ideal e a Chrome Web Store; o ZIP e so piloto | Instrucoes de instalacao da extensao + o que fazer depois |
-| Lab vulneravel / alvo de teste interno | Alvos cooperativos (quando houver captura via popup) |
+| Em producao o caminho ideal e rebuild da imagem | O scanner entra no alvo com as credenciais do sistema |
+| Lab vulneravel / alvo de teste interno | Alvos cooperativos |
 | Para Bling e outros SaaS | Para sistemas externos autenticados |
-| Baixar `shingeki-target-session.zip` as the label | Baixar a extensao Shingeki (URL can still point to the zip) |
 | Worker ignorou start_path / rebuild a imagem | Ops/alerts stay in logs and engineering docs |
 
 ## Checklist (agents and human review)

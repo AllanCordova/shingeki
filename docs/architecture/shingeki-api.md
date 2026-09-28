@@ -10,18 +10,17 @@ Contratos HTTP: [API.md](../API.md). Como rodar: [RUN-PROJECT.md](../RUN-PROJECT
 app/
   Http/Controllers/     # Auth (+ Google), Admin, Project, System (CRUD + OwnedSystem),
                         # Attack, SystemResult, Audit, Remediation (+ AI, GitHub, History),
-                        # CoverUpload, TargetSession (legado), ManualProxy, Notification, Catalog*
+                        # CoverUpload, ManualProxy, Notification, Catalog*
   Http/Middleware/      # EnsureUserRole (ADMIN bypass)
   Http/Requests/        # Form Requests + ValidatesCoverSelection
   Policies/             # Escopo por dono; CatalogPolicy (ownership + papéis)
   Models/               # User, Project, System, Attack, AttackDispatch, AttackAcknowledgment,
-                        # SystemResult, DispatchProbe, Remediation, SystemTargetSession,
+                        # SystemResult, DispatchProbe, Remediation,
                         # CatalogImport, AiRemediationSuggestion, UserCoverUpload, …
   GraphQL/              # Query/mutation da sidebar (Lighthouse)
   Services/
     Cover/              # Upload, biblioteca, avatar
     Attack/             # Catálogo para dispatch, RabbitMQ, resultados e probes
-    TargetSession/      # Legado; captura de sessao nao e mais o caminho do DAST
     CatalogImport/      # Parser CSV, validação por linha, filas
     Remediation/        # Snippets por stack; patches GitHub
     Ai/                 # LLM (Gemini/Groq)
@@ -57,7 +56,7 @@ Schema: `apps/api/graphql/`. Não migrar o restante da API para GraphQL — ver 
 | Projetos / sistemas | CRUD aninhado; `login_url`; capas; dashboard; lista plana `/api/systems`; settings DAST persistidos |
 | Biblioteca de capas | `UserCoverLibraryService` — limite por usuário, reuso, avatar |
 | Aceite no dispatch | Body com `accepted_responsibility`, `accepted_legal_terms`, `terms_version`; auditoria em `attack_acknowledgments` |
-| Login do scanner | Usuario/senha cifrados no `System`; o worker DAST autentica no Chromium dele. Ver [TARGET-SESSION.md](../api/TARGET-SESSION.md) |
+| Login do scanner | Usuário/senha cifrados no `System`; o worker DAST autentica no Chromium dele. Ver [TARGET-SESSION.md](../api/TARGET-SESSION.md) |
 | Catálogo global | CRUD `/api/catalog/*` + import CSV assíncrono (`catalog:consume-imports`) |
 | DAST / SAST | `AttackCatalogService` monta lote (autores ADMIN/SPECIALIST); `AttackQueuePublisher` publica em RabbitMQ |
 | Resultados | Achados (`SystemResult`) + probes (`DispatchProbe`); comparação e export PDF |

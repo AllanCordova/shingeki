@@ -2,6 +2,9 @@ package dynamic
 
 import (
 	"strings"
+
+	"github.com/shingeki/dast-worker/internal/contracts"
+	"github.com/shingeki/dast-worker/internal/discovery/bfs"
 )
 
 type formCandidate struct {
@@ -44,6 +47,51 @@ func shouldSkipForm(form formCandidate, hasSession bool) bool {
 		return true
 	}
 	return false
+}
+
+func vectorFromForm(pageURL string, form formCandidate) (contracts.AttackVector, bool) {
+	method := strings.ToUpper(strings.TrimSpace(form.Method))
+	if method == "" {
+		method = "GET"
+	}
+
+	resolved := strings.TrimSpace(pageURL)
+	if action := strings.TrimSpace(form.Action); action != "" {
+		if next, ok := bfs.ResolveReference(pageURL, action); ok {
+			resolved = next
+		}
+	}
+	if resolved == "" {
+		return contracts.AttackVector{}, false
+	}
+
+	params := map[string]string{}
+	for _, field := range form.Fields {
+		name := strings.TrimSpace(field.Name)
+		if name == "" {
+			continue
+		}
+		inputType := strings.ToLower(strings.TrimSpace(field.Type))
+		switch inputType {
+		case "submit", "button", "image", "reset", "file":
+			continue
+		}
+		params[name] = ""
+	}
+	if len(params) == 0 {
+		return contracts.AttackVector{}, false
+	}
+
+	location := contracts.FormTargetLocation(method)
+	route := resolved
+	if location == "QUERY_PARAMETER" {
+		route = contracts.WithQueryParams(resolved, params)
+	}
+	vector := contracts.NewAttackVector(route, method, location)
+	for key, value := range params {
+		vector.Params[key] = value
+	}
+	return vector, true
 }
 
 func looksLikeLoginForm(form formCandidate, combined string) bool {

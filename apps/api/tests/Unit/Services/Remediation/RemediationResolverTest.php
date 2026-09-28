@@ -126,3 +126,37 @@ test('resolves many findings without per-finding remediation queries', function 
 
     expect($remediationQueries)->toHaveCount(1);
 });
+
+test('falls back to the generic remediation when the selected stack has no match', function () {
+    $laravel = Stack::factory()->laravel()->create();
+    $generic = Stack::factory()->generic()->create();
+
+    Remediation::factory()->for($generic)->create([
+        'attack_category' => AttackCategory::Xss,
+        'title' => 'Generic XSS fix',
+    ]);
+
+    $user = User::factory()->create();
+    $system = System::factory()->create();
+    $system->stacks()->attach($laravel->id, ['is_primary' => true]);
+    $attack = Attack::factory()->for($user)->create([
+        'category' => AttackCategory::Xss,
+    ]);
+    $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+        'scan_type' => AttackScanType::Dast,
+        'completed_at' => now(),
+    ]);
+    $result = SystemResult::factory()
+        ->for($system)
+        ->for($attack)
+        ->create(['attack_dispatch_id' => $dispatch->id]);
+
+    $resolved = (new RemediationResolver)->resolveForResult(
+        $result->load(['attack', 'attackDispatch']),
+        $system->stacks,
+    );
+
+    expect($resolved)->toHaveCount(1)
+        ->and($resolved[0]['stack']['slug'])->toBe('generic')
+        ->and($resolved[0]['title'])->toBe('Generic XSS fix');
+});

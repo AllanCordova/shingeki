@@ -180,6 +180,18 @@ final class AttackCatalogPayloads
     /**
      * @return list<string>
      */
+    public static function csrfOrigin(): array
+    {
+        return [
+            'https://evil.invalid',
+            'http://attacker.example',
+            'https://evil.example',
+        ];
+    }
+
+    /**
+     * @return list<string>
+     */
     public static function openRedirect(): array
     {
         return [
@@ -187,7 +199,7 @@ final class AttackCatalogPayloads
             'http://evil.invalid',
             '//evil.invalid',
             '/\\evil.invalid',
-            'https://github.com/juice-shop/juice-shop.evil.invalid',
+            'https://evil.example',
             'https://example.com',
             'https://owasp.org',
             '//google.com',
@@ -221,5 +233,13 @@ final class AttackCatalogPayloads
             'None',
             'NONE',
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function secretLeak(): array
+    {
+        return ['passive'];
     }
 }

@@ -55,30 +55,68 @@ class AttackCatalogSeeder extends Seeder
      */
     public static function definitions(): array
     {
-        $dast = [];
+        $attacks = [];
         foreach (self::dastPacks() as $pack) {
             $values = $pack['values'];
-            $dast[] = [
+            $payload = [
+                'value' => $values[0],
+                'values' => $values,
+            ];
+            if (! empty($pack['field'])) {
+                $payload['field'] = $pack['field'];
+            }
+            $attacks[] = [
                 'scan_type' => AttackScanType::Dast,
                 'category' => $pack['category'],
                 'target_location' => $pack['location'],
                 'risk_level' => $pack['risk'],
-                'payload' => [
-                    'value' => $values[0],
-                    'values' => $values,
-                ],
+                'payload' => $payload,
             ];
         }
 
-        $dast[] = [
-            'scan_type' => AttackScanType::Sast,
-            'category' => AttackCategory::SqlInjection,
-            'target_location' => AttackTargetLocation::SourceCode,
-            'risk_level' => AttackRiskLevel::High,
-            'payload' => ['languages' => ['php', 'typescript', 'javascript']],
-        ];
+        foreach (self::sastPacks() as $pack) {
+            $attacks[] = [
+                'scan_type' => AttackScanType::Sast,
+                'category' => $pack['category'],
+                'target_location' => AttackTargetLocation::SourceCode,
+                'risk_level' => $pack['risk'],
+                'payload' => ['languages' => self::sastLanguages()],
+            ];
+        }
 
-        return $dast;
+        return $attacks;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function sastLanguages(): array
+    {
+        return ['php', 'typescript', 'javascript', 'python', 'go', 'java', 'ruby'];
+    }
+
+    /**
+     * @return list<array{category: AttackCategory, risk: AttackRiskLevel}>
+     */
+    private static function sastPacks(): array
+    {
+        return [
+            ['category' => AttackCategory::SqlInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Xss, 'risk' => AttackRiskLevel::Medium],
+            ['category' => AttackCategory::PathTraversal, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::CommandInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Ssrf, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Xxe, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Ssti, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::OpenRedirect, 'risk' => AttackRiskLevel::Medium],
+            ['category' => AttackCategory::NosqlInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::LdapInjection, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::JwtConfusion, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::Csrf, 'risk' => AttackRiskLevel::Medium],
+            ['category' => AttackCategory::Idor, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::SupplyChain, 'risk' => AttackRiskLevel::High],
+            ['category' => AttackCategory::SecretLeak, 'risk' => AttackRiskLevel::High],
+        ];
     }
 
     /**
@@ -86,7 +124,8 @@ class AttackCatalogSeeder extends Seeder
      *     category: AttackCategory,
      *     location: AttackTargetLocation,
      *     risk: AttackRiskLevel,
-     *     values: list<string>
+     *     values: list<string>,
+     *     field?: string
      * }>
      */
     private static function dastPacks(): array
@@ -122,11 +161,13 @@ class AttackCatalogSeeder extends Seeder
             ['category' => AttackCategory::LdapInjection, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::High, 'values' => $ldap],
             ['category' => AttackCategory::LdapInjection, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => $ldap],
             ['category' => AttackCategory::Csrf, 'location' => AttackTargetLocation::Form, 'risk' => AttackRiskLevel::Medium, 'values' => AttackCatalogPayloads::csrf()],
+            ['category' => AttackCategory::Csrf, 'location' => AttackTargetLocation::Header, 'risk' => AttackRiskLevel::Medium, 'values' => AttackCatalogPayloads::csrfOrigin(), 'field' => 'Origin'],
             ['category' => AttackCategory::OpenRedirect, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::Medium, 'values' => AttackCatalogPayloads::openRedirect()],
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::High, 'values' => $ssti],
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => $ssti],
             ['category' => AttackCategory::Ssti, 'location' => AttackTargetLocation::Form, 'risk' => AttackRiskLevel::High, 'values' => $ssti],
             ['category' => AttackCategory::JwtConfusion, 'location' => AttackTargetLocation::Header, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::jwt()],
+            ['category' => AttackCategory::SecretLeak, 'location' => AttackTargetLocation::ApiEndpoint, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::secretLeak()],
         ];
     }
 }

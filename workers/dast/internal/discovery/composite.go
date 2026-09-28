@@ -42,9 +42,15 @@ func (e *CompositeEngine) Discover(
 	}
 
 	if err := ApplyJSONLogin(ctx, seedURL, auth); err != nil {
-		e.logger.Warn("json credential login failed; browser form login may still work", "error", err)
+		e.logger.Warn("json credential login failed; form login may still work", "error", err)
 	} else if auth != nil && auth.HasCredentials() && len(contracts.EffectiveAuthHeaders(auth)) > 0 {
 		e.logger.Info("applied json credential login for discovery")
+	}
+
+	if err := ApplyHTTPFormLogin(ctx, seedURL, auth); err != nil {
+		e.logger.Warn("http form login failed; browser form login may still work", "error", err)
+	} else if auth != nil && auth.HasCredentials() && auth.HasSession() && auth.LoginURL != "" {
+		e.logger.Info("applied http form login for discovery")
 	}
 
 	if seedURL != targetURL {
@@ -108,16 +114,22 @@ func (e *CompositeEngine) Discover(
 		)
 	}
 
-	beforeSPA := len(vectors)
-	vectors = AppendSPASearchVectors(targetURL, vectors)
-	vectors = AppendSPALoginVectors(targetURL, vectors)
-	vectors = AppendSPAAuthenticatedVectors(targetURL, vectors, auth)
-	vectors = AppendSPACoverageVectors(targetURL, vectors)
-	if len(vectors) > beforeSPA {
-		e.logger.Info("added SPA/REST training vectors",
-			"added", len(vectors)-beforeSPA,
-			"total", len(vectors),
+	if opts.HasStartPath() {
+		e.logger.Info("skipped SPA/REST training vectors because start_path scopes the crawl",
+			"start_path", opts.StartPath,
 		)
+	} else {
+		beforeSPA := len(vectors)
+		vectors = AppendSPASearchVectors(targetURL, vectors)
+		vectors = AppendSPALoginVectors(targetURL, vectors)
+		vectors = AppendSPAAuthenticatedVectors(targetURL, vectors, auth)
+		vectors = AppendSPACoverageVectors(targetURL, vectors)
+		if len(vectors) > beforeSPA {
+			e.logger.Info("added SPA/REST training vectors",
+				"added", len(vectors)-beforeSPA,
+				"total", len(vectors),
+			)
+		}
 	}
 
 	if len(vectors) == 0 {
@@ -130,6 +142,7 @@ func (e *CompositeEngine) Discover(
 	}
 
 	beforeFilter := len(vectors)
+	vectors = CanonicalizeQueryVectors(vectors)
 	vectors = FilterAttackable(targetURL, vectors)
 	if len(vectors) < beforeFilter {
 		e.logger.Info("filtered blocked discovery vectors",

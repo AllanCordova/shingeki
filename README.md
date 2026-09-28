@@ -12,11 +12,8 @@ Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](d
 |-----------|-----------|
 | [`apps/api/`](apps/api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
 | [`apps/client/`](apps/client/) | Frontend Next.js (BFF, React Query, autenticação) |
-| [`apps/extension/`](apps/extension/) | Extensão Chrome/Edge (legado; fora de uso) |
 | [`workers/dast/`](workers/dast/) | Worker Go DAST (discovery, ataques, evidências) |
 | [`workers/sast/`](workers/sast/) | Worker Go SAST (clone + Semgrep) |
-| [`labs/vulnerable-target/`](labs/vulnerable-target/) | Alvo PHP vulnerável para validação do pipeline |
-| Juice Shop (Docker) | Treino DAST — [docs/architecture/shingeki-juice-shop.md](docs/architecture/shingeki-juice-shop.md) |
 
 ## Documentação
 
@@ -26,9 +23,11 @@ Fonte canônica: **[`docs/`](docs/index.md)** (cada tópico tem um arquivo dono 
 
 ```bash
 docker compose up -d          # MySQL + RabbitMQ + api-consumers
-cd apps/api && php artisan serve
-cd apps/client && npm run dev
+npm install                   # scripts da raiz (API + client juntos)
+npm run dev
 ```
+
+Workers (opcional): `docker compose --profile stack up -d --build`. Treino DAST sem Docker de alvo: [goldset](docs/architecture/shingeki-dast-goldset.md). Deploy do client, da API e dos workers: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 | Tópico | Arquivo no repositório |
 |--------|-------------------------|

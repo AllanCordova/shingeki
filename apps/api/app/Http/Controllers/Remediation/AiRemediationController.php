@@ -29,10 +29,7 @@ class AiRemediationController extends Controller
         $this->authorize('remediate', $system);
 
         $system->load('stacks');
-
-        if ($system->stacks->isEmpty()) {
-            return $this->emptyStacksResponse();
-        }
+        $system->setRelation('stacks', $this->stacksForRemediation($system));
 
         $dispatch = $this->resolveDispatch($system, $request->validated('dispatch_id'));
 

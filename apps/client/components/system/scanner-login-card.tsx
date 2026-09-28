@@ -98,7 +98,7 @@ export function ScannerLoginCard({
             label="URL de login"
             htmlFor="scanner-login-url"
             error={errors.login_url?.message}
-            hint="Ex: https://alvo.exemplo.com/login ou https://alvo.exemplo.com/#/login"
+            hint="Página do formulário (ex: /login.php) ou endpoint JSON (ex: /rest/user/login)."
           >
             <Input
               id="scanner-login-url"

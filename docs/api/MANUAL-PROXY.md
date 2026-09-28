@@ -12,11 +12,10 @@ O proxy roda **no host da API** (não no worker Docker):
 
 | `target_url` cadastrado | URL usada pelo proxy |
 |-------------------------|----------------------|
-| `http://127.0.0.1:8090` | Igual |
-| `http://localhost:8090` | Igual |
-| `http://vulnerable-target` (legado) | Reescrito para `VULNERABLE_TARGET_URL` (`http://127.0.0.1:8090` por padrão) |
+| `http://127.0.0.1:3010` | Igual |
+| `http://localhost:3010` | Igual |
 
-Workers DAST continuam usando `WorkerTargetUrlResolver::forWorker()` (rede Docker). O manual proxy usa `forManualProxy()`.
+Workers DAST usam `WorkerTargetUrlResolver::forWorker()` (reescrita de loopback para `host.docker.internal` quando o worker está em Docker). O manual proxy usa `forManualProxy()` e mantém a URL cadastrada.
 
 ## Rotas
 
@@ -42,7 +41,6 @@ Base: `/api/projects/{project}/systems/{system}/manual-proxy`
 | `headers` | Opcional; objeto string→string |
 | `body` | Opcional; string bruta |
 | `content_type` | Opcional |
-| `use_target_session` | Ignorado. A captura de sessao foi desligada; envie Cookie/Bearer em `headers` se precisar |
 | `payload` | Opcional; `{ target_location, field, value }` para injeção catalogada |
 
 **Resposta `200`:**

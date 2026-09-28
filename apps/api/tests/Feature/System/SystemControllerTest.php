@@ -208,6 +208,38 @@ describe('POST /api/projects/{project}/systems', function () {
             ->assertJsonPath('system.name', 'Main API');
     });
 
+    test('creates a system without stacks', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+
+        Sanctum::actingAs($user);
+
+        $fields = validSystemFields();
+        unset($fields['stack_ids']);
+
+        $this->post(systemsIndexUrl($project), $fields)
+            ->assertCreated()
+            ->assertJsonPath('system.stacks', []);
+    });
+
+    test('clears stacks when the update sends an empty list', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $stack = Stack::factory()->laravel()->create();
+        $system->stacks()->attach($stack->id, ['is_primary' => true]);
+
+        Sanctum::actingAs($user);
+
+        $this->putJson(systemUrl($project, $system), [
+            'stack_ids' => [],
+        ])
+            ->assertOk()
+            ->assertJsonPath('system.stacks', []);
+
+        expect($system->fresh()->stacks)->toHaveCount(0);
+    });
+
     test('stores scanner login credentials without returning the password', function () {
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();

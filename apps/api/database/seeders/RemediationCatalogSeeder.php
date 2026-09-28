@@ -20,16 +20,43 @@ class RemediationCatalogSeeder extends Seeder
             ->where('email', config('attacks.catalog_admin_email'))
             ->firstOrFail();
 
-        $vanillaPhp = Stack::query()->where('slug', 'vanilla_php')->firstOrFail();
-        $laravel = Stack::query()->where('slug', 'laravel')->firstOrFail();
-        $express = Stack::query()->where('slug', 'express')->firstOrFail();
-        $react = Stack::query()->where('slug', 'react')->firstOrFail();
-        $angular = Stack::query()->where('slug', 'angular')->firstOrFail();
+        $stacks = Stack::query()->get()->keyBy('slug');
 
-        $entries = [
+        foreach (self::definitions() as $definition) {
+            $stack = $stacks->get($definition['stack_slug']);
+
+            if ($stack === null) {
+                continue;
+            }
+
+            $entry = $definition;
+            unset($entry['stack_slug']);
+            $entry['stack_id'] = $stack->id;
+            $this->upsertRemediation($entry, $catalogAdmin->id);
+        }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function definitions(): array
+    {
+        return [
+            ...self::legacyDefinitions(),
+            ...self::stackDefinitions(),
+            ...self::genericDefinitions(),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function legacyDefinitions(): array
+    {
+        return [
             // Vanilla PHP — alvo vulnerável de laboratório (DAST)
             [
-                'stack_id' => $vanillaPhp->id,
+                'stack_slug' => 'vanilla_php',
                 'scan_type' => AttackScanType::Dast,
                 'attack_category' => AttackCategory::PathTraversal,
                 'title' => 'Restringir leitura ao diretório permitido',
@@ -38,7 +65,7 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://owasp.org/www-community/attacks/Path_Traversal'],
             ],
             [
-                'stack_id' => $vanillaPhp->id,
+                'stack_slug' => 'vanilla_php',
                 'scan_type' => AttackScanType::Dast,
                 'attack_category' => AttackCategory::SqlInjection,
                 'title' => 'Use prepared statements com PDO',
@@ -47,7 +74,7 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://www.php.net/manual/en/pdo.prepared-statements.php', 'https://owasp.org/www-community/attacks/SQL_Injection'],
             ],
             [
-                'stack_id' => $vanillaPhp->id,
+                'stack_slug' => 'vanilla_php',
                 'scan_type' => AttackScanType::Dast,
                 'attack_category' => AttackCategory::Xss,
                 'title' => 'Escape a saída com htmlspecialchars',
@@ -57,7 +84,7 @@ class RemediationCatalogSeeder extends Seeder
             ],
             // Vanilla PHP — alvo vulnerável (SAST / Semgrep)
             [
-                'stack_id' => $vanillaPhp->id,
+                'stack_slug' => 'vanilla_php',
                 'scan_type' => AttackScanType::Sast,
                 'attack_category' => AttackCategory::SqlInjection,
                 'semgrep_rule_id' => 'php.lang.security.injection.tainted-sql-string.tainted-sql-string',
@@ -67,7 +94,7 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://www.php.net/manual/en/pdo.prepared-statements.php', 'https://owasp.org/www-community/attacks/SQL_Injection'],
             ],
             [
-                'stack_id' => $vanillaPhp->id,
+                'stack_slug' => 'vanilla_php',
                 'scan_type' => AttackScanType::Sast,
                 'attack_category' => AttackCategory::Xss,
                 'semgrep_rule_id' => 'php.lang.security.injection.echoed-request.echoed-request',
@@ -77,7 +104,7 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://www.php.net/manual/en/function.htmlspecialchars.php', 'https://owasp.org/www-community/attacks/xss/'],
             ],
             [
-                'stack_id' => $vanillaPhp->id,
+                'stack_slug' => 'vanilla_php',
                 'scan_type' => AttackScanType::Sast,
                 'attack_category' => AttackCategory::PathTraversal,
                 'semgrep_rule_id' => 'php.lang.security.injection.tainted-filename.tainted-filename',
@@ -88,7 +115,7 @@ class RemediationCatalogSeeder extends Seeder
             ],
             // Laravel
             [
-                'stack_id' => $laravel->id,
+                'stack_slug' => 'laravel',
                 'attack_category' => AttackCategory::SqlInjection,
                 'title' => 'Use Eloquent or query bindings',
                 'description' => 'Never concatenate user input into SQL. Use the query builder or Eloquent with parameter binding.',
@@ -96,7 +123,7 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://laravel.com/docs/eloquent', 'https://owasp.org/www-community/attacks/SQL_Injection'],
             ],
             [
-                'stack_id' => $laravel->id,
+                'stack_slug' => 'laravel',
                 'semgrep_rule_id' => 'php.lang.security.injection.sql-injection',
                 'scan_type' => AttackScanType::Sast,
                 'title' => 'Replace raw SQL concatenation',
@@ -105,7 +132,7 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://laravel.com/docs/queries'],
             ],
             [
-                'stack_id' => $laravel->id,
+                'stack_slug' => 'laravel',
                 'attack_category' => AttackCategory::PathTraversal,
                 'title' => 'Validate paths with Storage',
                 'description' => 'Resolve paths inside allowed directories and reject traversal sequences.',
@@ -114,7 +141,7 @@ class RemediationCatalogSeeder extends Seeder
             ],
             // Express
             [
-                'stack_id' => $express->id,
+                'stack_slug' => 'express',
                 'attack_category' => AttackCategory::SqlInjection,
                 'title' => 'Use parameterized queries',
                 'description' => 'Pass user input as query parameters instead of string interpolation.',
@@ -123,7 +150,7 @@ class RemediationCatalogSeeder extends Seeder
             ],
             // React
             [
-                'stack_id' => $react->id,
+                'stack_slug' => 'react',
                 'attack_category' => AttackCategory::Xss,
                 'title' => 'Avoid unsafe HTML injection',
                 'description' => 'Do not render untrusted HTML. Prefer text nodes or sanitize before using dangerouslySetInnerHTML.',
@@ -132,7 +159,7 @@ class RemediationCatalogSeeder extends Seeder
             ],
             // Angular
             [
-                'stack_id' => $angular->id,
+                'stack_slug' => 'angular',
                 'attack_category' => AttackCategory::Xss,
                 'title' => 'Keep Angular interpolation and avoid bypassing sanitizer',
                 'description' => 'Bind untrusted input as text. Do not use bypassSecurityTrustHtml unless the value is already sanitized.',
@@ -140,10 +167,174 @@ class RemediationCatalogSeeder extends Seeder
                 'references' => ['https://angular.dev/best-practices/security'],
             ],
         ];
+    }
 
-        foreach ($entries as $entry) {
-            $this->upsertRemediation($entry, $catalogAdmin->id);
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function stackDefinitions(): array
+    {
+        $snippet = static fn (string $slug, AttackCategory $category, string $title, string $description, string $code, array $references): array => [
+            'stack_slug' => $slug,
+            'attack_category' => $category,
+            'title' => $title,
+            'description' => $description,
+            'code_snippet' => $code,
+            'references' => $references,
+        ];
+
+        $owaspSql = ['https://owasp.org/www-community/attacks/SQL_Injection'];
+        $owaspXss = ['https://owasp.org/www-community/attacks/xss/'];
+        $owaspSsti = ['https://owasp.org/www-community/attacks/Server_Side_Template_Injection'];
+
+        return [
+            $snippet('nextjs', AttackCategory::Xss, 'Renderize texto, não HTML cru', 'No Next.js, interpolação do React já escapa texto. Não use dangerouslySetInnerHTML com conteúdo do usuário sem sanitizar.', "<p>{query}</p>\n\n// HTML só depois de sanitizar:\nimport DOMPurify from 'dompurify';\n<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html) }} />", $owaspXss),
+            $snippet('javascript', AttackCategory::Xss, 'Escreva texto com textContent', 'Não monte HTML com dados do usuário via innerHTML. Use nós de texto ou um sanitizador antes de inserir markup.', 'results.textContent = query;', $owaspXss),
+            $snippet('typescript', AttackCategory::Xss, 'Trate a entrada como texto', 'Tipar a string não impede XSS. Atribua o valor a textContent ou escape antes de inserir no DOM.', 'results.textContent = query;', $owaspXss),
+            $snippet('python', AttackCategory::SqlInjection, 'Use placeholders do DB-API', 'Mantenha o SQL fixo e passe os valores como parâmetros. Não use f-string nem concatenação na consulta.', 'cursor.execute("SELECT * FROM users WHERE email = %s", (email,))', $owaspSql),
+            $snippet('ruby', AttackCategory::SqlInjection, 'Vincule parâmetros na consulta', 'Não interpole variáveis Ruby dentro do SQL. Use placeholders da API do banco.', 'db.prepare("SELECT * FROM users WHERE email = $1").execute(email)', $owaspSql),
+            $snippet('java', AttackCategory::SqlInjection, 'Use PreparedStatement', 'O SQL fica constante e os valores entram por setString. Statement com concatenação é o sink de injeção.', "PreparedStatement stmt = connection.prepareStatement(\n    \"SELECT * FROM users WHERE email = ?\");\nstmt.setString(1, email);\nResultSet rows = stmt.executeQuery();", $owaspSql),
+            $snippet('csharp', AttackCategory::SqlInjection, 'Passe parâmetros nomeados', 'Não monte o CommandText com a entrada do usuário. Declare o parâmetro e envie o valor à parte.', "command.CommandText = \"SELECT * FROM users WHERE email = @email\";\ncommand.Parameters.Add(\"@email\", SqlDbType.NVarChar).Value = email;", $owaspSql),
+            $snippet('go', AttackCategory::SqlInjection, 'Use placeholders do database/sql', 'QueryRowContext recebe o SQL e os argumentos separados. Não use fmt.Sprintf na consulta.', 'row := db.QueryRowContext(ctx, "SELECT id FROM users WHERE email = $1", email)', $owaspSql),
+            $snippet('kotlin', AttackCategory::SqlInjection, 'Use PreparedStatement no JDBC', 'Prepare a consulta uma vez e vincule o email com setString. Não concatene a entrada na string SQL.', "connection.prepareStatement(\"SELECT * FROM users WHERE email = ?\").use { stmt ->\n    stmt.setString(1, email)\n    stmt.executeQuery()\n}", $owaspSql),
+            $snippet('elixir', AttackCategory::SqlInjection, 'Passe os valores fora do SQL', 'Repo.query! aceita a consulta e a lista de parâmetros. Não interpole a entrada na string.', 'Repo.query!("SELECT * FROM users WHERE email = $1", [email])', $owaspSql),
+            $snippet('symfony', AttackCategory::SqlInjection, 'Consulte pelo repositório Doctrine', 'O findOneBy gera SQL parametrizado. Evite createQuery com concatenação de DQL ou SQL.', "\$user = \$this->entityManager\n    ->getRepository(User::class)\n    ->findOneBy(['email' => \$email]);", $owaspSql),
+            $snippet('codeigniter', AttackCategory::SqlInjection, 'Use o binding do query builder', 'O segundo argumento de query() vira placeholder. Não interpole o email na string SQL.', "\$db->query('SELECT * FROM users WHERE email = ?', [\$email]);", $owaspSql),
+            $snippet('cakephp', AttackCategory::SqlInjection, 'Filtre com array no ORM', 'where com array de condições é parametrizado. Não passe uma string SQL montada à mão.', "\$users->find()->where(['email' => \$email])->first();", $owaspSql),
+            $snippet('wordpress', AttackCategory::SqlInjection, 'Prepare a consulta com $wpdb', '$wpdb->prepare escapa os placeholders %s e %d. Não concatene $_GET ou $_POST no SQL.', "\$wpdb->prepare(\n    \"SELECT * FROM {\$wpdb->users} WHERE user_email = %s\",\n    \$email\n);", ['https://developer.wordpress.org/apis/security/data-validation/', ...$owaspSql]),
+            $snippet('livewire', AttackCategory::Xss, 'Escape a saída no Blade', 'A sintaxe {{ }} codifica HTML. {!! !!} imprime HTML cru e só deve receber conteúdo já sanitizado.', "<p>{{ \$query }}</p>\n{{-- evite {!! \$query !!} --}}", $owaspXss),
+            $snippet('nestjs', AttackCategory::SqlInjection, 'Filtre pelo repositório com objeto where', 'O TypeORM monta os parâmetros a partir do objeto. Não passe uma string SQL com a entrada interpolada.', 'await this.userRepository.findOne({ where: { email } });', $owaspSql),
+            $snippet('fastify', AttackCategory::SqlInjection, 'Envie valores como parâmetros da query', 'O cliente do banco recebe o SQL e o array de valores separados.', "await client.query('SELECT * FROM users WHERE email = \$1', [email]);", $owaspSql),
+            $snippet('hono', AttackCategory::Xss, 'Responda texto, não HTML montado', 'c.text envia a busca como texto. c.html com a string do usuário reflete XSS.', "return c.text(query);\n// evite: c.html(query)", $owaspXss),
+            $snippet('vue', AttackCategory::Xss, 'Use interpolação e evite v-html', 'Mustache escapa HTML. v-html interpreta markup e só é seguro com conteúdo sanitizado.', "<p>{{ query }}</p>\n<!-- evite v-html=\"query\" -->", $owaspXss),
+            $snippet('nuxt', AttackCategory::Xss, 'Mantenha a interpolação do Vue', 'O template do Nuxt escapa texto. Não ligue dados do usuário em v-html.', "<p>{{ query }}</p>\n<!-- evite v-html=\"query\" -->", $owaspXss),
+            $snippet('svelte', AttackCategory::Xss, 'Interpole texto e evite {@html}', '{query} é texto. {@html} renderiza markup e não deve receber a entrada crua.', "<p>{query}</p>\n<!-- evite {@html query} -->", $owaspXss),
+            $snippet('sveltekit', AttackCategory::Xss, 'Não injete HTML da busca', 'A interpolação do Svelte já escapa. {@html} fica restrito a HTML sanitizado.', "<p>{query}</p>\n<!-- evite {@html query} -->", $owaspXss),
+            $snippet('remix', AttackCategory::Xss, 'Renderize a busca como texto', 'JSX escapa o conteúdo de {query}. Não monte o HTML da resposta com a string do usuário.', '<p>{query}</p>', $owaspXss),
+            $snippet('astro', AttackCategory::Xss, 'Evite set:html com dados do usuário', 'A expressão {query} no Astro é texto. set:html insere HTML e precisa de sanitização.', "<p>{query}</p>\n<!-- evite <p set:html={query} /> -->", $owaspXss),
+            $snippet('htmx', AttackCategory::Xss, 'Escape o HTML parcial da resposta', 'htmx insere a resposta no DOM. O servidor precisa codificar a busca antes de devolver o fragmento.', "echo htmlspecialchars(\$query, ENT_QUOTES | ENT_HTML5, 'UTF-8');", $owaspXss),
+            $snippet('django', AttackCategory::SqlInjection, 'Filtre pelo ORM', 'filter(email=email) gera SQL parametrizado. Evite extra() e RawSQL com a entrada concatenada.', 'User.objects.filter(email=email).first()', $owaspSql),
+            $snippet('flask', AttackCategory::Ssti, 'Não renderize a entrada como template', 'render_template usa um arquivo fixo e a busca entra como variável. render_template_string(request.args) é SSTI.', "return render_template('search.html', query=query)\n# nunca: render_template_string(request.args['q'])", $owaspSsti),
+            $snippet('fastapi', AttackCategory::SqlInjection, 'Monte a consulta no SQLAlchemy', 'A expressão where compara a coluna com o valor. Não interpole o email no text().', 'await session.execute(select(User).where(User.email == email))', $owaspSql),
+            $snippet('rails', AttackCategory::SqlInjection, 'Use hash conditions no ActiveRecord', 'where(email: email) é parametrizado. where("email = \'#{email}\'") concatena SQL.', "User.where(email: email).first\n# evite: User.where(\"email = '#{email}'\")", $owaspSql),
+            $snippet('spring', AttackCategory::SqlInjection, 'Consulte com parâmetro no Spring Data', 'O método do repositório vira uma query com binding. JdbcTemplate com string concatenada não.', 'userRepository.findByEmail(email);', $owaspSql),
+            $snippet('ktor', AttackCategory::SqlInjection, 'Vincule o valor no JDBC', 'Mesmo atrás do Ktor, a consulta ao banco precisa de placeholder. Não monte o SQL na rota.', "connection.prepareStatement(\"SELECT * FROM users WHERE email = ?\").use { stmt ->\n    stmt.setString(1, email)\n}", $owaspSql),
+            $snippet('aspnet', AttackCategory::SqlInjection, 'Use parâmetro nomeado no Dapper', 'O objeto anônimo vira parâmetro. Não interpole o email na string da query.', "await connection.QueryAsync<User>(\n    \"SELECT * FROM users WHERE email = @Email\",\n    new { Email = email });", $owaspSql),
+            $snippet('blazor', AttackCategory::Xss, 'Deixe o Razor escapar o texto', '@query codifica HTML. MarkupString desliga o escape e só serve para HTML confiável.', "<p>@query</p>\n@* evite: @((MarkupString)query) *@", $owaspXss),
+            $snippet('gin', AttackCategory::SqlInjection, 'Passe o argumento separado no database/sql', 'O handler do Gin não deve formatar SQL. Entregue o valor como argumento da query.', 'db.QueryRowContext(ctx, "SELECT id FROM users WHERE email = ?", email)', $owaspSql),
+            $snippet('phoenix', AttackCategory::SqlInjection, 'Busque com o schema do Ecto', 'get_by gera a consulta parametrizada. Não interpole a entrada em fragment.', 'Repo.get_by(User, email: email)', $owaspSql),
+        ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function genericDefinitions(): array
+    {
+        $items = [
+            AttackCategory::SqlInjection->value => [
+                'title' => 'Use consultas parametrizadas',
+                'description' => 'Não concatene entrada do usuário na consulta. Mantenha o SQL fixo e envie os valores por placeholders, bindings ou o ORM.',
+                'code_snippet' => "query = \"SELECT * FROM users WHERE email = ?\"\ndb.execute(query, [email])",
+                'references' => ['https://owasp.org/www-community/attacks/SQL_Injection', 'https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html'],
+            ],
+            AttackCategory::Xss->value => [
+                'title' => 'Codifique a saída e evite HTML cru',
+                'description' => 'Trate dados do usuário como texto. Só renderize HTML depois de um sanitizador e restrinja scripts com Content-Security-Policy.',
+                'code_snippet' => "render_text(user_input)\n\n# HTML só depois de sanitizar\nsafe_html = sanitize(html)",
+                'references' => ['https://owasp.org/www-community/attacks/xss/', 'https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html'],
+            ],
+            AttackCategory::Csrf->value => [
+                'title' => 'Exija um token anti-CSRF em mudanças de estado',
+                'description' => 'POST, PUT, PATCH e DELETE devem carregar um token ligado à sessão. Cookies de sessão usam SameSite.',
+                'code_snippet' => "on POST, PUT, PATCH, DELETE:\n  reject unless csrf_token matches session\nset session cookie SameSite=Lax",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html'],
+            ],
+            AttackCategory::CommandInjection->value => [
+                'title' => 'Não passe entrada do usuário para o shell',
+                'description' => 'Evite o shell. Se um processo externo for inevitável, chame-o com lista de argumentos e valide cada um contra uma allowlist.',
+                'code_snippet' => "run([\"tool\", \"--name\", allowlisted_name])\n# sem string de shell e sem metacaracteres da entrada",
+                'references' => ['https://owasp.org/www-community/attacks/Command_Injection'],
+            ],
+            AttackCategory::PathTraversal->value => [
+                'title' => 'Resolva o caminho dentro de um diretório base',
+                'description' => 'Fique só com o nome do arquivo, resolva o caminho canônico e recuse qualquer arquivo fora do diretório permitido.',
+                'code_snippet' => "name = basename(user_input)\nfull = canonical(base_dir + \"/\" + name)\nreject unless full starts with canonical(base_dir)",
+                'references' => ['https://owasp.org/www-community/attacks/Path_Traversal'],
+            ],
+            AttackCategory::Ssrf->value => [
+                'title' => 'Permita só destinos conhecidos',
+                'description' => 'Não busque uma URL livre no servidor. Use allowlist de hosts e bloqueie localhost, IPs privados e metadados de cloud.',
+                'code_snippet' => "host = parse_url(user_url).host\nreject unless host in allowlist\nreject if host resolves to private, loopback, or link-local",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html'],
+            ],
+            AttackCategory::Xxe->value => [
+                'title' => 'Desligue entidades externas no parser XML',
+                'description' => 'O parser não deve resolver DTD nem entidades externas. Prefira JSON quando o XML não for necessário.',
+                'code_snippet' => "parser.disallow_doctype = true\nparser.external_entities = false",
+                'references' => ['https://owasp.org/www-community/vulnerabilities/XML_External_Entity_(XXE)_Processing'],
+            ],
+            AttackCategory::LdapInjection->value => [
+                'title' => 'Escape filtros LDAP',
+                'description' => 'Não concatene entrada em filtros LDAP. Escape os caracteres especiais ou use uma API de filtro parametrizado.',
+                'code_snippet' => "filter = \"(uid=\" + ldap_escape(username) + \")\"",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html'],
+            ],
+            AttackCategory::NosqlInjection->value => [
+                'title' => 'Não aceite operadores vindos do cliente',
+                'description' => 'Recuse objetos com chaves de operador. Converta a entrada para o tipo esperado antes de consultar.',
+                'code_snippet' => "email = string(input.email)  # rejeita {\"\$gt\": \"\"}\ndb.users.find({ email: email })",
+                'references' => ['https://owasp.org/www-community/attacks/NoSQL_injection'],
+            ],
+            AttackCategory::Idor->value => [
+                'title' => 'Autorize o acesso em toda leitura e escrita',
+                'description' => 'Não confie no identificador enviado pelo cliente. Carregue o registro e confirme que o usuário autenticado pode acessá-lo.',
+                'code_snippet' => "record = db.find(id)\nreject unless record.owner_id == current_user.id",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html'],
+            ],
+            AttackCategory::OpenRedirect->value => [
+                'title' => 'Redirecione só para destinos permitidos',
+                'description' => 'Não use a URL do usuário como destino. Aceite apenas caminhos relativos da aplicação ou hosts em allowlist.',
+                'code_snippet' => "reject unless redirect starts with \"/\" and not \"//\"\n# ou: reject unless host(redirect) in allowlist",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Unvalidated_Redirects_and_Forwards_Cheat_Sheet.html'],
+            ],
+            AttackCategory::Ssti->value => [
+                'title' => 'Não renderize entrada do usuário como template',
+                'description' => 'A entrada é dado, não código de template. Templates dinâmicos precisam de sandbox sem acesso a objetos internos.',
+                'code_snippet' => "template.render({ name: user_input })\n# nunca: engine.render(user_input)",
+                'references' => ['https://owasp.org/www-community/attacks/Server_Side_Template_Injection'],
+            ],
+            AttackCategory::JwtConfusion->value => [
+                'title' => 'Fixe o algoritmo e valide a assinatura',
+                'description' => 'Não aceite o algoritmo vindo do token. Recuse alg=none, verifique a assinatura com a chave esperada e confira emissor, audiência e expiração.',
+                'code_snippet' => "reject unless header.alg == expected_alg\nverify(token, trusted_key)\nreject if expired or issuer/audience mismatch",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_for_Java_Cheat_Sheet.html'],
+            ],
+            AttackCategory::SupplyChain->value => [
+                'title' => 'Trave dependências e verifique a integridade',
+                'description' => 'Commite o lockfile, instale com verificação de integridade e revise pacotes novos antes de aceitar a atualização.',
+                'code_snippet' => "commit lockfile\ninstall --frozen-lockfile\nreview dependency updates before merge",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html'],
+            ],
+            AttackCategory::SecretLeak->value => [
+                'title' => 'Tire segredos do código e das respostas públicas',
+                'description' => 'Tokens, chaves e senhas não entram no HTML, no JavaScript enviado ao browser nem em endpoints públicos. Use variável de ambiente no servidor e revogue qualquer segredo que já tenha vazado.',
+                'code_snippet' => "api_key = env(\"API_KEY\")\n# não: const apiKey = \"sk_live_...\" no bundle\n# não: GET /api/config devolvendo segredo",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html'],
+            ],
+        ];
+
+        $definitions = [];
+
+        foreach ($items as $category => $item) {
+            $definitions[] = [
+                'stack_slug' => 'generic',
+                'attack_category' => AttackCategory::from($category),
+                ...$item,
+            ];
         }
+
+        return $definitions;
     }
 
     /**

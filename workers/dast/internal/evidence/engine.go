@@ -49,6 +49,7 @@ func NewDefaultValidator(cfg config.Config, logger *slog.Logger) *CompositeValid
 		NewSQLAuthBypassValidator(),
 		NewSQLBooleanValidator(),
 		NewIDORValidator(),
+		NewCSRFValidator(),
 		NewRedirectValidator(),
 		NewJWTValidator(),
 		NewSSTIValidator(),

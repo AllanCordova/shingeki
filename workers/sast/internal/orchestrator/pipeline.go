@@ -24,6 +24,7 @@ type codeScanner interface {
 
 type resultPublisher interface {
 	PublishResult(ctx context.Context, result contracts.ResultMessage) error
+	PublishProbe(ctx context.Context, probe contracts.ProbeMessage) error
 	PublishCompletion(ctx context.Context, completion contracts.DispatchCompletionMessage) error
 }
 
@@ -52,25 +53,36 @@ func NewPipeline(
 	}
 }
 
-func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error {
+func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err error) {
 	start := time.Now()
 	published := 0
+	probes := 0
 
 	defer func() {
 		if p.publisher == nil {
 			return
 		}
+		status := contracts.CompletionStatusCompleted
+		errorMsg := ""
+		if err != nil {
+			status = contracts.CompletionStatusFailed
+			errorMsg = err.Error()
+		}
 		completion := contracts.DispatchCompletionMessage{
 			Event:         contracts.EventDispatchCompleted,
 			DispatchID:    batch.DispatchID,
 			SystemID:      batch.SystemID,
+			Status:        status,
+			Error:         errorMsg,
 			DurationMs:    time.Since(start).Milliseconds(),
 			FindingsCount: published,
+			ProbesCount:   probes,
+			JobsPlanned:   len(batch.Attacks),
 		}
 		completeCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		if err := p.publisher.PublishCompletion(completeCtx, completion); err != nil {
-			p.logger.Error("failed to publish dispatch completion", "error", err, "dispatch_id", batch.DispatchID)
+		if pubErr := p.publisher.PublishCompletion(completeCtx, completion); pubErr != nil {
+			p.logger.Error("failed to publish dispatch completion", "error", pubErr, "dispatch_id", batch.DispatchID)
 		}
 	}()
 
@@ -93,12 +105,31 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) error
 
 	p.logger.Info("semgrep scan finished", "findings", len(findings))
 
+	matched := map[string]struct{}{}
 	for _, finding := range findings {
+		attackID := mapper.AttackIDForFinding(batch, finding)
+		if attackID == "" {
+			p.logger.Info("skipped semgrep finding without catalog match", "check_id", finding.CheckID, "path", finding.Path)
+			continue
+		}
 		result := mapper.ToResultMessage(batch, finding, repoDir)
+		result.AttackID = attackID
 		if err := p.publisher.PublishResult(ctx, result); err != nil {
 			return fmt.Errorf("publish result: %w", err)
 		}
+		matched[attackID] = struct{}{}
 		published++
+	}
+
+	for _, attack := range batch.Attacks {
+		if _, ok := matched[attack.AttackID]; ok {
+			continue
+		}
+		probe := cleanCatalogProbe(batch, attack)
+		if err := p.publisher.PublishProbe(ctx, probe); err != nil {
+			return fmt.Errorf("publish probe: %w", err)
+		}
+		probes++
 	}
 
 	p.logger.Info("sast pipeline finished",
@@ -124,4 +155,21 @@ func (p *Pipeline) resolveRepository(ctx context.Context, repositoryURL, ref str
 	}
 
 	return "", nil, fmt.Errorf("repository_url is required")
+}
+
+func cleanCatalogProbe(batch contracts.DispatchBatch, attack contracts.AttackItem) contracts.ProbeMessage {
+	payload := strings.Join(attack.PayloadLanguages(), ",")
+	if payload == "" {
+		payload = attack.Category
+	}
+	return contracts.ProbeMessage{
+		Event:       contracts.EventAttackProbe,
+		DispatchID:  batch.DispatchID,
+		SystemID:    batch.SystemID,
+		AttackID:    attack.AttackID,
+		Route:       "semgrep:" + strings.ToLower(attack.Category),
+		PayloadUsed: payload,
+		Outcome:     "clean",
+		Evidence:    "Semgrep ran this catalog category and found no matching rule hits.",
+	}
 }

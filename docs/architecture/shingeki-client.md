@@ -18,7 +18,7 @@ app/
     notificacoes/
     termos/ataques/
   api/               # Route handlers — proxy REST e GraphQL para a Laravel
-  conectar-alvo/     # Captura same-origin da sessão do alvo
+  conectar-alvo/     # Página 410: captura de sessão desligada
   page.tsx           # Landing pública
 proxy.ts             # Rotas privadas; `/` é pública
 lib/
@@ -86,4 +86,5 @@ components/
 | Guia inicial | Abre sozinho sem projetos se o usuário ainda não dispensou |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` |
 | Notificações | Sininho no header (poll 20s) + `/notificacoes` |
-| Login do scanner | Card na pagina do sistema (usuario/senha do alvo) |
+| Login do scanner | Card na página do sistema (usuário/senha do alvo) |
+| Testes | `npm test` em `lib/**/*.test.ts` (copy de scan, redirect seguro, duração); CI também roda `lint` e `tsc --noEmit` |

@@ -3,9 +3,7 @@ import type { Timestamps } from "../common/common";
 import { createWithCoverSchema, updateWithCoverSchema } from "../cover/cover-selection";
 import type { Stack } from "./stack";
 
-const stackIdsSchema = z
-  .array(z.string().uuid("Stack inválida."))
-  .min(1, "Selecione pelo menos uma stack tecnológica.");
+const stackIdsSchema = z.array(z.string().uuid("Stack inválida."));
 
 export const systemCreateSchema = createWithCoverSchema({
   name: z

@@ -54,8 +54,6 @@ const MESSAGE_TRANSLATIONS: Record<string, string> = {
     "É preciso manter pelo menos um administrador na plataforma.",
   "Platform API tokens cannot be used as target session credentials.":
     "Não use a sessão da plataforma Shingeki como autenticação do alvo.",
-  "Use a extensão Shingeki ou a importação manual para conectar a sessão do alvo.":
-    "Use a extensão Shingeki ou a importação manual para conectar a sessão do alvo.",
 };
 
 function translateFieldMessage(message: string): string {
@@ -97,7 +95,7 @@ function defaultMessageForStatus(status: number): string {
     case 404:
       return "Recurso não encontrado.";
     case 410:
-      return "Esta ação não está mais disponível. Use a extensão ou a importação manual.";
+      return "Esta ação não está mais disponível. Configure o login do scanner na página do sistema.";
     case 422:
       return "Dados inválidos. Verifique os campos destacados.";
     case 429:

@@ -65,3 +65,96 @@ func TestAttackIDForFindingMatchesCategoryAndLanguage(t *testing.T) {
 		t.Fatalf("expected sqli-1, got %s", got)
 	}
 }
+
+func TestAttackIDForFindingSkipsUnselectedCategory(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "xss-1",
+				Category: "XSS",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+			{
+				AttackID: "path-1",
+				Category: "PATH_TRAVERSAL",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "php.lang.security.injection.tainted-sql-string.tainted-sql-string",
+		Path:    "login.php",
+	})
+	if got != "" {
+		t.Fatalf("sql finding must not map onto xss/path catalog items, got %s", got)
+	}
+}
+
+func TestAttackIDForFindingMapsSupplyChain(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "sqli-1",
+				Category: "SQL_INJECTION",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+			{
+				AttackID: "supply-1",
+				Category: "SUPPLY_CHAIN",
+				Payload:  json.RawMessage(`{"languages":["javascript"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+		Path:    ".github/workflows/test.yml",
+	})
+	if got != "supply-1" {
+		t.Fatalf("github-actions finding must map to SUPPLY_CHAIN, got %s", got)
+	}
+}
+
+func TestAttackIDForFindingSkipsUncategorizedWithoutCatalogMatch(t *testing.T) {
+	batch := contracts.DispatchBatch{
+		Attacks: []contracts.AttackItem{
+			{
+				AttackID: "xss-1",
+				Category: "XSS",
+				Payload:  json.RawMessage(`{"languages":["javascript"]}`),
+			},
+			{
+				AttackID: "sqli-1",
+				Category: "SQL_INJECTION",
+				Payload:  json.RawMessage(`{"languages":["php"]}`),
+			},
+		},
+	}
+
+	got := mapper.AttackIDForFinding(batch, scanner.Finding{
+		CheckID: "yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag",
+		Path:    ".github/workflows/test.yml",
+	})
+	if got != "" {
+		t.Fatalf("supply-chain finding must not inherit SQL_INJECTION, got %s", got)
+	}
+}
+
+func TestCategoryForCheckID(t *testing.T) {
+	if got := mapper.CategoryForCheckID("php.lang.security.injection.echoed-request.echoed-request"); got != mapper.CategoryXSS {
+		t.Fatalf("xss=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("javascript.express.security.audit.express-open-redirect"); got != mapper.CategoryOpenRedirect {
+		t.Fatalf("redirect=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("python.lang.security.audit.sqli.psycopg-sqli"); got != mapper.CategorySQLInjection {
+		t.Fatalf("sqli=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("yaml.github-actions.security.github-actions-mutable-action-tag.github-actions-mutable-action-tag"); got != mapper.CategorySupplyChain {
+		t.Fatalf("supply=%s", got)
+	}
+	if got := mapper.CategoryForCheckID("generic.secrets.security.detected-generic-secret"); got != mapper.CategorySecretLeak {
+		t.Fatalf("secret=%s", got)
+	}
+}

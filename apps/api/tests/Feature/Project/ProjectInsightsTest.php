@@ -41,6 +41,26 @@ describe('GET projects/{project}/dashboard', function () {
             ->assertJsonPath('dashboard.last_dispatch.id', $latest->id)
             ->assertJsonCount(1, 'dashboard.systems_with_findings');
     });
+
+    test('dashboard ignores failed scans that never completed', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create(['name' => 'API']);
+
+        AttackDispatch::factory()->for($system)->for($user)->create([
+            'dispatched_at' => now(),
+            'completed_at' => null,
+            'failed_at' => now(),
+            'findings_count' => 9,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/projects/'.$project->id.'/dashboard')
+            ->assertOk()
+            ->assertJsonPath('dashboard.total_findings', 0)
+            ->assertJsonCount(0, 'dashboard.systems_with_findings');
+    });
 });
 
 describe('GET system-results/compare', function () {

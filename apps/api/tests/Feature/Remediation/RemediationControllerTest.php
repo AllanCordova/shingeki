@@ -53,16 +53,36 @@ describe('POST systems/remediate', function () {
             ->assertJsonPath('findings.0.remediations.0.title', 'Fix SQL injection');
     });
 
-    test('returns unprocessable when system has no stacks', function () {
+    test('uses generic remediations when the system has no stacks', function () {
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
         $system = System::factory()->for($project)->create();
+        $generic = Stack::factory()->generic()->create();
+
+        Remediation::factory()->for($generic)->create([
+            'attack_category' => AttackCategory::SqlInjection,
+            'title' => 'Generic SQL fix',
+        ]);
+
+        $attack = Attack::factory()->for($user)->create([
+            'category' => AttackCategory::SqlInjection,
+        ]);
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'scan_type' => AttackScanType::Dast,
+            'completed_at' => now(),
+        ]);
+        SystemResult::factory()
+            ->for($system)
+            ->for($attack)
+            ->create(['attack_dispatch_id' => $dispatch->id]);
 
         Sanctum::actingAs($user);
 
         $this->postJson(remediateUrl($project, $system))
-            ->assertUnprocessable()
-            ->assertJsonPath('message', 'Configure at least one technology stack on the system before remediating.');
+            ->assertOk()
+            ->assertJsonPath('stacks.0.slug', 'generic')
+            ->assertJsonPath('findings.0.remediations.0.title', 'Generic SQL fix')
+            ->assertJsonPath('findings.0.remediations.0.stack.slug', 'generic');
     });
 
     test('remediates a specific dispatch when dispatch_id is provided', function () {

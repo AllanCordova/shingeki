@@ -28,17 +28,11 @@ class SendManualProxyRequest extends FormRequest
             'headers.*' => ['string', 'max:8192'],
             'body' => ['sometimes', 'nullable', 'string', 'max:65536'],
             'content_type' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'use_target_session' => ['sometimes', 'boolean'],
             'payload' => ['sometimes', 'nullable', 'array'],
             'payload.target_location' => ['required_with:payload', Rule::enum(AttackTargetLocation::class)],
             'payload.field' => ['sometimes', 'nullable', 'string', 'max:255'],
             'payload.value' => ['sometimes', 'nullable', 'string', 'max:8192'],
         ];
-    }
-
-    public function useTargetSession(): bool
-    {
-        return $this->boolean('use_target_session', false);
     }
 
     /**

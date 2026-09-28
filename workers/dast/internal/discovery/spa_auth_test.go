@@ -14,8 +14,8 @@ func TestAppendSPAAuthenticatedVectorsAddsBasketUsersReviews(t *testing.T) {
 	}
 	auth := &contracts.TargetAuth{Headers: map[string]string{"Authorization": "Bearer tok"}}
 	got := AppendSPAAuthenticatedVectors("http://shop.test/", vectors, auth)
-	if len(got) != 5 {
-		t.Fatalf("expected 3 authenticated siblings, got %#v", got)
+	if len(got) != 6 {
+		t.Fatalf("expected 4 authenticated siblings, got %#v", got)
 	}
 	last := got[len(got)-1]
 	if last.Method != "PUT" || last.TargetLocation != "JSON_BODY" {
@@ -48,10 +48,13 @@ func TestAppendSPAAuthenticatedVectorsSeedsWhenCrawlHasJunkIDs(t *testing.T) {
 	auth := &contracts.TargetAuth{Headers: map[string]string{"Authorization": "Bearer tok"}}
 	got := AppendSPAAuthenticatedVectors("http://shop.test/", vectors, auth)
 
-	hasBasket1, hasReviewPUT := false, false
+	hasBasket1, hasBasket2, hasReviewPUT := false, false, false
 	for _, vector := range got {
 		if strings.Contains(vector.Route, "/rest/basket/1") && vector.TargetLocation == "URL_PATH" {
 			hasBasket1 = true
+		}
+		if strings.Contains(vector.Route, "/rest/basket/2") && vector.TargetLocation == "URL_PATH" {
+			hasBasket2 = true
 		}
 		if vector.Method == "PUT" && strings.Contains(vector.Route, "/rest/products/1/reviews") {
 			if _, ok := vector.Params["author"]; ok {
@@ -61,6 +64,9 @@ func TestAppendSPAAuthenticatedVectorsSeedsWhenCrawlHasJunkIDs(t *testing.T) {
 	}
 	if !hasBasket1 {
 		t.Fatalf("NaN/0 basket must still seed /rest/basket/1, got %#v", got)
+	}
+	if !hasBasket2 {
+		t.Fatalf("must seed jim basket /rest/basket/2, got %#v", got)
 	}
 	if !hasReviewPUT {
 		t.Fatalf("GET reviews JSON must still seed PUT author, got %#v", got)
