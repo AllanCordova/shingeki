@@ -316,12 +316,6 @@ class RemediationCatalogSeeder extends Seeder
                 'code_snippet' => "commit lockfile\ninstall --frozen-lockfile\nreview dependency updates before merge",
                 'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html'],
             ],
-            AttackCategory::SecretLeak->value => [
-                'title' => 'Tire segredos do código e revogue os expostos',
-                'description' => 'Senhas, tokens e chaves ficam em cofre ou variável de ambiente. Se um segredo vazou no repositório, revogue-o: apagar o arquivo não invalida a credencial.',
-                'code_snippet' => "token = env(\"API_TOKEN\")\n# revoke the leaked credential\n# never commit .env or private keys",
-                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html'],
-            ],
         ];
 
         $definitions = [];
