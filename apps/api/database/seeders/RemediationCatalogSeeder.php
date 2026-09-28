@@ -316,6 +316,12 @@ class RemediationCatalogSeeder extends Seeder
                 'code_snippet' => "commit lockfile\ninstall --frozen-lockfile\nreview dependency updates before merge",
                 'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Vulnerable_Dependency_Management_Cheat_Sheet.html'],
             ],
+            AttackCategory::SecretLeak->value => [
+                'title' => 'Tire segredos do código e das respostas públicas',
+                'description' => 'Tokens, chaves e senhas não entram no HTML, no JavaScript enviado ao browser nem em endpoints públicos. Use variável de ambiente no servidor e revogue qualquer segredo que já tenha vazado.',
+                'code_snippet' => "api_key = env(\"API_KEY\")\n# não: const apiKey = \"sk_live_...\" no bundle\n# não: GET /api/config devolvendo segredo",
+                'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html'],
+            ],
         ];
 
         $definitions = [];
