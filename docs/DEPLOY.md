@@ -2,7 +2,7 @@
 
 Sobe o client, a API (HTTP + consumers de fila), MySQL, RabbitMQ e os workers DAST e SAST.
 
-Arquivos: [`docker-compose.prod.yml`](../docker-compose.prod.yml), [`deploy/Caddyfile`](../deploy/Caddyfile), [`.env.production.example`](../.env.production.example).
+Arquivos: [`docker-compose.prod.yml`](https://github.com/AllanCordova/shingeki/blob/main/docker-compose.prod.yml), [`deploy/Caddyfile`](https://github.com/AllanCordova/shingeki/blob/main/deploy/Caddyfile), [`.env.production.example`](https://github.com/AllanCordova/shingeki/blob/main/.env.production.example).
 
 O browser só fala com o Caddy. `/storage` vai para a API (capas); o resto vai para o Next.js, que chama a API pela rede interna.
 
@@ -22,7 +22,7 @@ O túnel rápido `trycloudflare.com` muda de endereço quando reinicia. Não use
 
 ## Antes de mandar o link
 
-As senhas do seed estão no guia de desenvolvimento ([credenciais](RUN-PROJECT.md#credenciais-do-seed)): `test@example.com` / `password` e `admin@admin.com` / `password`. Troque as duas no primeiro login, antes de passar a URL. O seed não sobrescreve senha de usuário que já existe.
+As senhas do seed estão no guia de desenvolvimento ([credenciais](RUN-PROJECT.md#credenciais-do-seed)): `test@example.com` / `password` e `admin@admin.com` / `password`. Elas são públicas. A tela de perfil só altera nome e avatar, então troque as duas no banco antes de passar a URL. O seed não sobrescreve senha de usuário que já existe.
 
 Quem tem conta pode disparar DAST contra uma URL. Convide só gente de confiança.
 
@@ -158,4 +158,6 @@ Suba sem o perfil `share`. As portas 80 e 443 precisam chegar na VPS para o Cadd
 
 MySQL e os arquivos de capa ficam nos volumes `shingeki-prod_mysql_data` e `shingeki-prod_api_storage`. `down` sem `-v` preserva os dois.
 
-Os projetos de lab que o seed cria apontam para `127.0.0.1`. Eles não existem nesta stack. Para um teste real, cadastre um sistema com a URL pública do alvo.
+Há dois workers DAST (`shingeki-prod-dast-worker-1` e `shingeki-prod-dast-worker-2`) na mesma fila `attacks.dispatch`. O RabbitMQ entrega o próximo scan ao worker livre. Não há balanceador HTTP.
+
+O seed cria projetos demo com hosts `*.example`. Eles não são alvos reais. Para um teste, cadastre um sistema com a URL pública do alvo.
