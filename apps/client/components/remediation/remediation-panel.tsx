@@ -8,6 +8,7 @@ import { notify } from "@/lib/notify";
 import { AiRemediationFindingCard } from "@/components/remediation/ai-remediation-finding-card";
 import { GitHubPrPreviewModal } from "@/components/remediation/github-pr-preview-modal";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
+import { StackIcon } from "@/components/system/stack-icon";
 import { cn } from "@/lib/utils";
 import {
   Badge,
@@ -364,7 +365,7 @@ function FindingRemediationCard({ finding }: { finding: RemediatedFinding }) {
 
         {finding.remediations.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            Nenhuma remediação cadastrada para as stacks deste sistema.
+            Nenhuma remediação cadastrada para esta vulnerabilidade.
           </p>
         ) : (
           finding.remediations.map((remediation) => (
@@ -373,7 +374,10 @@ function FindingRemediationCard({ finding }: { finding: RemediatedFinding }) {
               className="flex flex-col gap-2 rounded-app border border-border p-3"
             >
               <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="neutral">{remediation.stack.name}</Badge>
+                <Badge tone="neutral" className="gap-1.5">
+                  <StackIcon slug={remediation.stack.slug} className="size-3.5" />
+                  {remediation.stack.name}
+                </Badge>
                 <span className="font-medium text-foreground">
                   {remediation.title}
                 </span>

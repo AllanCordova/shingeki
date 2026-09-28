@@ -178,7 +178,9 @@ class AiRemediationService
             fn (Stack $stack) => (bool) optional($stack->pivot)->is_primary,
         );
 
-        return $primary ?? $system->stacks->first()
+        return $primary
+            ?? $system->stacks->first()
+            ?? Stack::query()->where('slug', Stack::GENERIC_SLUG)->first()
             ?? throw new RuntimeException('System has no stacks configured.');
     }
 

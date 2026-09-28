@@ -7,6 +7,17 @@ type CoverPayload = {
   cover_upload_id?: string;
 };
 
+function appendStackIds(formData: FormData, stackIds: string[]): void {
+  if (stackIds.length === 0) {
+    formData.append("stack_ids", "");
+    return;
+  }
+
+  stackIds.forEach((stackId) => {
+    formData.append("stack_ids[]", stackId);
+  });
+}
+
 function appendCoverFields(formData: FormData, cover: CoverPayload): void {
   if (cover.cover) {
     formData.append("cover", cover.cover);
@@ -65,9 +76,7 @@ export function buildSystemCreateFormData(input: SystemCreateInput): FormData {
     formData.append("logged_in_indicator", input.logged_in_indicator);
   }
   formData.append("repository_url", input.repository_url);
-  input.stack_ids.forEach((stackId) => {
-    formData.append("stack_ids[]", stackId);
-  });
+  appendStackIds(formData, input.stack_ids ?? []);
   appendCoverFields(formData, input);
   return formData;
 }
@@ -119,9 +128,7 @@ export function buildSystemUpdateFormData(
   }
 
   if (input.stack_ids !== undefined) {
-    input.stack_ids.forEach((stackId) => {
-      formData.append("stack_ids[]", stackId);
-    });
+    appendStackIds(formData, input.stack_ids);
     hasField = true;
   }
 

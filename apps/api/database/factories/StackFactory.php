@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\System\StackKind;
 use App\Models\System\Stack;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -22,6 +23,7 @@ class StackFactory extends Factory
         return [
             'slug' => $slug,
             'name' => ucfirst(str_replace('-', ' ', $slug)),
+            'kind' => StackKind::Framework,
             'languages' => ['php'],
         ];
     }
@@ -31,6 +33,7 @@ class StackFactory extends Factory
         return $this->state(fn () => [
             'slug' => 'laravel',
             'name' => 'Laravel',
+            'kind' => StackKind::Framework,
             'languages' => ['php'],
         ]);
     }
@@ -40,7 +43,18 @@ class StackFactory extends Factory
         return $this->state(fn () => [
             'slug' => 'vanilla_php',
             'name' => 'PHP',
+            'kind' => StackKind::Language,
             'languages' => ['php'],
+        ]);
+    }
+
+    public function generic(): static
+    {
+        return $this->state(fn () => [
+            'slug' => Stack::GENERIC_SLUG,
+            'name' => 'Genérica',
+            'kind' => StackKind::Generic,
+            'languages' => [],
         ]);
     }
 }

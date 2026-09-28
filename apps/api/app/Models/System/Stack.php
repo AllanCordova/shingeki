@@ -2,6 +2,7 @@
 
 namespace App\Models\System;
 
+use App\Enums\System\StackKind;
 use App\Models\Remediation\Remediation;
 use Database\Factories\StackFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -12,6 +13,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Stack extends Model
 {
+    public const GENERIC_SLUG = 'generic';
+
     /** @use HasFactory<StackFactory> */
     use HasFactory, HasUuids;
 
@@ -25,6 +28,7 @@ class Stack extends Model
     protected $fillable = [
         'slug',
         'name',
+        'kind',
         'languages',
     ];
 
@@ -34,6 +38,7 @@ class Stack extends Model
     protected function casts(): array
     {
         return [
+            'kind' => StackKind::class,
             'languages' => 'array',
         ];
     }

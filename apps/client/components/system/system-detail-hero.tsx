@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { Stack } from "@/lib/contracts/system/stack";
+import { StackChips } from "@/components/system/stack-chips";
 import { CoverHero } from "@/components/ui";
 
 interface SystemDetailHeroProps {
@@ -9,6 +11,7 @@ interface SystemDetailHeroProps {
     name: string;
     target_url: string;
     cover_path?: string | null;
+    stacks?: Array<Pick<Stack, "slug" | "name">>;
   };
   backHref: string;
   backLabel: string;
@@ -50,6 +53,9 @@ export function SystemDetailHero({
           >
             {system.target_url}
           </a>
+          <div className="mt-3">
+            <StackChips stacks={system.stacks} />
+          </div>
         </div>
         {actions ? (
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">

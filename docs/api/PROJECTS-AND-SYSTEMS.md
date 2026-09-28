@@ -19,7 +19,7 @@ Lista projetos do usuário (mais recentes primeiro).
       "id": "uuid",
       "user_id": "uuid",
       "cover_path": "/storage/covers/....jpg",
-      "name": "Pentest Lab",
+      "name": "Netflix",
       "description": "...",
       "created_at": "...",
       "updated_at": "..."
@@ -93,9 +93,9 @@ Base: `/api/projects/{project}/systems`
       "id": "uuid",
       "project_id": "uuid",
       "cover_path": "/storage/covers/....jpg",
-      "name": "Vulnerable PHP Target",
-      "target_url": "http://127.0.0.1:8090",
-      "login_url": "http://127.0.0.1:8090/login.php",
+      "name": "API de Catalogo",
+      "target_url": "https://catalog.api.netflix.example",
+      "login_url": "https://catalog.api.netflix.example/login",
       "repository_url": "https://github.com/...",
       "stacks": [
         { "id": "uuid", "slug": "laravel", "name": "Laravel", "languages": ["php"] }
@@ -120,10 +120,10 @@ Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional
 | `login_password` | não (write-only; nunca volta na API) |
 | `logged_in_indicator` | não (texto visível só depois do login) |
 | `repository_url` | sim (URL válida) |
-| `stack_ids` | sim (array de UUIDs; mínimo 1) — ver [STACKS.md](STACKS.md) |
+| `stack_ids` | não (array de UUIDs; pode ser vazio) — ver [STACKS.md](STACKS.md) |
 | `cover` / `cover_upload_id` | não (opcional; web) |
 
-Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID.
+Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID. Lista vazia: envie `stack_ids` vazio.
 
 **Resposta `201`:** `{ "message": "...", "system": { ... } }`
 

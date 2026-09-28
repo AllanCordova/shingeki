@@ -9,6 +9,7 @@ import {
 } from "@/lib/hooks/system/use-systems";
 import { notify } from "@/lib/notify";
 import { FORM_MODAL_SIZE } from "@/lib/ui";
+import { StackChips } from "@/components/system/stack-chips";
 import { SystemForm } from "@/components/system/system-form";
 import {
   Card,
@@ -74,6 +75,7 @@ export function SystemCard({
             <p className="truncate text-sm text-muted-foreground">
               {system.target_url}
             </p>
+            <StackChips stacks={system.stacks} />
           </CardContent>
         </Link>
       </Card>

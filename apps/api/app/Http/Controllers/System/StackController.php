@@ -18,6 +18,7 @@ class StackController extends Controller
                     'id' => $stack->id,
                     'slug' => $stack->slug,
                     'name' => $stack->name,
+                    'kind' => $stack->kind?->value,
                     'languages' => $stack->languages,
                 ])
                 ->values()

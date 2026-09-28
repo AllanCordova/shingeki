@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Models\Attack\AttackDispatch;
+use App\Models\System\Stack;
 use App\Models\System\System;
 use App\Models\System\SystemResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 
 trait ResolvesRemediationDispatch
@@ -40,6 +42,24 @@ trait ResolvesRemediationDispatch
             ->paginate(perPage: $perPage, page: $page);
     }
 
+    /**
+     * Systems without a chosen stack still get the language-agnostic catalog.
+     *
+     * @return Collection<int, Stack>
+     */
+    protected function stacksForRemediation(System $system): Collection
+    {
+        if ($system->stacks->isNotEmpty()) {
+            return $system->stacks;
+        }
+
+        $generic = Stack::query()->where('slug', Stack::GENERIC_SLUG)->first();
+
+        return $generic === null
+            ? $system->stacks
+            : new Collection([$generic]);
+    }
+
     protected function formatSystemStacks(System $system): array
     {
         return $system->stacks
@@ -55,7 +75,7 @@ trait ResolvesRemediationDispatch
     protected function emptyStacksResponse(): JsonResponse
     {
         return response()->json([
-            'message' => 'Configure at least one technology stack on the system before remediating.',
+            'message' => 'Configure at least one technology stack on the system before opening a pull request.',
         ], 422);
     }
 

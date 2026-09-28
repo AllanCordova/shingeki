@@ -22,6 +22,7 @@ class SystemUpdate extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->prepareScannerLogin();
+        $this->normalizeStackIds();
     }
 
     /**
@@ -37,8 +38,17 @@ class SystemUpdate extends FormRequest
             'login_url' => $this->browserLoginUrlRules(),
             'repository_url' => ['sometimes', 'url', 'max:2048'],
             'dast_max_routes' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:500'],
-            'stack_ids' => ['sometimes', 'array', 'min:1'],
+            'stack_ids' => ['sometimes', 'array'],
             'stack_ids.*' => ['uuid', 'exists:stacks,id'],
         ];
+    }
+
+    private function normalizeStackIds(): void
+    {
+        if (! $this->exists('stack_ids') || is_array($this->input('stack_ids'))) {
+            return;
+        }
+
+        $this->merge(['stack_ids' => []]);
     }
 }
