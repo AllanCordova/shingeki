@@ -24,11 +24,6 @@ chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
 
 php artisan package:discover --ansi
 php artisan migrate --force
-
-if [ "${RUN_DB_SEED:-true}" = "true" ]; then
-  php artisan db:seed --force
-fi
-
 php artisan storage:link --force 2>/dev/null || true
 
 exec "$@"

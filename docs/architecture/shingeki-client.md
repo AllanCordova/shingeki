@@ -86,5 +86,5 @@ components/
 | Guia inicial | Abre sozinho sem projetos se o usuário ainda não dispensou |
 | Arsenal manual | `/projetos/.../sistemas/.../arsenal` |
 | Notificações | Sininho no header (poll 20s) + `/notificacoes` |
-| Login do scanner | Card na página do sistema (usuário/senha do alvo) |
+| Sessão do navegador | Card da URL de login; comando de captura e noVNC depois da profundidade do DAST |
 | Testes | `npm test` em `lib/**/*.test.ts` (copy de scan, redirect seguro, duração); CI também roda `lint` e `tsc --noEmit` |

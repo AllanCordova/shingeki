@@ -28,6 +28,38 @@ type RodCrawler struct {
 	logger *slog.Logger
 }
 
+func (r *RodCrawler) Authenticate(ctx context.Context, targetURL string, auth *contracts.TargetAuth) error {
+	if !r.cfg.RodEnabled || auth == nil || !auth.HasCredentials() || hasSessionAuth(auth) {
+		return nil
+	}
+	launchTimeout := r.cfg.BrowserLaunchTimeout
+	if launchTimeout <= 0 {
+		launchTimeout = 45 * time.Second
+	}
+	launchCtx, launchCancel := context.WithTimeout(ctx, launchTimeout)
+	defer launchCancel()
+
+	connected, err := connectBrowser(launchCtx, r.cfg, r.logger)
+	if err != nil {
+		return err
+	}
+	defer connected.cleanup()
+
+	page, err := connected.browser.Context(ctx).Page(proto.TargetCreateTarget{URL: "about:blank"})
+	if err != nil {
+		return fmt.Errorf("create page: %w", err)
+	}
+	defer page.Close()
+
+	if err := applyStealth(page, auth.UserAgent); err != nil {
+		r.logger.Warn("stealth profile incomplete", "error", err)
+	}
+	if err := authenticateBrowser(ctx, connected.browser, page, targetURL, auth, r.settle); err != nil && !hasSessionAuth(auth) {
+		return fmt.Errorf("%w: %v", contracts.ErrScannerLogin, err)
+	}
+	return nil
+}
+
 func NewRodCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.AttackConfig, logger *slog.Logger) *RodCrawler {
 	if logger == nil {
 		logger = slog.Default()
@@ -76,18 +108,6 @@ func (r *RodCrawler) Discover(
 		r.logger.Warn("stealth profile incomplete", "error", err)
 	}
 
-	if auth.HasCredentials() {
-		if err := authenticateBrowser(exploreCtx, browser, page, targetURL, auth, r.settle); err != nil {
-			if auth.HasSession() {
-				r.logger.Warn("browser login incomplete; using existing session", "error", err)
-			} else {
-				return nil, fmt.Errorf("%w: %v", contracts.ErrScannerLogin, err)
-			}
-		} else {
-			r.logger.Info("scanner login established a session for dynamic discovery")
-		}
-	}
-
 	var mu sync.Mutex
 	vectors := make(map[string]contracts.AttackVector)
 	record := func(vector contracts.AttackVector) {
@@ -130,8 +150,6 @@ func (r *RodCrawler) Discover(
 			"has_user_agent", userAgent != "",
 			"has_credentials", auth.HasCredentials(),
 		)
-	} else if auth.HasCredentials() {
-		return nil, fmt.Errorf("%w: credentials did not establish a session", contracts.ErrScannerLogin)
 	} else {
 		r.logger.Warn("dynamic discovery running without auth; authenticated SPA routes may redirect to login")
 	}
@@ -571,21 +589,53 @@ func looksLikeLoginURL(raw string) bool {
 	if err != nil {
 		return false
 	}
-	path := strings.ToLower(strings.Trim(parsed.Path, "/"))
-	if path == "" {
+	switch lastAuthSegment(parsed.Path) {
+	case "login", "signin", "sign-in", "log-in", "inscricao":
+		return true
+	default:
 		return false
+	}
+}
+
+func looksLikeRegisterURL(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	last := lastAuthSegment(parsed.Path)
+	switch last {
+	case "register", "signup", "sign-up", "cadastro", "cadastrar", "registrar", "registro", "join":
+		return true
+	default:
+		return false
+	}
+}
+
+func looksLikeAuthFragment(raw string) bool {
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	frag := strings.ToLower(parsed.Fragment)
+	for _, hint := range []string{"login", "signin", "sign-in", "register", "signup", "sign-up", "cadastro"} {
+		if strings.Contains(frag, hint) {
+			return true
+		}
+	}
+	return false
+}
+
+func lastAuthSegment(path string) string {
+	path = strings.ToLower(strings.Trim(path, "/"))
+	if path == "" {
+		return ""
 	}
 	segments := strings.Split(path, "/")
 	last := segments[len(segments)-1]
 	last = strings.TrimSuffix(last, ".php")
 	last = strings.TrimSuffix(last, ".html")
 	last = strings.TrimSuffix(last, ".htm")
-	switch last {
-	case "login", "signin", "sign-in", "log-in", "inscricao":
-		return true
-	default:
-		return false
-	}
+	return last
 }
 
 func headerFromNetwork(headers proto.NetworkHeaders, name string) string {

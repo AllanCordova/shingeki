@@ -69,8 +69,6 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
-      RUN_DB_SEED: ${RUN_DB_SEED:-true}
-      ATTACKS_TARGET_LOCALHOST_REWRITE: ${ATTACKS_TARGET_LOCALHOST_REWRITE:-host.docker.internal}
     depends_on:
       mysql:
         condition: service_healthy
@@ -116,9 +114,10 @@ services:
       - .env
       - path: ./workers/dast/.env
         required: false
+    network_mode: host
     environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
@@ -130,15 +129,27 @@ services:
       DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
       DISCOVERY_CDP_URL: ${DISCOVERY_CDP_URL:-}
       DISCOVERY_PROXY: ${DISCOVERY_PROXY:-}
-      TARGET_LOCALHOST_REWRITE: host.docker.internal
+      TARGET_LOCALHOST_REWRITE: ""
       ATTACK_REQUEST_TIMEOUT: ${ATTACK_REQUEST_TIMEOUT:-30s}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      BROWSER_STATE_KEY: ${BROWSER_STATE_KEY:-}
     depends_on:
       rabbitmq:
         condition: service_healthy
-    networks:
-      - shingeki
+
+  capture:
+    profiles: ["stack"]
+    build:
+      context: ./workers/capture
+      dockerfile: Dockerfile
+    container_name: shingeki-capture
+    restart: unless-stopped
+    shm_size: "1gb"
+    network_mode: host
+    environment:
+      CAPTURE_SERVICE_TOKEN: ${CAPTURE_SERVICE_TOKEN:-}
+      CAPTURE_SERVICE_PORT: "7900"
+      CAPTURE_SERVICE_HOST: 127.0.0.1
+      CAPTURE_NOVNC_BIND: 127.0.0.1:6080
 
 networks:
   shingeki:

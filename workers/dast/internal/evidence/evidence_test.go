@@ -277,6 +277,70 @@ func TestPathTraversalValidatorRequiresFileMarker(t *testing.T) {
 	}
 }
 
+func TestPathTraversalValidatorIgnoresReflectedRoute(t *testing.T) {
+	validator := evidence.NewPathTraversalValidator()
+	encoded := "/api/v1/%2e%2e%2fstorage%2fsecret.txt"
+	body := `{"message":"The route api/v1/%2e%2e%2fstorage%2fsecret.txt could not be found.","exception":"Symfony\\Component\\HttpKernel\\Exception\\NotFoundHttpException","file":"/var/www/vendor/laravel/framework/src/Illuminate/Routing/AbstractRouteCollection.php","line":44,"trace":[{"file":"/var/www/vendor/laravel/framework/src/Illuminate/Routing/AbstractRouteCollection.php","line":44,"function":"match","args":["api/v1/%2e%2e%2fstorage%2fsecret.txt"]}]}`
+
+	cases := []types.Response{
+		{
+			Job: types.Job{
+				Attack: contracts.AttackItem{AttackID: "atk-1", Category: "PATH_TRAVERSAL"},
+				Vector: contracts.AttackVector{Route: "http://127.0.0.1:8001/api/v1/payments/1"},
+			},
+			AttackStatus: 404,
+			BaselineBody: `{"message":"The route api/v1/payments/1 could not be found."}`,
+			AttackBody:   body,
+			PayloadUsed:  "../storage/secret.txt",
+			RawRequest:   "GET " + encoded + " HTTP/1.1",
+		},
+		{
+			Job: types.Job{
+				Attack: contracts.AttackItem{AttackID: "atk-1", Category: "PATH_TRAVERSAL"},
+				Vector: contracts.AttackVector{Route: "http://127.0.0.1:8001/api/v1/login"},
+			},
+			AttackStatus: 404,
+			AttackBody:   "The route api/v1/%2e%2e%2fstorage%2fsecret.txt could not be found.",
+			PayloadUsed:  "../storage/secret.txt",
+			RawRequest:   "POST " + encoded + " HTTP/1.1",
+		},
+		{
+			Job: types.Job{
+				Attack: contracts.AttackItem{AttackID: "atk-1", Category: "PATH_TRAVERSAL"},
+				Vector: contracts.AttackVector{Route: "http://127.0.0.1:8001/api/v1/orders/1"},
+			},
+			AttackStatus: 500,
+			AttackBody:   body,
+			PayloadUsed:  "../storage/secret.txt",
+			RawRequest:   "GET /api/v1/orders/" + "%2e%2e%2fstorage%2fsecret.txt HTTP/1.1",
+		},
+	}
+
+	for _, resp := range cases {
+		if finding := validator.Analyze(context.Background(), resp); finding != nil {
+			t.Fatalf("reflected route %s must not confirm path traversal, got %q", resp.RawRequest, finding.Evidence)
+		}
+	}
+}
+
+func TestPathTraversalValidatorConfirmsFilenameInFileBody(t *testing.T) {
+	validator := evidence.NewPathTraversalValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "PATH_TRAVERSAL"},
+			Vector: contracts.AttackVector{Route: "http://target/download/readme.txt"},
+		},
+		AttackStatus: 200,
+		BaselineBody: "readme",
+		AttackBody:   "canary file\nname: secret.txt\n",
+		PayloadUsed:  "../storage/secret.txt",
+		RawRequest:   "GET /download/%2e%2e%2fstorage%2fsecret.txt HTTP/1.1",
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding == nil {
+		t.Fatal("expected finding when file body names secret.txt outside the echoed path")
+	}
+}
+
 func TestTimingValidatorSleep(t *testing.T) {
 	validator := evidence.NewTimingValidator(config.EvidenceConfig{TimingTolerance: 2 * time.Second})
 	resp := types.Response{

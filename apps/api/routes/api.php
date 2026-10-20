@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Attack\AttackAcknowledgmentController;
 use App\Http\Controllers\Attack\AttackController;
+use App\Http\Controllers\Attack\SessionCaptureController;
 use App\Http\Controllers\Audit\AuditReportController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Auth\GoogleAuthController;
@@ -24,6 +25,10 @@ use App\Http\Controllers\System\StackController;
 use App\Http\Controllers\System\SystemController;
 use App\Http\Controllers\System\SystemResultController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('session-captures/{token}/complete', [SessionCaptureController::class, 'complete'])
+    ->where('token', '[A-Fa-f0-9]{64}')
+    ->middleware('throttle:20,1');
 
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
@@ -88,6 +93,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('projects/{project}/systems/{system}/attack-acknowledgment', [AttackAcknowledgmentController::class, 'show']);
     Route::get('projects/{project}/systems/{system}/attacks/catalog', [AttackController::class, 'catalog']);
+    Route::post('projects/{project}/systems/{system}/attacks/session-captures', [SessionCaptureController::class, 'store']);
+    Route::get('projects/{project}/systems/{system}/attacks/session-captures/{capture}', [SessionCaptureController::class, 'show']);
+    Route::post('projects/{project}/systems/{system}/attacks/session-captures/{capture}/browser', [SessionCaptureController::class, 'browser']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);

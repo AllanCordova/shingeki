@@ -13,14 +13,14 @@ function ConectarAlvoContent() {
       <ErrorShow
         error={{
           message: ticket
-            ? "A captura automática de sessão foi desligada. Configure usuário e senha do alvo na página do sistema (login do scanner)."
+            ? "Este link de conexão não abre mais uma sessão. Capture o navegador pelo disparo DAST na página do sistema."
             : "Link de conexão inválido.",
           status: 410,
           hasFieldErrors: false,
         }}
       />
       <p className="max-w-md text-sm text-muted-foreground">
-        A autenticação do DAST fica no scanner, não nesta janela.
+        A sessão autenticada nasce da captura do navegador, não desta janela.
       </p>
       <Button type="button" onClick={() => window.close()}>
         Fechar janela

@@ -96,9 +96,6 @@ class OwnedSystemController extends Controller
             'name' => $system->name,
             'target_url' => $system->target_url,
             'login_url' => $system->login_url,
-            'login_username' => $system->login_username,
-            'login_configured' => $system->hasScannerLogin(),
-            'logged_in_indicator' => $system->logged_in_indicator,
             'repository_url' => $system->repository_url,
             'dast_max_routes' => $system->dast_max_routes,
             'dast_start_path' => $system->dast_start_path,
@@ -119,6 +116,7 @@ class OwnedSystemController extends Controller
                 ? [
                     'id' => $system->project->id,
                     'name' => $system->project->name,
+                    'cover_path' => $system->project->cover_path,
                 ]
                 : null,
             'created_at' => $system->created_at,

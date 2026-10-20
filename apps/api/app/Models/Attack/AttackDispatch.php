@@ -26,6 +26,13 @@ class AttackDispatch extends Model
     /**
      * @var list<string>
      */
+    protected $hidden = [
+        'browser_state',
+    ];
+
+    /**
+     * @var list<string>
+     */
     protected $fillable = [
         'system_id',
         'user_id',
@@ -33,10 +40,13 @@ class AttackDispatch extends Model
         'depth',
         'start_path',
         'max_routes',
+        'route_map',
+        'browser_state',
         'attacks_count',
         'dispatched_at',
         'completed_at',
         'failed_at',
+        'session_expired_at',
         'failure_reason',
         'duration_ms',
         'findings_count',
@@ -54,9 +64,12 @@ class AttackDispatch extends Model
             'scan_type' => AttackScanType::class,
             'depth' => AttackDepth::class,
             'max_routes' => 'integer',
+            'route_map' => 'array',
+            'browser_state' => 'array',
             'dispatched_at' => 'datetime',
             'completed_at' => 'datetime',
             'failed_at' => 'datetime',
+            'session_expired_at' => 'datetime',
             'duration_ms' => 'integer',
             'findings_count' => 'integer',
             'probes_count' => 'integer',
@@ -105,6 +118,10 @@ class AttackDispatch extends Model
 
     public function scanStatus(): string
     {
+        if ($this->session_expired_at !== null) {
+            return 'session_expired';
+        }
+
         if ($this->failed_at !== null) {
             return 'failed';
         }

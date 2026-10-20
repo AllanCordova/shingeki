@@ -55,7 +55,6 @@ func (s *HTTPScanner) Scan(
 		s = NewHTTPScanner()
 	}
 
-	headers := contracts.EffectiveAuthHeaders(auth)
 	seenURL := map[string]struct{}{}
 	var pages []string
 	addPage := func(raw string) {
@@ -111,7 +110,7 @@ func (s *HTTPScanner) Scan(
 		if fetched >= maxFetches {
 			break
 		}
-		body, reqDump, fetchErr := s.get(ctx, pageURL, headers)
+		body, reqDump, fetchErr := s.get(ctx, pageURL, contracts.HeadersForURL(auth, targetURL, pageURL))
 		fetched++
 		if fetchErr != nil {
 			lastFetchErr = fetchErr
@@ -146,7 +145,7 @@ func (s *HTTPScanner) Scan(
 			continue
 		}
 		seenURL[scriptURL] = struct{}{}
-		body, reqDump, fetchErr := s.get(ctx, scriptURL, headers)
+		body, reqDump, fetchErr := s.get(ctx, scriptURL, contracts.HeadersForURL(auth, targetURL, scriptURL))
 		fetched++
 		if fetchErr != nil {
 			lastFetchErr = fetchErr

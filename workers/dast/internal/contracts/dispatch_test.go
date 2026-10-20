@@ -38,6 +38,35 @@ func TestParseDispatchBatchValid(t *testing.T) {
 	}
 }
 
+func TestParseDispatchBatchAcceptsRouteMap(t *testing.T) {
+	raw := []byte(`{
+		"event": "attack.dispatch.batch",
+		"dispatch_id": "dispatch-1",
+		"system_id": "sys-1",
+		"user_id": "user-1",
+		"target_url": "https://example.com",
+		"route_map": [
+			{"method": "GET", "path": "/api/v1/user"},
+			{"method": "POST", "path": "/api/v1/product", "body": {"name": "exemplo"}}
+		],
+		"attacks": [{
+			"attack_id": "atk-1",
+			"category": "SQL_INJECTION",
+			"target_location": "JSON_BODY",
+			"risk_level": "HIGH",
+			"payload": {"value":"' OR 1=1 --"}
+		}]
+	}`)
+
+	batch, err := contracts.ParseDispatchBatch(raw)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(batch.EffectiveRouteMap()) != 2 || batch.RouteMap[1].Path != "/api/v1/product" {
+		t.Fatalf("route map = %#v", batch.RouteMap)
+	}
+}
+
 func TestParseDispatchBatchRejectsFileTargetURL(t *testing.T) {
 	raw := []byte(`{
 		"event": "attack.dispatch.batch",

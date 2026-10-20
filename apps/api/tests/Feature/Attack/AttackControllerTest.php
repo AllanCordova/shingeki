@@ -125,7 +125,7 @@ describe('POST attacks/dispatch', function () {
             ->and($acknowledgment->terms_version)->toBe(AttackAcknowledgmentTerms::VERSION);
     });
 
-    test('publishes scanner credentials instead of a copied target session', function () {
+    test('dispatches the public surface without embedding credentials', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         $catalogAttacks = Attack::factory()->count(1)->for($admin)->create();
 
@@ -133,8 +133,6 @@ describe('POST attacks/dispatch', function () {
         $project = Project::factory()->for($user)->create();
         $system = System::factory()->for($project)->create([
             'login_url' => 'https://app.example.com/login',
-            'login_username' => 'scanner@example.com',
-            'login_password' => 'secret-pass-123',
         ]);
 
         Sanctum::actingAs($user);
@@ -148,12 +146,7 @@ describe('POST attacks/dispatch', function () {
                 Mockery::on(fn (User $queuedUser) => $queuedUser->is($user)),
                 Mockery::on(fn (Collection $attacks) => $attacks->count() === 1),
                 AttackScanType::Dast,
-                Mockery::on(fn (?array $auth) => $auth === [
-                    'type' => 'credentials',
-                    'username' => 'scanner@example.com',
-                    'password' => 'secret-pass-123',
-                    'login_url' => 'https://app.example.com/login',
-                ]),
+                null,
             );
 
         $this->postJson(
@@ -161,8 +154,7 @@ describe('POST attacks/dispatch', function () {
             validAttackDispatchPayload($catalogAttacks->pluck('id')->all()),
         )
             ->assertAccepted()
-            ->assertJsonPath('scanner_login_configured', true)
-            ->assertJsonMissingPath('target_session_connected');
+            ->assertJsonMissingPath('scanner_login_configured');
     });
 
     test('dispatches with quick depth when requested', function () {
@@ -220,6 +212,68 @@ describe('POST attacks/dispatch', function () {
 
         expect($dispatch?->start_path)->toBe('/products')
             ->and($dispatch?->max_routes)->toBe(50);
+    });
+
+    test('dispatches dast against an exclusive route map', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $attack = Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'dast_start_path' => '/checkout',
+            'dast_max_routes' => 50,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once();
+
+        $this->postJson(attackDispatchUrl($project, $system), [
+            ...validAttackDispatchPayload([$attack->id]),
+            'route_map' => [
+                ['method' => 'GET', 'path' => 'api/v1/user'],
+                ['method' => 'GET', 'path' => 'api/v1/product'],
+                ['method' => 'POST', 'path' => '/api/v1/product', 'body' => ['name' => 'exemplo']],
+                ['method' => 'GET', 'path' => '/api/v1/product/{id}', 'query' => ['id' => '1']],
+            ],
+        ])
+            ->assertAccepted()
+            ->assertJsonPath('dispatch.start_path', null)
+            ->assertJsonPath('dispatch.max_routes', null)
+            ->assertJsonPath('dispatch.route_map.0.path', '/api/v1/user')
+            ->assertJsonPath('dispatch.route_map.1.path', '/api/v1/product')
+            ->assertJsonPath('dispatch.route_map.2.method', 'POST')
+            ->assertJsonPath('dispatch.route_map.2.body.name', 'exemplo')
+            ->assertJsonPath('dispatch.route_map.3.path', '/api/v1/product/1');
+
+        $dispatch = AttackDispatch::query()->where('system_id', $system->id)->first();
+
+        expect($dispatch?->route_map)->toHaveCount(4)
+            ->and($dispatch?->start_path)->toBeNull()
+            ->and($dispatch?->max_routes)->toBeNull();
+    });
+
+    test('returns unprocessable for a route map that leaves the target', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $attack = Attack::factory()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(attackDispatchUrl($project, $system), [
+            ...validAttackDispatchPayload([$attack->id]),
+            'route_map' => [
+                ['method' => 'GET', 'path' => 'https://evil.example/api/v1/user'],
+            ],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['route_map']);
     });
 
     test('omits max_routes when start_path is set without max_routes', function () {
@@ -427,6 +481,28 @@ describe('POST attacks/dispatch/sast', function () {
             ->assertJsonPath('dispatch.depth', 'full');
 
         expect(AttackAcknowledgment::query()->where('system_id', $system->id)->count())->toBe(1);
+    });
+
+    test('rejects a route map on sast dispatch', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $sastAttack = Attack::factory()->sast()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'repository_url' => 'https://github.com/org/repo',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(attackSastDispatchUrl($project, $system), [
+            ...validAttackDispatchPayload([$sastAttack->id]),
+            'route_map' => [
+                ['method' => 'GET', 'path' => '/api/v1/user'],
+            ],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['route_map']);
     });
 
     test('returns unprocessable when repository url is missing', function () {

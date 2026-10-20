@@ -48,3 +48,24 @@ test('process marks dispatch as failed when status is failed', function () {
         ->and($updated->failure_reason)->toBe('discovery: chrome missing')
         ->and($updated->scanStatus())->toBe('failed');
 });
+
+test('process marks dispatch as session expired without failing it', function () {
+    $user = User::factory()->create();
+    $system = System::factory()->create();
+    $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+    $updated = app(AttackDispatchCompletionProcessor::class)->process([
+        'event' => AttackDispatchCompletionProcessor::EVENT,
+        'dispatch_id' => $dispatch->id,
+        'system_id' => $system->id,
+        'status' => 'session_expired',
+        'duration_ms' => 800,
+        'findings_count' => 1,
+        'probes_count' => 2,
+    ]);
+
+    expect($updated->session_expired_at)->not->toBeNull()
+        ->and($updated->failed_at)->toBeNull()
+        ->and($updated->completed_at)->toBeNull()
+        ->and($updated->scanStatus())->toBe('session_expired');
+});

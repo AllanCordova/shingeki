@@ -101,6 +101,28 @@ func TestApplyJSONLoginSkipsHTMLFormLoginURL(t *testing.T) {
 	}
 }
 
+func TestApplyJSONLoginSkipsConfiguredPage(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		http.NotFound(w, r)
+	}))
+	defer server.Close()
+
+	auth := &contracts.TargetAuth{
+		Type:     "credentials",
+		LoginURL: server.URL + "/login",
+		Username: "scanner@example.com",
+		Password: "secret",
+	}
+	if err := ApplyJSONLogin(context.Background(), server.URL, auth); err != nil {
+		t.Fatal(err)
+	}
+	if called {
+		t.Fatal("must not guess /rest/user/login when the user passed a page")
+	}
+}
+
 func TestApplyHTTPFormLoginStoresSessionCookie(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/login.php" || r.Method != http.MethodPost {

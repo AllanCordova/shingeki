@@ -66,15 +66,6 @@ export function buildSystemCreateFormData(input: SystemCreateInput): FormData {
   if (input.login_url) {
     formData.append("login_url", input.login_url);
   }
-  if (input.login_username) {
-    formData.append("login_username", input.login_username);
-  }
-  if (input.login_password) {
-    formData.append("login_password", input.login_password);
-  }
-  if (input.logged_in_indicator) {
-    formData.append("logged_in_indicator", input.logged_in_indicator);
-  }
   formData.append("repository_url", input.repository_url);
   appendStackIds(formData, input.stack_ids ?? []);
   appendCoverFields(formData, input);
@@ -99,21 +90,6 @@ export function buildSystemUpdateFormData(
 
   if (input.login_url !== undefined) {
     formData.append("login_url", input.login_url);
-    hasField = true;
-  }
-
-  if (input.login_username !== undefined) {
-    formData.append("login_username", input.login_username);
-    hasField = true;
-  }
-
-  if (input.login_password) {
-    formData.append("login_password", input.login_password);
-    hasField = true;
-  }
-
-  if (input.logged_in_indicator !== undefined) {
-    formData.append("logged_in_indicator", input.logged_in_indicator);
     hasField = true;
   }
 

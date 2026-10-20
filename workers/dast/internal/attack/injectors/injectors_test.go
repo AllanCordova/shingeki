@@ -207,4 +207,12 @@ func TestBuildHeaderJWTNone(t *testing.T) {
 	if !strings.Contains(baseSpec.Headers["Authorization"], "invalid-signature") {
 		t.Fatalf("baseline must use a broken signature, got %q", baseSpec.Headers["Authorization"])
 	}
+
+	anon, err := injectors.BuildUnauthenticated(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := anon.Headers["Authorization"]; ok {
+		t.Fatalf("unauthenticated probe must drop Authorization, got %v", anon.Headers)
+	}
 }

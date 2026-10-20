@@ -5,21 +5,23 @@ import {
   dispatchFailureCopy,
   dispatchStatusLabel,
   dispatchStatusTone,
+  sessionExpiredCopy,
 } from "./attack";
 
 describe("dispatchStatusLabel", () => {
-  it("labels completed, failed, and pending scans", () => {
+  it("labels completed, failed, pending, and expired scans", () => {
     assert.equal(dispatchStatusLabel("completed"), "Concluído");
     assert.equal(dispatchStatusLabel("failed"), "Falhou");
     assert.equal(dispatchStatusLabel("pending"), "Processando");
+    assert.equal(dispatchStatusLabel("session_expired"), "Sessão expirada");
   });
 });
 
 describe("dispatchFailureCopy", () => {
-  it("explains scanner login failures with accents", () => {
+  it("explains an old scanner login failure without asking for a password", () => {
     assert.match(
       dispatchFailureCopy("discovery: scanner login failed"),
-      /não conseguiu entrar/,
+      /Capture o estado do navegador/,
     );
   });
 
@@ -31,10 +33,17 @@ describe("dispatchFailureCopy", () => {
   });
 });
 
+describe("sessionExpiredCopy", () => {
+  it("tells the operator to capture the browser again", () => {
+    assert.match(sessionExpiredCopy(), /Capture o navegador de novo/);
+  });
+});
+
 describe("dispatchStatusTone", () => {
   it("maps status to UI tone", () => {
     assert.equal(dispatchStatusTone("completed"), "success");
     assert.equal(dispatchStatusTone("failed"), "danger");
     assert.equal(dispatchStatusTone("pending"), "warning");
+    assert.equal(dispatchStatusTone("session_expired"), "warning");
   });
 });

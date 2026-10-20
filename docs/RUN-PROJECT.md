@@ -80,7 +80,9 @@ Na primeira vez, ou após mudar código dos workers, use `--build`.
 |-------|----------------------|
 | 1. API enfileira o lote | publica em `attacks.dispatch` |
 | 2. Worker DAST | consome `attacks.dispatch`, publica resultados em `attacks.results` |
-| 3. `api-consumers` | consome `attacks.results`, grava no MySQL e marca o dispatch (sucesso → `completed_at`; falha → `failed_at`) |
+| 3. `api-consumers` | consome `attacks.results`, grava no MySQL e marca o dispatch (sucesso → `completed_at`; falha → `failed_at`; sessão expirada → `session_expired_at`) |
+
+O profile `stack` também sobe o serviço `capture` (Playwright, Xvfb e noVNC) em `127.0.0.1:7900` e `127.0.0.1:6080`. O comando local em `workers/capture` não depende dele. Contrato: [TARGET-SESSION.md](api/TARGET-SESSION.md).
 
 Se o disparo ficar **pendente** com o worker DAST rodando, verifique se `api-consumers` está ativo e se a fila `attacks.results` tem consumer:
 
@@ -101,7 +103,7 @@ npm run test:dast
 
 Gabarito: [goldset DAST](architecture/shingeki-dast-goldset.md). Contrato de dispatch: [ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 
-Quando o worker corre em Docker contra um alvo no host, a API reescreve `127.0.0.1` / `localhost` para `host.docker.internal` (`ATTACKS_TARGET_LOCALHOST_REWRITE` / `TARGET_LOCALHOST_REWRITE`). Cadastre só URLs de browser (`127.0.0.1`), nunca `host.docker.internal`.
+O worker DAST usa a rede da máquina. Um alvo em `127.0.0.1` ou `localhost` é o da máquina, sem reescrever o host e sem mudar a porta em que o servidor escuta.
 
 **SAST:** o worker clona o `repository_url` do sistema. Defina `GITHUB_TOKEN` no `.env` da raiz para repositórios privados. Amostras de treino: [`workers/sast/testdata/goldset/`](../workers/sast/testdata/goldset/).
 
@@ -109,8 +111,8 @@ Quando o worker corre em Docker contra um alvo no host, a API reescreve `127.0.0
 
 | E-mail | Senha | Perfil |
 |--------|-------|--------|
-| `test@example.com` | `password` | `SPECIALIST` — projetos demo (Netflix, Mercado Livre, Nubank, iFood) |
-| `admin@admin.com` | `password` | `ADMIN` — catálogo global + mesmos projetos demo |
+| `test@example.com` | `password` | `SPECIALIST` — projeto Laboratório com quatro alvos públicos de scanner |
+| `admin@admin.com` | `password` | `ADMIN` — catálogo global + o mesmo laboratório |
 
 Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 

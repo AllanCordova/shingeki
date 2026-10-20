@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -27,13 +28,15 @@ type resultPublisher interface {
 }
 
 type Pipeline struct {
-	discovery discovery.Engine
-	attack    attack.Engine
-	evidence  evidence.Validator
-	secrets   secrets.Scanner
-	publisher resultPublisher
-	logger    *slog.Logger
-	ping      func(ctx context.Context, rawURL string) error
+	discovery    discovery.Engine
+	attack       attack.Engine
+	evidence     evidence.Validator
+	secrets      secrets.Scanner
+	publisher    resultPublisher
+	logger       *slog.Logger
+	ping         func(ctx context.Context, rawURL string) error
+	guard        sessionGuard
+	sessionBatch int
 }
 
 func NewPipeline(
@@ -47,12 +50,14 @@ func NewPipeline(
 		logger = slog.Default()
 	}
 	return &Pipeline{
-		discovery: discoveryEngine,
-		attack:    attackEngine,
-		evidence:  evidenceEngine,
-		publisher: publisher,
-		logger:    logger,
-		ping:      httputil.CheckReachable,
+		discovery:    discoveryEngine,
+		attack:       attackEngine,
+		evidence:     evidenceEngine,
+		publisher:    publisher,
+		logger:       logger,
+		ping:         httputil.CheckReachable,
+		guard:        newHTTPSessionGuard(),
+		sessionBatch: 20,
 	}
 }
 
@@ -71,7 +76,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	defer func() {
 		status := contracts.CompletionStatusCompleted
 		errText := ""
-		if err != nil {
+		if errors.Is(err, contracts.ErrSessionExpired) {
+			status = contracts.CompletionStatusSessionExpired
+		} else if err != nil {
 			status = contracts.CompletionStatusFailed
 			errText = err.Error()
 		}
@@ -101,6 +108,7 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 		"depth", batch.EffectiveDepth(),
 		"start_path", batch.EffectiveStartPath(),
 		"max_routes", batch.EffectiveMaxRoutes(),
+		"route_map", len(batch.EffectiveRouteMap()),
 	)
 
 	targetURL := targeturl.Normalize(batch.TargetURL)
@@ -114,6 +122,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 		if err = p.ping(ctx, targetURL); err != nil {
 			return err
 		}
+	}
+	if err = batch.Auth.MaterializeBrowserState(); err != nil {
+		return fmt.Errorf("browser state: %w", err)
 	}
 
 	var vectors []contracts.AttackVector
@@ -132,68 +143,107 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	probesPublished += secretProbes
 
 	jobs := p.attack.MapVectorsToJobs(vectors, batch.Attacks)
-	jobs = attack.ApplyAuth(jobs, batch.Auth)
+	jobs = attack.ApplyAuth(jobs, batch.Auth, targetURL)
 	jobsPlanned = len(jobs)
 	p.logger.Info("mapped attack jobs", "jobs", jobsPlanned)
 
-	responses := p.attack.ExecutePool(ctx, jobs)
-	for _, response := range responses {
-		if response.Error != nil && !response.TimedOut {
-			p.logger.Warn("attack job failed",
-				"attack_id", response.Job.Attack.AttackID,
-				"route", response.Job.Vector.Route,
-				"error", response.Error,
-			)
-			if err = p.publishProbe(errorProbe(batch, response)); err != nil {
-				return err
-			}
-			probesPublished++
-			continue
+	controlURL, err := p.establishControl(ctx, targetURL, batch.Auth, vectors)
+	if err != nil {
+		return err
+	}
+
+	batchSize := len(jobs)
+	if controlURL != "" {
+		batchSize = p.sessionBatch
+		if batchSize < 1 {
+			batchSize = 20
 		}
+	}
+	if batchSize < 1 {
+		batchSize = 1
+	}
 
-		finding := p.evidence.Analyze(ctx, response)
-		if response.Error != nil && finding == nil {
-			if err = p.publishProbe(errorProbe(batch, response)); err != nil {
-				return err
+	for start := 0; start < len(jobs); start += batchSize {
+		if start > 0 && controlURL != "" {
+			expired, checkErr := p.guard.Expired(ctx, targetURL, controlURL, batch.Auth)
+			if checkErr != nil {
+				return fmt.Errorf("session control: %w", checkErr)
 			}
-			probesPublished++
-			continue
+			if expired {
+				return contracts.ErrSessionExpired
+			}
 		}
-
-		outcome := "clean"
-		evidenceText := fmt.Sprintf("HTTP %d · nenhum indicador detectado", response.AttackStatus)
-
-		if finding != nil {
-			outcome = "vulnerable"
-			evidenceText = finding.Evidence
-			finding.VulnerableRoute = targeturl.CanonicalSinkRoute(finding.VulnerableRoute)
-
-			key := findingIdentity(finding.AttackID, finding.VulnerableRoute)
-			if _, exists := publishedFindings[key]; !exists {
-				result := finding.ToResultMessage(batch.DispatchID, batch.SystemID)
-				if err = p.publishResult(result); err != nil {
+		end := start + batchSize
+		if end > len(jobs) {
+			end = len(jobs)
+		}
+		responses := p.attack.ExecutePool(ctx, jobs[start:end])
+		for _, response := range responses {
+			if response.Skipped {
+				if err = p.publishProbe(skippedProbe(batch, response)); err != nil {
 					return err
 				}
-				publishedFindings[key] = struct{}{}
-				findingsPublished++
+				probesPublished++
+				continue
 			}
-		}
 
-		probe := contracts.ProbeMessage{
-			Event:       contracts.EventAttackProbe,
-			DispatchID:  batch.DispatchID,
-			SystemID:    batch.SystemID,
-			AttackID:    response.Job.Attack.AttackID,
-			Route:       response.Job.Vector.Route,
-			PayloadUsed: response.PayloadUsed,
-			HTTPRequest: response.RawRequest,
-			Outcome:     outcome,
-			Evidence:    evidenceText,
+			if response.Error != nil && !response.TimedOut {
+				p.logger.Warn("attack job failed",
+					"attack_id", response.Job.Attack.AttackID,
+					"route", response.Job.Vector.Route,
+					"error", response.Error,
+				)
+				if err = p.publishProbe(errorProbe(batch, response)); err != nil {
+					return err
+				}
+				probesPublished++
+				continue
+			}
+
+			finding := p.evidence.Analyze(ctx, response)
+			if response.Error != nil && finding == nil {
+				if err = p.publishProbe(errorProbe(batch, response)); err != nil {
+					return err
+				}
+				probesPublished++
+				continue
+			}
+
+			outcome := "clean"
+			evidenceText := fmt.Sprintf("HTTP %d · nenhum indicador detectado", response.AttackStatus)
+
+			if finding != nil {
+				outcome = "vulnerable"
+				evidenceText = finding.Evidence
+				finding.VulnerableRoute = targeturl.CanonicalSinkRoute(finding.VulnerableRoute)
+
+				key := findingIdentity(finding.AttackID, finding.VulnerableRoute)
+				if _, exists := publishedFindings[key]; !exists {
+					result := finding.ToResultMessage(batch.DispatchID, batch.SystemID)
+					if err = p.publishResult(result); err != nil {
+						return err
+					}
+					publishedFindings[key] = struct{}{}
+					findingsPublished++
+				}
+			}
+
+			probe := contracts.ProbeMessage{
+				Event:       contracts.EventAttackProbe,
+				DispatchID:  batch.DispatchID,
+				SystemID:    batch.SystemID,
+				AttackID:    response.Job.Attack.AttackID,
+				Route:       response.Job.Vector.Route,
+				PayloadUsed: response.PayloadUsed,
+				HTTPRequest: response.RawRequest,
+				Outcome:     outcome,
+				Evidence:    evidenceText,
+			}
+			if err = p.publishProbe(probe); err != nil {
+				return err
+			}
+			probesPublished++
 		}
-		if err = p.publishProbe(probe); err != nil {
-			return err
-		}
-		probesPublished++
 	}
 
 	p.logger.Info("pipeline finished",
@@ -204,6 +254,22 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	)
 
 	return nil
+}
+
+func (p *Pipeline) establishControl(ctx context.Context, targetURL string, auth *contracts.TargetAuth, vectors []contracts.AttackVector) (string, error) {
+	if p.guard == nil || !auth.HasSession() {
+		return "", nil
+	}
+	candidates := make([]string, 0, 1+len(vectors))
+	candidates = append(candidates, targetURL)
+	for _, vector := range vectors {
+		candidates = append(candidates, vector.Route)
+	}
+	controlURL, err := p.guard.Establish(ctx, targetURL, auth, candidates)
+	if err != nil {
+		return "", err
+	}
+	return controlURL, nil
 }
 
 func (p *Pipeline) publishProbe(probe contracts.ProbeMessage) error {
@@ -317,6 +383,19 @@ func secretLeakAttackID(attacks []contracts.AttackItem) string {
 
 func findingIdentity(attackID, route string) string {
 	return attackID + "\x00" + targeturl.CanonicalSinkRoute(route)
+}
+
+func skippedProbe(batch contracts.DispatchBatch, response types.Response) contracts.ProbeMessage {
+	return contracts.ProbeMessage{
+		Event:       contracts.EventAttackProbe,
+		DispatchID:  batch.DispatchID,
+		SystemID:    batch.SystemID,
+		AttackID:    response.Job.Attack.AttackID,
+		Route:       response.Job.Vector.Route,
+		PayloadUsed: response.PayloadUsed,
+		Outcome:     "clean",
+		Evidence:    "rota pública sem autenticação; JWT_CONFUSION não testado",
+	}
 }
 
 func errorProbe(batch contracts.DispatchBatch, response types.Response) contracts.ProbeMessage {

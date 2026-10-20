@@ -9,14 +9,17 @@ import (
 	"github.com/shingeki/dast-worker/internal/contracts"
 )
 
-func cookieParamsFromAuth(seedURL string, auth *contracts.TargetAuth) []*proto.NetworkCookieParam {
+func cookieParamsFromAuth(targetURL, seedURL string, auth *contracts.TargetAuth) []*proto.NetworkCookieParam {
 	if auth == nil {
 		return nil
 	}
-	out := cookieParamsFromCaptured(seedURL, auth.Cookies)
+	out := cookieParamsFromCaptured(seedURL, contracts.CookiesForBrowser(targetURL, auth.Cookies))
 	seen := make(map[string]struct{}, len(out))
 	for _, cookie := range out {
 		seen[strings.ToLower(cookie.Name)] = struct{}{}
+	}
+	if !contracts.HostInScope(targetURL, seedURL) {
+		return out
 	}
 	for _, headerCookie := range cookieParamsFromHeader(seedURL, auth.Headers) {
 		if _, exists := seen[strings.ToLower(headerCookie.Name)]; exists {
