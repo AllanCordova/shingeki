@@ -4,32 +4,7 @@ Detecta vulnerabilidades em sistemas web autorizados e devolve a correção em c
 
 Um projeto reúne vários sistemas. Cada sistema é um alvo. O catálogo de ataques é o mesmo para todos; a remediação muda conforme a stack daquele sistema.
 
-Este arquivo descreve os materiais da monografia e o que a banca precisa para acessar, executar e avaliar o trabalho. O mesmo conteúdo deve ser colado no campo **Instruções adicionais** do SGTCC.
-
-## Materiais entregues
-
-A monografia segue em PDF, no envio principal do SGTCC. Os complementares vão em um único `.zip`:
-
-Os arquivos reunidos para o zip estão em [`entrega/`](entrega/).
-
-```text
-complementares.zip
-├── README.md
-├── codigo-fonte.zip
-├── demonstracao.mp4
-├── apresentacao.pptx
-└── apresentacao.pdf
-```
-
-| Material | Onde está | O que contém |
-|----------|-----------|--------------|
-| Monografia | PDF no SGTCC, fora do zip | Texto do trabalho |
-| Código-fonte | [github.com/AllanCordova/shingeki](https://github.com/AllanCordova/shingeki) e `codigo-fonte.zip` | Monorepo: API Laravel (`apps/api`), client Next.js (`apps/client`), workers DAST e SAST em Go (`workers/dast`, `workers/sast`) e captura de sessão (`workers/capture`) |
-| Apresentação | `entrega/apresentacao.pptx` e `entrega/apresentacao.pdf` | Slides da defesa, em PowerPoint e em PDF |
-| Vídeo | `entrega/demonstracao.mp4` e https://youtu.be/k51GRkimX8U | Demonstração do funcionamento |
-| Sistema | [shingeki.com.br](https://shingeki.com.br/) | Interface publicada para a banca. Credencial na seção [Autenticação](#autenticação-e-credenciais-de-teste) |
-
-O `codigo-fonte.zip` é o clone do repositório, sem `node_modules`, sem `vendor` e sem arquivos `.env`. Os exemplos versionados são `.env.example` e `.env.production.example`. Segredos, tokens, chaves de API e certificados ficam de fora. As contas abaixo são fictícias, criadas pelo seed.
+Este arquivo descreve o que a banca precisa para acessar, executar e avaliar o trabalho. O mesmo conteúdo deve ser colado no campo **Instruções adicionais** do SGTCC.
 
 ## Repositório
 
@@ -37,11 +12,7 @@ https://github.com/AllanCordova/shingeki
 
 ## Vídeo de demonstração
 
-Arquivo no zip: `demonstracao.mp4` (cópia em [`entrega/demonstracao.mp4`](entrega/demonstracao.mp4)).
-
-YouTube: https://youtu.be/k51GRkimX8U
-
-O link abre para a banca sem pedido de permissão.
+https://youtu.be/k51GRkimX8U
 
 ## Acesso ao sistema
 
@@ -67,7 +38,14 @@ Requisitos:
 - Docker e Docker Compose
 - Memória suficiente para o Chromium do worker DAST
 
-Na raiz do repositório:
+Clone o repositório e entre na pasta:
+
+```bash
+git clone https://github.com/AllanCordova/shingeki.git
+cd shingeki
+```
+
+Na raiz:
 
 ```bash
 npm run dev
@@ -83,7 +61,14 @@ npm run seed
 
 ## Execução
 
-Com a stack no ar:
+Clone o repositório e entre na pasta:
+
+```bash
+git clone https://github.com/AllanCordova/shingeki.git
+cd shingeki
+```
+
+Siga a [instalação](#instalação). Com a stack no ar:
 
 - interface em http://localhost:3000
 - API em http://127.0.0.1:8000/api
