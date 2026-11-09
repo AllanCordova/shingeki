@@ -4,32 +4,7 @@ Detecta vulnerabilidades em sistemas web autorizados e devolve a correção em c
 
 Um projeto reúne vários sistemas. Cada sistema é um alvo. O catálogo de ataques é o mesmo para todos; a remediação muda conforme a stack daquele sistema.
 
-Este arquivo descreve os materiais da monografia e o que a banca precisa para acessar, executar e avaliar o trabalho. O mesmo conteúdo deve ser colado no campo **Instruções adicionais** do SGTCC.
-
-## Materiais entregues
-
-A monografia segue em PDF, no envio principal do SGTCC. Os complementares vão em um único `.zip`:
-
-Os arquivos reunidos para o zip estão em [`entrega/`](entrega/).
-
-```text
-complementares.zip
-├── README.md
-├── codigo-fonte.zip
-├── demonstracao.mp4
-├── apresentacao.pptx
-└── apresentacao.pdf
-```
-
-| Material | Onde está | O que contém |
-|----------|-----------|--------------|
-| Monografia | PDF no SGTCC, fora do zip | Texto do trabalho |
-| Código-fonte | [github.com/AllanCordova/shingeki](https://github.com/AllanCordova/shingeki) e `codigo-fonte.zip` | Monorepo: API Laravel (`apps/api`), client Next.js (`apps/client`), workers DAST e SAST em Go (`workers/dast`, `workers/sast`) e captura de sessão (`workers/capture`) |
-| Apresentação | `entrega/apresentacao.pptx` e `entrega/apresentacao.pdf` | Slides da defesa, em PowerPoint e em PDF |
-| Vídeo | `entrega/demonstracao.mp4` e https://youtu.be/k51GRkimX8U | Demonstração do funcionamento |
-| Sistema | [shingeki.com.br](https://shingeki.com.br/) | Interface publicada para a banca. Credencial na seção [Autenticação](#autenticação-e-credenciais-de-teste) |
-
-O `codigo-fonte.zip` é o clone do repositório, sem `node_modules`, sem `vendor` e sem arquivos `.env`. Os exemplos versionados são `.env.example` e `.env.production.example`. Segredos, tokens, chaves de API e certificados ficam de fora. As contas abaixo são fictícias, criadas pelo seed.
+Este arquivo descreve o que a banca precisa para acessar, executar e avaliar o trabalho. O mesmo conteúdo deve ser colado no campo **Instruções adicionais** do SGTCC.
 
 ## Repositório
 
@@ -37,11 +12,7 @@ https://github.com/AllanCordova/shingeki
 
 ## Vídeo de demonstração
 
-Arquivo no zip: `demonstracao.mp4` (cópia em [`entrega/demonstracao.mp4`](entrega/demonstracao.mp4)).
-
-YouTube: https://youtu.be/k51GRkimX8U
-
-O link abre para a banca sem pedido de permissão.
+https://youtu.be/k51GRkimX8U
 
 ## Acesso ao sistema
 
@@ -67,7 +38,14 @@ Requisitos:
 - Docker e Docker Compose
 - Memória suficiente para o Chromium do worker DAST
 
-Na raiz do repositório:
+Clone o repositório e entre na pasta:
+
+```bash
+git clone https://github.com/AllanCordova/shingeki.git
+cd shingeki
+```
+
+Na raiz:
 
 ```bash
 npm run dev
@@ -83,7 +61,14 @@ npm run seed
 
 ## Execução
 
-Com a stack no ar:
+Clone o repositório e entre na pasta:
+
+```bash
+git clone https://github.com/AllanCordova/shingeki.git
+cd shingeki
+```
+
+Siga a [instalação](#instalação). Com a stack no ar:
 
 - interface em http://localhost:3000
 - API em http://127.0.0.1:8000/api
@@ -104,7 +89,7 @@ Guia completo, filas e validação dos workers: [docs/RUN-PROJECT.md](docs/RUN-P
 
 ## Utilização
 
-1. Abra https://shingeki.com.br/login e entre com `test@example.com` / `password`. Na stack local, o mesmo fluxo está em http://localhost:3000/login.
+1. Abra https://shingeki.com.br/login e entre com `test@example.com` / `password`. Na stack local, o mesmo fluxo está em http://localhost:3000/login. Quem roda o código na própria máquina também entra com o administrador `admin@admin.com` / `password`.
 2. Abra o projeto **Laboratório**. O seed cria quatro alvos públicos feitos para scanner: OWASP Juice Shop, Google Firing Range, Acunetix ASP.NET e Gin and Juice.
 3. Abra um sistema, dispare um ataque e aceite os termos de responsabilidade. O disparo só segue com esse aceite.
 4. Aguarde o resultado. O worker publica achados; a interface mostra evidências e o snippet de correção da stack daquele sistema.
@@ -115,11 +100,14 @@ Ataque os alvos do Laboratório, ou um sistema para o qual exista autorização.
 
 Na interface, use **Entrar** com e-mail e senha. A API autentica em `POST /api/auth/login` e devolve um token Sanctum. No client, esse token fica em cookie http-only; a banca não precisa montar o header à mão para usar a interface.
 
-A banca entra só com a conta abaixo, em https://shingeki.com.br/login e na stack local depois de `npm run seed`. É um dado fictício. Se o usuário já existir, o seed não troca a senha; no sistema publicado a senha desta conta é `password`.
+A banca entra no sistema publicado só com `test@example.com` / `password`, em https://shingeki.com.br/login. É um dado fictício. Se o usuário já existir, o seed não troca a senha; no sistema publicado a senha desta conta é `password`.
+
+Quem roda a stack local, depois de `npm run seed`, entra em http://localhost:3000/login com essa conta e também com o perfil de administrador.
 
 | E-mail | Senha | Perfil | Uso |
 |--------|-------|--------|-----|
-| `test@example.com` | `password` | `SPECIALIST` | Projeto Laboratório, catálogo global e arsenal manual |
+| `test@example.com` | `password` | `SPECIALIST` | Projeto Laboratório, catálogo global e arsenal manual. Vale no sistema publicado e na stack local |
+| `admin@admin.com` | `password` | `ADMIN` | Perfil de administrador. Só na stack local, depois de `npm run seed` |
 
 Papéis e contrato HTTP: [docs/api/AUTHENTICATION.md](docs/api/AUTHENTICATION.md).
 
