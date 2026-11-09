@@ -2,7 +2,9 @@ package dynamic
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,9 +31,14 @@ func networkVector(targetURL, method, route, contentType, body string) (contract
 	vector := contracts.NewAttackVector(route, method, location)
 	if body != "" {
 		vector.Body = httputil.Truncate(httputil.RedactBody(body), 16<<10)
-		if looksLikeGraphQL(route, body) {
+		switch {
+		case location == "XML_BODY":
+			if root := mergeXMLParams(vector, body); root != "" && vector.XMLRoot == "" {
+				vector.XMLRoot = root
+			}
+		case looksLikeGraphQL(route, body):
 			mergeGraphQLParams(vector, body)
-		} else {
+		default:
 			mergeJSONParams(vector, body)
 		}
 	}
@@ -50,6 +57,9 @@ func classifyTargetLocation(method, contentType, route, body string) string {
 		return "JSON_BODY"
 	}
 	lowerType := strings.ToLower(contentType)
+	if strings.Contains(lowerType, "xml") || looksLikeXMLBody(body) {
+		return "XML_BODY"
+	}
 	if strings.Contains(lowerType, "application/json") {
 		return "JSON_BODY"
 	}
@@ -66,6 +76,21 @@ func classifyTargetLocation(method, contentType, route, body string) string {
 	return "API_ENDPOINT"
 }
 
+func looksLikeXMLBody(body string) bool {
+	trimmed := strings.TrimSpace(body)
+	if trimmed == "" {
+		return false
+	}
+	if strings.HasPrefix(strings.ToLower(trimmed), "%3c") {
+		decoded, err := url.QueryUnescape(trimmed)
+		if err != nil {
+			return false
+		}
+		trimmed = strings.TrimSpace(decoded)
+	}
+	return strings.HasPrefix(trimmed, "<") && strings.Contains(trimmed, ">")
+}
+
 func looksLikeGraphQL(route, body string) bool {
 	if strings.Contains(strings.ToLower(route), "graphql") {
 		return true
@@ -77,6 +102,72 @@ func looksLikeGraphQL(route, body string) bool {
 	_, hasQuery := payload["query"]
 	_, hasOp := payload["operationName"]
 	return hasQuery || hasOp
+}
+
+func mergeXMLParams(vector contracts.AttackVector, body string) string {
+	trimmed := strings.TrimSpace(body)
+	if strings.HasPrefix(strings.ToLower(trimmed), "%3c") {
+		decoded, err := url.QueryUnescape(trimmed)
+		if err != nil {
+			return ""
+		}
+		trimmed = strings.TrimSpace(decoded)
+	}
+	decoder := xml.NewDecoder(strings.NewReader(trimmed))
+	decoder.CharsetReader = func(_ string, input io.Reader) (io.Reader, error) {
+		return input, nil
+	}
+
+	depth := 0
+	root := ""
+	current := ""
+	leaf := true
+	var text strings.Builder
+	fields := 0
+	for fields < 32 {
+		token, err := decoder.Token()
+		if err != nil {
+			break
+		}
+		switch element := token.(type) {
+		case xml.StartElement:
+			depth++
+			if depth == 1 {
+				root = element.Name.Local
+				if strings.EqualFold(root, "html") || strings.EqualFold(root, "body") {
+					return ""
+				}
+				continue
+			}
+			if depth == 2 {
+				current = element.Name.Local
+				text.Reset()
+				leaf = true
+				continue
+			}
+			if depth > 2 {
+				leaf = false
+			}
+		case xml.EndElement:
+			if depth == 2 && current != "" && leaf {
+				if _, exists := vector.Params[current]; !exists {
+					vector.Params[current] = strings.TrimSpace(text.String())
+					fields++
+				}
+			}
+			if depth == 2 {
+				current = ""
+			}
+			if depth > 0 {
+				depth--
+			}
+		case xml.CharData:
+			if depth == 2 && leaf {
+				text.Write(element)
+			}
+		}
+	}
+	return root
 }
 
 func mergeJSONParams(vector contracts.AttackVector, body string) {

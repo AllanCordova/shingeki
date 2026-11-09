@@ -10,6 +10,25 @@ import (
 	"github.com/shingeki/dast-worker/internal/contracts"
 )
 
+func TestBuildBrowserLeavesPayloadOutOfTheRequest(t *testing.T) {
+	job := types.Job{
+		Attack: contracts.AttackItem{TargetLocation: "BROWSER", Category: "XSS"},
+		Vector: contracts.AttackVector{
+			Route:          "https://range.test/address/location.hash/innerHtml",
+			Method:         "GET",
+			TargetLocation: "URL_PATH",
+		},
+		Payload: types.PayloadSpec{Value: "<img src=x onerror=alert(1)>"},
+	}
+	spec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if spec.URL != job.Vector.Route {
+		t.Fatalf("browser job must fetch the clean page, got %s", spec.URL)
+	}
+}
+
 func TestBuildQueryInjection(t *testing.T) {
 	job := types.Job{
 		Attack: contracts.AttackItem{TargetLocation: "QUERY_PARAMETER"},
@@ -206,5 +225,72 @@ func TestBuildHeaderJWTNone(t *testing.T) {
 	}
 	if !strings.Contains(baseSpec.Headers["Authorization"], "invalid-signature") {
 		t.Fatalf("baseline must use a broken signature, got %q", baseSpec.Headers["Authorization"])
+	}
+
+	anon, err := injectors.BuildUnauthenticated(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := anon.Headers["Authorization"]; ok {
+		t.Fatalf("unauthenticated probe must drop Authorization, got %v", anon.Headers)
+	}
+}
+
+func TestBuildXMLWrapsDiscoveredFields(t *testing.T) {
+	job := types.Job{
+		Attack: contracts.AttackItem{Category: "XXE", TargetLocation: "XML_BODY"},
+		Vector: contracts.AttackVector{
+			Route:  "https://shop.test/catalog/product/stock",
+			Method: "POST",
+			Params: map[string]string{"productId": "1", "storeId": "1"},
+		},
+		ParamKey: "productId",
+		Payload:  types.PayloadSpec{Value: `<?xml version="1.0"?><!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]><foo>&xxe;</foo>`},
+	}
+	spec, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if spec.Headers["Content-Type"] != "application/xml" {
+		t.Fatalf("content type %s", spec.Headers["Content-Type"])
+	}
+	if !strings.Contains(spec.Body, "<productId>&xxe;</productId>") || !strings.Contains(spec.Body, "<storeId>1</storeId>") {
+		t.Fatalf("unexpected xml body %s", spec.Body)
+	}
+	if !strings.Contains(spec.Body, "<data>") {
+		t.Fatalf("default root should stay data, got %s", spec.Body)
+	}
+
+	job.Vector.XMLRoot = "stockCheck"
+	shaped, err := injectors.BuildAttack(job)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(shaped.Body, "<stockCheck>") || !strings.Contains(shaped.Body, "</stockCheck>") {
+		t.Fatalf("expected the page root, got %s", shaped.Body)
+	}
+	if !strings.Contains(shaped.Body, "<!DOCTYPE stockCheck") {
+		t.Fatalf("doctype should name the page root, got %s", shaped.Body)
+	}
+	if strings.Contains(spec.Body, "root:x:0:0:") {
+		t.Fatal("probe must not embed file contents")
+	}
+
+	literal, err := injectors.BuildXMLProbe(job, "productId", "zzentityprobe", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(literal.Body, "<productId>zzentityprobe</productId>") || strings.Contains(literal.Body, "<!DOCTYPE") {
+		t.Fatalf("literal probe = %s", literal.Body)
+	}
+	entity, err := injectors.BuildXMLProbe(job, "productId", `1"&`, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(entity.Body, `<!ENTITY xxe "1&quot;&amp;">`) || !strings.Contains(entity.Body, "<productId>&xxe;</productId>") {
+		t.Fatalf("internal entity probe = %s", entity.Body)
+	}
+	if !strings.Contains(entity.Body, "<storeId>1</storeId>") || !strings.Contains(entity.Body, "<!DOCTYPE stockCheck") {
+		t.Fatalf("internal entity probe lost the document shape: %s", entity.Body)
 	}
 }

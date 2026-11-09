@@ -155,6 +155,7 @@ class AttackCatalogSeeder extends Seeder
             ['category' => AttackCategory::NosqlInjection, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::High, 'values' => $nosql],
             ['category' => AttackCategory::Xxe, 'location' => AttackTargetLocation::FileUpload, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::xxe()],
             ['category' => AttackCategory::Xxe, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::xxe()],
+            ['category' => AttackCategory::Xxe, 'location' => AttackTargetLocation::XmlBody, 'risk' => AttackRiskLevel::High, 'values' => AttackCatalogPayloads::xxe()],
             ['category' => AttackCategory::Ssrf, 'location' => AttackTargetLocation::QueryParameter, 'risk' => AttackRiskLevel::High, 'values' => $ssrf],
             ['category' => AttackCategory::Ssrf, 'location' => AttackTargetLocation::JsonBody, 'risk' => AttackRiskLevel::High, 'values' => $ssrf],
             ['category' => AttackCategory::Ssrf, 'location' => AttackTargetLocation::Header, 'risk' => AttackRiskLevel::High, 'values' => $ssrf],

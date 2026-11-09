@@ -24,7 +24,7 @@ func extraHeaderPairs(authHeaders map[string]string) []string {
 		if key == "" || value == "" {
 			continue
 		}
-		if strings.EqualFold(key, "Cookie") {
+		if strings.EqualFold(key, "Cookie") || strings.EqualFold(key, "Authorization") {
 			continue
 		}
 		pairs = append(pairs, key, value)
@@ -54,7 +54,7 @@ func headerValue(headers map[string]string, name string) string {
 }
 
 func injectBrowserAuth(browser *rod.Browser, page *rod.Page, targetURL, seedURL string, auth *contracts.TargetAuth) error {
-	cookies := cookieParamsFromAuth(seedURL, auth)
+	cookies := cookieParamsFromAuth(targetURL, seedURL, auth)
 	if len(cookies) > 0 {
 		if err := browser.SetCookies(cookies); err != nil {
 			if pageErr := page.SetCookies(cookies); pageErr != nil {
@@ -63,7 +63,7 @@ func injectBrowserAuth(browser *rod.Browser, page *rod.Page, targetURL, seedURL 
 		}
 	}
 
-	headers := contracts.EffectiveAuthHeaders(auth)
+	headers := contracts.HeadersForURL(auth, targetURL, seedURL)
 	if pairs := extraHeaderPairs(headers); len(pairs) > 0 {
 		if _, err := page.SetExtraHeaders(pairs); err != nil {
 			return fmt.Errorf("set extra headers: %w", err)

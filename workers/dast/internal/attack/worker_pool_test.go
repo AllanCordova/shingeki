@@ -100,6 +100,94 @@ func TestExecutePoolDoesNotFollowCrossOriginRedirect(t *testing.T) {
 	}
 }
 
+func TestExecutePoolSkipsJWTOnPublicRoute(t *testing.T) {
+	t.Parallel()
+
+	var hits atomic.Int32
+	var credentialed atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		if r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != "" {
+			credentialed.Add(1)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("public article"))
+	}))
+	t.Cleanup(server.Close)
+
+	engine := testEngine(1)
+	responses := engine.ExecutePool(context.Background(), []types.Job{jwtJob(server.URL + "/hc/article")})
+	if len(responses) != 1 {
+		t.Fatalf("expected 1 response, got %d", len(responses))
+	}
+	if !responses[0].Skipped {
+		t.Fatal("expected public route to skip JWT confusion")
+	}
+	if responses[0].AttackStatus != 0 || responses[0].BaselineStatus != 0 {
+		t.Fatalf("expected no attack traffic, baseline=%d attack=%d", responses[0].BaselineStatus, responses[0].AttackStatus)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("expected only the unauthenticated probe, got %d", hits.Load())
+	}
+	if credentialed.Load() != 0 {
+		t.Fatal("public probe must not send Authorization or Cookie")
+	}
+}
+
+func TestExecutePoolRunsJWTWhenAnonymousIsRejected(t *testing.T) {
+	t.Parallel()
+
+	var anonymous, broken, forged atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		auth := r.Header.Get("Authorization")
+		switch {
+		case auth == "":
+			anonymous.Add(1)
+			w.WriteHeader(http.StatusUnauthorized)
+		case strings.Contains(auth, "invalid-signature"):
+			broken.Add(1)
+			w.WriteHeader(http.StatusUnauthorized)
+		default:
+			forged.Add(1)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"email":"admin@example.com","role":"admin"}`))
+		}
+	}))
+	t.Cleanup(server.Close)
+
+	engine := testEngine(1)
+	responses := engine.ExecutePool(context.Background(), []types.Job{jwtJob(server.URL + "/api/me")})
+	if len(responses) != 1 || responses[0].Error != nil {
+		t.Fatalf("unexpected response: %+v", responses)
+	}
+	if responses[0].Skipped {
+		t.Fatal("protected route must still be tested")
+	}
+	if responses[0].BaselineStatus != http.StatusUnauthorized || responses[0].AttackStatus != http.StatusOK {
+		t.Fatalf("baseline=%d attack=%d", responses[0].BaselineStatus, responses[0].AttackStatus)
+	}
+	if anonymous.Load() != 1 || broken.Load() != 1 || forged.Load() != 1 {
+		t.Fatalf("anonymous=%d broken=%d forged=%d", anonymous.Load(), broken.Load(), forged.Load())
+	}
+}
+
+func jwtJob(rawURL string) types.Job {
+	token := "eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiIxIn0.sig"
+	return types.Job{
+		Attack: contracts.AttackItem{
+			AttackID:       "atk-jwt",
+			Category:       "JWT_CONFUSION",
+			TargetLocation: "HEADER",
+		},
+		Vector: contracts.AttackVector{
+			Route:   rawURL,
+			Method:  http.MethodGet,
+			Headers: map[string]string{"Authorization": "Bearer " + token, "Cookie": "session=abc"},
+		},
+		Payload: types.PayloadSpec{Value: "none"},
+	}
+}
+
 func TestExecutePoolClampsZeroConcurrency(t *testing.T) {
 	t.Parallel()
 

@@ -17,13 +17,17 @@ type Consumer struct {
 	cfg     config.RabbitMQConfig
 	handler Handler
 	logger  *slog.Logger
+	cancels *CancelRegistry
 }
 
-func NewConsumer(cfg config.RabbitMQConfig, handler Handler, logger *slog.Logger) *Consumer {
+func NewConsumer(cfg config.RabbitMQConfig, handler Handler, logger *slog.Logger, cancels *CancelRegistry) *Consumer {
 	if logger == nil {
 		logger = slog.Default()
 	}
-	return &Consumer{cfg: cfg, handler: handler, logger: logger}
+	if cancels == nil {
+		cancels = NewCancelRegistry()
+	}
+	return &Consumer{cfg: cfg, handler: handler, logger: logger, cancels: cancels}
 }
 
 func (c *Consumer) Run(ctx context.Context, url string) error {
@@ -85,11 +89,15 @@ func (c *Consumer) handleDelivery(ctx context.Context, delivery amqp.Delivery) {
 
 	c.logger.Info("processing dispatch batch",
 		"system_id", batch.SystemID,
+		"dispatch_id", batch.DispatchID,
 		"target_url", batch.TargetURL,
 		"attacks", len(batch.Attacks),
 	)
 
-	if err := c.handler(ctx, batch); err != nil {
+	jobCtx, stop := c.cancels.Begin(ctx, batch.DispatchID)
+	defer stop()
+
+	if err := c.handler(jobCtx, batch); err != nil {
 		c.logger.Error("pipeline failed",
 			"system_id", batch.SystemID,
 			"error", err,

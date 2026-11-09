@@ -52,27 +52,36 @@ class UserNotificationService
         $durationLabel = $durationMs >= 1000
             ? round($durationMs / 1000, 1).' s'
             : $durationMs.' ms';
+        $cancelled = $dispatch->cancelled_at !== null;
         $failed = $dispatch->failed_at !== null;
+        $sessionExpired = $dispatch->session_expired_at !== null;
+        $systemName = $dispatch->system?->name ?? 'Sistema';
 
         $notification->update([
-            'status' => $failed ? UserNotificationStatus::Failed : UserNotificationStatus::Completed,
-            'title' => $failed
-                ? "Scan {$scanLabel} falhou"
-                : "Scan {$scanLabel} finalizado",
-            'body' => $failed
-                ? sprintf('%s — não foi possível concluir o scan', $dispatch->system?->name ?? 'Sistema')
-                : sprintf(
-                    '%s — %d achado(s) em %s',
-                    $dispatch->system?->name ?? 'Sistema',
-                    $findings,
-                    $durationLabel,
-                ),
-            'read_at' => null,
+            'status' => (($failed || $sessionExpired) && ! $cancelled)
+                ? UserNotificationStatus::Failed
+                : UserNotificationStatus::Completed,
+            'title' => match (true) {
+                $cancelled => "Scan {$scanLabel} cancelado",
+                $sessionExpired => "Sessão do scan {$scanLabel} expirou",
+                $failed => "Scan {$scanLabel} falhou",
+                default => "Scan {$scanLabel} finalizado",
+            },
+            'body' => match (true) {
+                $cancelled => sprintf('%s — o scan foi cancelado', $systemName),
+                $sessionExpired => sprintf('%s — capture o navegador de novo para continuar', $systemName),
+                $failed => sprintf('%s — não foi possível concluir o scan', $systemName),
+                default => sprintf('%s — %d achado(s) em %s', $systemName, $findings, $durationLabel),
+            },
+            'read_at' => $notification->status === UserNotificationStatus::Pending
+                ? null
+                : $notification->read_at,
             'payload' => [
                 ...($notification->payload ?? []),
                 'findings_count' => $findings,
                 'duration_ms' => $durationMs,
-                'failed' => $failed,
+                'failed' => $failed && ! $cancelled,
+                'cancelled' => $cancelled,
             ],
         ]);
 

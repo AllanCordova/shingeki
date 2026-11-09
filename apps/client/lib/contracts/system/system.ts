@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { DispatchStatus } from "../attack/attack";
+import type { DastRouteMapEntry } from "../attack/route-map";
 import type { Timestamps } from "../common/common";
 import { createWithCoverSchema, updateWithCoverSchema } from "../cover/cover-selection";
 import type { Stack } from "./stack";
@@ -16,12 +18,6 @@ export const systemCreateSchema = createWithCoverSchema({
     .max(2048, "A URL alvo é muito longa."),
   login_url: z
     .union([z.url("URL de login inválida."), z.literal("")])
-    .optional(),
-  login_username: z.string().max(255, "O usuário é muito longo.").optional(),
-  login_password: z.string().max(255, "A senha é muito longa.").optional(),
-  logged_in_indicator: z
-    .string()
-    .max(255, "O indicador é muito longo.")
     .optional(),
   repository_url: z
     .url("URL do repositório inválida.")
@@ -44,12 +40,6 @@ export const systemUpdateSchema = updateWithCoverSchema({
   login_url: z
     .union([z.url("URL de login inválida."), z.literal("")])
     .optional(),
-  login_username: z.string().max(255, "O usuário é muito longo.").optional(),
-  login_password: z.string().max(255, "A senha é muito longa.").optional(),
-  logged_in_indicator: z
-    .string()
-    .max(255, "O indicador é muito longo.")
-    .optional(),
   repository_url: z
     .url("URL do repositório inválida.")
     .min(1, "Informe a URL do repositório.")
@@ -69,17 +59,21 @@ export interface System extends Timestamps {
   target_url: string;
   repository_url: string;
   login_url?: string | null;
-  login_username?: string | null;
-  login_configured?: boolean;
-  logged_in_indicator?: string | null;
   dast_start_path?: string | null;
   dast_max_routes?: number | null;
   dast_attack_ids?: string[] | null;
   sast_attack_ids?: string[] | null;
+  lab_routes?: DastRouteMapEntry[] | null;
   stacks: Stack[];
+  latest_dispatch?: {
+    id: string;
+    status: DispatchStatus;
+    dispatched_at: string | null;
+  } | null;
   project?: {
     id: string;
     name: string;
+    cover_path?: string | null;
   };
 }
 

@@ -19,7 +19,7 @@ Lista projetos do usuário (mais recentes primeiro).
       "id": "uuid",
       "user_id": "uuid",
       "cover_path": "/storage/covers/....jpg",
-      "name": "Netflix",
+      "name": "Laboratório",
       "description": "...",
       "created_at": "...",
       "updated_at": "..."
@@ -93,9 +93,9 @@ Base: `/api/projects/{project}/systems`
       "id": "uuid",
       "project_id": "uuid",
       "cover_path": "/storage/covers/....jpg",
-      "name": "API de Catalogo",
-      "target_url": "https://catalog.api.netflix.example",
-      "login_url": "https://catalog.api.netflix.example/login",
+      "name": "Alvo web",
+      "target_url": "http://127.0.0.1:8080",
+      "login_url": "http://127.0.0.1:8080/login",
       "repository_url": "https://github.com/...",
       "stacks": [
         { "id": "uuid", "slug": "laravel", "name": "Laravel", "languages": ["php"] }
@@ -115,10 +115,7 @@ Aceita `application/json` (sem capa) ou `multipart/form-data` (com capa opcional
 |-------|-------------|
 | `name` | sim |
 | `target_url` | sim (URL válida) |
-| `login_url` | não (página de login do scanner) |
-| `login_username` | não (usuário/e-mail do alvo; criptografado) |
-| `login_password` | não (write-only; nunca volta na API) |
-| `logged_in_indicator` | não (texto visível só depois do login) |
+| `login_url` | não (página inicial da captura de sessão) |
 | `repository_url` | sim (URL válida) |
 | `stack_ids` | não (array de UUIDs; pode ser vazio) — ver [STACKS.md](STACKS.md) |
 | `cover` / `cover_upload_id` | não (opcional; web) |
@@ -133,7 +130,7 @@ Em `multipart/form-data`, envie `stack_ids[]` repetido por UUID. Lista vazia: en
 
 ### PUT /api/projects/{project}/systems/{system}
 
-Campos opcionais: `name`, `target_url`, `login_url`, `login_username`, `login_password`, `logged_in_indicator`, `repository_url`, `stack_ids` ([STACKS.md](STACKS.md)), `cover`, `cover_upload_id`. `login_username` vazio remove o login do scanner. Login autenticado: [TARGET-SESSION.md](TARGET-SESSION.md).
+Campos opcionais: `name`, `target_url`, `login_url`, `repository_url`, `stack_ids` ([STACKS.md](STACKS.md)), `cover`, `cover_upload_id`. `login_url` vazio faz a captura abrir `target_url`. Sessão autenticada: [TARGET-SESSION.md](TARGET-SESSION.md).
 
 **Resposta `200`:** `{ "message": "...", "system": { ... } }`
 

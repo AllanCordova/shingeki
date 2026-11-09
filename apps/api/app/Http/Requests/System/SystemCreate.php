@@ -3,7 +3,6 @@
 namespace App\Http\Requests\System;
 
 use App\Http\Requests\Concerns\ValidatesCoverSelection;
-use App\Http\Requests\Concerns\ValidatesScannerLogin;
 use App\Http\Requests\Concerns\ValidatesTargetUrl;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -11,7 +10,6 @@ use Illuminate\Foundation\Http\FormRequest;
 class SystemCreate extends FormRequest
 {
     use ValidatesCoverSelection;
-    use ValidatesScannerLogin;
     use ValidatesTargetUrl;
 
     public function authorize(): bool
@@ -21,7 +19,7 @@ class SystemCreate extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->prepareScannerLogin();
+        $this->prepareLoginUrl();
         $this->normalizeStackIds();
     }
 
@@ -32,7 +30,6 @@ class SystemCreate extends FormRequest
     {
         return [
             ...$this->coverCreateRules(),
-            ...$this->scannerLoginRules(),
             'name' => ['required', 'string', 'max:255'],
             'target_url' => $this->browserTargetUrlRules(),
             'login_url' => $this->browserLoginUrlRules(),
@@ -40,6 +37,13 @@ class SystemCreate extends FormRequest
             'stack_ids' => ['sometimes', 'array'],
             'stack_ids.*' => ['uuid', 'exists:stacks,id'],
         ];
+    }
+
+    private function prepareLoginUrl(): void
+    {
+        if ($this->exists('login_url') && $this->input('login_url') === '') {
+            $this->merge(['login_url' => null]);
+        }
     }
 
     private function normalizeStackIds(): void

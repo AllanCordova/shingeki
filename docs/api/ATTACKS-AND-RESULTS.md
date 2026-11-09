@@ -212,4 +212,4 @@ curl -X POST "http://127.0.0.1:8000/api/projects/{projectId}/systems/{systemId}/
   -d "{\"accepted_responsibility\":true,\"accepted_legal_terms\":true,\"terms_version\":\"2026-07-13\"}"
 ```
 
-Substitua IDs após `GET /api/projects` (o seed cria projetos demo: Netflix, Mercado Livre, Nubank, iFood).
+Substitua IDs após `GET /api/projects`. O seed cria o projeto Laboratório com Juice Shop, Firing Range, Acunetix ASP.NET e Gin and Juice.

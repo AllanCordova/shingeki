@@ -8,6 +8,7 @@ use App\Models\Project\Project;
 use App\Models\System\System;
 use App\Models\System\SystemResult;
 use App\Models\User\User;
+use App\Services\Attack\AttackQueuePublisher;
 use Laravel\Sanctum\Sanctum;
 
 function systemResultsUrl(Project $project, System $system): string
@@ -277,6 +278,69 @@ describe('GET system-results/{attack_dispatch}', function () {
     });
 });
 
+describe('POST system-results/{attack_dispatch}/cancel', function () {
+    test('requires authentication', function () {
+        $project = Project::factory()->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->create();
+
+        $this->postJson(systemResultShowUrl($project, $system, $dispatch).'/cancel')
+            ->assertUnauthorized();
+    });
+
+    test('cancels a running dispatch without deleting it', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchCancel')
+            ->once();
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(systemResultShowUrl($project, $system, $dispatch).'/cancel')
+            ->assertOk()
+            ->assertJsonPath('message', 'Attack dispatch cancelled.')
+            ->assertJsonPath('dispatch.status', 'cancelled');
+
+        $this->assertDatabaseHas('attack_dispatches', [
+            'id' => $dispatch->id,
+        ]);
+        expect($dispatch->fresh()->scanStatus())->toBe('cancelled');
+    });
+
+    test('rejects cancelling a finished dispatch', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+            'completed_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(systemResultShowUrl($project, $system, $dispatch).'/cancel')
+            ->assertStatus(409);
+
+        expect($dispatch->fresh()->scanStatus())->toBe('completed');
+    });
+
+    test('returns not found for another users project', function () {
+        $owner = User::factory()->create();
+        $intruder = User::factory()->create();
+        $project = Project::factory()->for($owner)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($owner)->create();
+
+        Sanctum::actingAs($intruder);
+
+        $this->postJson(systemResultShowUrl($project, $system, $dispatch).'/cancel')
+            ->assertNotFound();
+    });
+});
+
 describe('DELETE system-results/{attack_dispatch}', function () {
     test('requires authentication', function () {
         $project = Project::factory()->create();
@@ -326,6 +390,21 @@ describe('DELETE system-results/{attack_dispatch}', function () {
         $this->deleteJson(systemResultShowUrl($project, $system, $dispatch))
             ->assertNotFound();
     });
+
+    test('refuses to delete a dispatch that is still running', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create();
+        $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+        Sanctum::actingAs($user);
+
+        $this->deleteJson(systemResultShowUrl($project, $system, $dispatch))
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'A running dispatch cannot be removed. Cancel it first.');
+
+        $this->assertDatabaseHas('attack_dispatches', ['id' => $dispatch->id]);
+    });
 });
 
 describe('DELETE system-results', function () {
@@ -352,6 +431,10 @@ describe('DELETE system-results', function () {
         SystemResult::factory()->for($system)->for($attack)->create([
             'attack_dispatch_id' => $second->id,
         ]);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchCancel')
+            ->twice();
 
         Sanctum::actingAs($user);
 

@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import {
   Button,
   Checkbox,
+  CoverThumb,
   ErrorShow,
   Loading,
 } from "@/components/ui";
@@ -244,7 +245,7 @@ export function SidebarNavigationSettings() {
       items
         .map(
           (item) =>
-            `${item.type}:${item.project_id}:${item.system_id ?? ""}:${item.visible}:${item.sort_order}:${item.name}`,
+            `${item.type}:${item.project_id}:${item.system_id ?? ""}:${item.visible}:${item.sort_order}:${item.name}:${item.cover_path ?? ""}`,
         )
         .join("|"),
     [items],
@@ -383,6 +384,11 @@ export function SidebarNavigationSettings() {
                           listeners={listeners}
                           setActivatorNodeRef={setActivatorNodeRef}
                         />
+                        <CoverThumb
+                          coverPath={group.project.cover_path}
+                          alt=""
+                          size="xs"
+                        />
                         <Checkbox
                           checked={group.project.visible}
                           onChange={(event) => {
@@ -396,6 +402,7 @@ export function SidebarNavigationSettings() {
                             markDirty();
                           }}
                           label={group.project.name}
+                          className="min-w-0"
                         />
                         <div className="ml-auto">
                           <ReorderButtons
@@ -448,6 +455,11 @@ export function SidebarNavigationSettings() {
                                         listeners={systemListeners}
                                         setActivatorNodeRef={setSystemActivatorRef}
                                       />
+                                      <CoverThumb
+                                        coverPath={system.cover_path}
+                                        alt=""
+                                        size="xs"
+                                      />
                                       <Checkbox
                                         checked={system.visible}
                                         onChange={(event) => {
@@ -462,6 +474,7 @@ export function SidebarNavigationSettings() {
                                           markDirty();
                                         }}
                                         label={system.name}
+                                        className="min-w-0"
                                       />
                                       <div className="ml-auto">
                                         <ReorderButtons

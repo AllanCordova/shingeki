@@ -15,22 +15,24 @@ const (
 	ScanTypeSast       = "SAST"
 	DepthQuick         = "quick"
 	DepthFull          = "full"
+	MaxRouteMapEntries = 400
 )
 
 type DispatchBatch struct {
-	Event         string       `json:"event"`
-	ScanType      string       `json:"scan_type"`
-	Depth         string       `json:"depth"`
-	StartPath     string       `json:"start_path,omitempty"`
-	MaxRoutes     int          `json:"max_routes,omitempty"`
-	DispatchID    string       `json:"dispatch_id"`
-	SystemID      string       `json:"system_id"`
-	UserID        string       `json:"user_id"`
-	TargetURL     string       `json:"target_url"`
-	RepositoryURL string       `json:"repository_url"`
-	Attacks       []AttackItem `json:"attacks"`
-	DispatchedAt  string       `json:"dispatched_at"`
-	Auth          *TargetAuth  `json:"auth,omitempty"`
+	Event         string          `json:"event"`
+	ScanType      string          `json:"scan_type"`
+	Depth         string          `json:"depth"`
+	StartPath     string          `json:"start_path,omitempty"`
+	MaxRoutes     int             `json:"max_routes,omitempty"`
+	RouteMap      []DispatchRoute `json:"route_map,omitempty"`
+	DispatchID    string          `json:"dispatch_id"`
+	SystemID      string          `json:"system_id"`
+	UserID        string          `json:"user_id"`
+	TargetURL     string          `json:"target_url"`
+	RepositoryURL string          `json:"repository_url"`
+	Attacks       []AttackItem    `json:"attacks"`
+	DispatchedAt  string          `json:"dispatched_at"`
+	Auth          *TargetAuth     `json:"auth,omitempty"`
 }
 
 func (b DispatchBatch) EffectiveScanType() string {
@@ -58,6 +60,22 @@ func (b DispatchBatch) EffectiveMaxRoutes() int {
 		return 0
 	}
 	return b.MaxRoutes
+}
+
+func (b DispatchBatch) EffectiveRouteMap() []DispatchRoute {
+	if len(b.RouteMap) == 0 {
+		return nil
+	}
+	return b.RouteMap
+}
+
+type DispatchRoute struct {
+	Method  string          `json:"method"`
+	Path    string          `json:"path"`
+	Query   StringMap       `json:"query,omitempty"`
+	Body    json.RawMessage `json:"body,omitempty"`
+	Content string          `json:"content,omitempty"`
+	XMLRoot string          `json:"xml_root,omitempty"`
 }
 
 type AttackItem struct {
@@ -108,12 +126,32 @@ func (b DispatchBatch) Validate() error {
 	if len(b.Attacks) == 0 {
 		return fmt.Errorf("attacks must not be empty")
 	}
+	if len(b.RouteMap) > MaxRouteMapEntries {
+		return fmt.Errorf("route_map exceeds %d entries", MaxRouteMapEntries)
+	}
+	for i, route := range b.RouteMap {
+		if strings.TrimSpace(route.Path) == "" {
+			return fmt.Errorf("route_map[%d]: path is required", i)
+		}
+		if route.Method != "" && !allowedRouteMethod(route.Method) {
+			return fmt.Errorf("route_map[%d]: invalid method %q", i, route.Method)
+		}
+	}
 	for i, a := range b.Attacks {
 		if err := a.Validate(); err != nil {
 			return fmt.Errorf("attacks[%d]: %w", i, err)
 		}
 	}
 	return nil
+}
+
+func allowedRouteMethod(method string) bool {
+	switch strings.ToUpper(strings.TrimSpace(method)) {
+	case "GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS":
+		return true
+	default:
+		return false
+	}
 }
 
 func (a AttackItem) Validate() error {

@@ -9,6 +9,7 @@ import { useLogout, useMe } from "@/lib/hooks/auth/use-auth";
 import { useUiStore } from "@/lib/stores/ui-store";
 import { notify } from "@/lib/notify";
 import { MenuIcon, SettingsIcon } from "@/components/ui/icons";
+import { LogoMark } from "@/components/logo-mark";
 import { ThemeToggle } from "./theme-toggle";
 import { UserAccountMenu } from "./user-account-menu";
 
@@ -51,20 +52,7 @@ export function Header({ showMenuButton = false }: { showMenuButton?: boolean })
             title="Início"
             className="flex min-w-0 items-center gap-2 text-lg font-semibold tracking-tight text-foreground"
           >
-            <img
-              src="/logo.png"
-              alt=""
-              width={32}
-              height={32}
-              className="h-8 w-8 shrink-0 dark:hidden"
-            />
-            <img
-              src="/logo_branca.ico"
-              alt=""
-              width={32}
-              height={32}
-              className="hidden h-8 w-8 shrink-0 dark:block"
-            />
+            <LogoMark className="h-8 w-8 shrink-0" />
             <span className="truncate">shingeki</span>
           </Link>
         </div>

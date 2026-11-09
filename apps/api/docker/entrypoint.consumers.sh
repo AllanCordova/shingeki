@@ -36,8 +36,4 @@ done
 php artisan package:discover --ansi
 php artisan migrate --force
 
-if [ "${RUN_DB_SEED:-true}" = "true" ]; then
-  php artisan db:seed --force
-fi
-
 exec "$@"

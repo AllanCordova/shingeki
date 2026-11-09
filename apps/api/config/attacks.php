@@ -10,6 +10,8 @@ return [
     'queues' => [
         'dispatch' => env('RABBITMQ_ATTACKS_DISPATCH_QUEUE', 'attacks.dispatch'),
         'sast_dispatch' => env('RABBITMQ_ATTACKS_SAST_DISPATCH_QUEUE', 'attacks.sast.dispatch'),
+        'cancel' => env('RABBITMQ_ATTACKS_CANCEL_QUEUE', 'attacks.dispatch.cancel'),
+        'sast_cancel' => env('RABBITMQ_ATTACKS_SAST_CANCEL_QUEUE', 'attacks.sast.dispatch.cancel'),
         'results' => env('RABBITMQ_ATTACKS_RESULTS_QUEUE', 'attacks.results'),
     ],
 

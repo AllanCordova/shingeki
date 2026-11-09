@@ -59,6 +59,10 @@ class AttackQueuePublisher
             $payload['max_routes'] = $dispatch->max_routes;
         }
 
+        if (is_array($dispatch->route_map) && $dispatch->route_map !== []) {
+            $payload['route_map'] = $dispatch->route_map;
+        }
+
         if ($targetAuth !== null) {
             $payload['auth'] = $this->objectifyAuthStorageMaps($targetAuth);
         }
@@ -66,6 +70,26 @@ class AttackQueuePublisher
         $message = json_encode($payload, JSON_THROW_ON_ERROR);
 
         $connection->pushRaw($message, $dispatchQueue);
+    }
+
+    public function publishDispatchCancel(AttackDispatch $dispatch): void
+    {
+        $connection = $this->connection();
+        $exchange = $this->cancelQueueFor($dispatch->scan_type);
+
+        $connection->declareExchange($exchange, 'fanout');
+
+        $message = json_encode([
+            'event' => 'attack.dispatch.cancel',
+            'scan_type' => $dispatch->scan_type->value,
+            'dispatch_id' => $dispatch->id,
+            'system_id' => $dispatch->system_id,
+        ], JSON_THROW_ON_ERROR);
+
+        $connection->pushRaw($message, $exchange, [
+            'exchange' => $exchange,
+            'exchange_type' => 'fanout',
+        ]);
     }
 
     /**
@@ -110,6 +134,14 @@ class AttackQueuePublisher
         return match ($scanType) {
             AttackScanType::Dast => config('attacks.queues.dispatch'),
             AttackScanType::Sast => config('attacks.queues.sast_dispatch'),
+        };
+    }
+
+    private function cancelQueueFor(AttackScanType $scanType): string
+    {
+        return match ($scanType) {
+            AttackScanType::Dast => config('attacks.queues.cancel'),
+            AttackScanType::Sast => config('attacks.queues.sast_cancel'),
         };
     }
 

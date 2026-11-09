@@ -69,14 +69,35 @@ class AttackDispatchCompletionProcessor
         }
 
         $failed = $status === 'failed';
+        $sessionExpired = $status === 'session_expired';
+        $cancelled = $status === 'cancelled';
+        $alreadyCancelled = $dispatch->cancelled_at !== null;
+
+        if ($alreadyCancelled && ! $cancelled) {
+            $dispatch->update([
+                'duration_ms' => (int) $durationMs,
+                'findings_count' => (int) $findingsCount,
+                'probes_count' => (int) $probesCount,
+                'vectors_discovered' => $vectorsDiscovered === null ? $dispatch->vectors_discovered : (int) $vectorsDiscovered,
+                'jobs_planned' => $jobsPlanned === null ? $dispatch->jobs_planned : (int) $jobsPlanned,
+            ]);
+
+            $dispatch = $dispatch->fresh();
+            $this->userNotificationService->completeAttackDispatch($dispatch);
+
+            return $dispatch;
+        }
+
         $reason = null;
-        if ($failed) {
+        if ($failed && ! $cancelled && ! $alreadyCancelled) {
             $reason = $error === '' ? 'Scan failed' : mb_substr($error, 0, 2000);
         }
 
         $dispatch->update([
-            'completed_at' => $failed ? null : now(),
-            'failed_at' => $failed ? now() : null,
+            'completed_at' => ($failed || $sessionExpired || $cancelled || $alreadyCancelled) ? null : now(),
+            'failed_at' => ($failed && ! $cancelled && ! $alreadyCancelled) ? now() : null,
+            'session_expired_at' => ($sessionExpired && ! $cancelled && ! $alreadyCancelled) ? now() : null,
+            'cancelled_at' => ($cancelled || $alreadyCancelled) ? ($dispatch->cancelled_at ?? now()) : null,
             'failure_reason' => $reason,
             'duration_ms' => (int) $durationMs,
             'findings_count' => (int) $findingsCount,

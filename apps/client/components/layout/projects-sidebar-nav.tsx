@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { SIDEBAR_NAV_PAGE_SIZE } from "@/lib/contracts/common/common";
 import { useSidebarNavigation } from "@/lib/hooks/navigation/use-sidebar-navigation";
 import { cn } from "@/lib/utils";
-import { Button, Spinner } from "@/components/ui";
+import { Button, CoverThumb, Spinner } from "@/components/ui";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -148,20 +148,25 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
                       href={projectHref}
                       title={project.name}
                       className={cn(
-                        "min-w-0 flex-1 truncate rounded-app py-1.5 transition-colors",
+                        "flex min-w-0 flex-1 items-center gap-2 rounded-app py-1.5 transition-colors",
                         projectActive
                           ? "text-foreground"
                           : "hover:bg-muted hover:text-foreground",
                       )}
                     >
-                      {project.name}
+                      <CoverThumb
+                        coverPath={project.cover_path}
+                        alt=""
+                        size="sm"
+                      />
+                      <span className="truncate">{project.name}</span>
                     </Link>
                   </div>
 
                   {isExpanded ? (
                     <ul className="flex flex-col gap-0.5 pb-1">
                       {project.systems.length === 0 ? (
-                        <li className="py-1.5 pl-7 text-xs text-muted-foreground">
+                        <li className="py-1.5 pl-14 text-xs text-muted-foreground">
                           Nenhum sistema neste projeto.
                         </li>
                       ) : (
@@ -177,13 +182,18 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
                                   href={href}
                                   title={system.name}
                                   className={cn(
-                                    "block truncate rounded-app py-1.5 pl-7 pr-2 text-xs transition-colors",
+                                    "flex min-w-0 items-center gap-2 rounded-app py-1.5 pl-14 pr-2 text-xs transition-colors",
                                     active
                                       ? "bg-primary/10 font-medium text-primary"
                                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                                   )}
                                 >
-                                  {system.name}
+                                  <CoverThumb
+                                    coverPath={system.cover_path}
+                                    alt=""
+                                    size="sm"
+                                  />
+                                  <span className="truncate">{system.name}</span>
                                 </Link>
                               </li>
                             );
@@ -192,7 +202,7 @@ export function ProjectsSidebarNav({ collapsed }: { collapsed: boolean }) {
                             <li>
                               <Link
                                 href={projectHref}
-                                className="block py-1.5 pl-7 pr-2 text-xs text-primary hover:underline"
+                                className="block py-1.5 pl-14 pr-2 text-xs text-primary hover:underline"
                               >
                                 Ver todos em {project.name}
                               </Link>

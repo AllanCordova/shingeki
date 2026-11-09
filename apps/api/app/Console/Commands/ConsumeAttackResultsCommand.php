@@ -7,6 +7,7 @@ use App\Models\Attack\DispatchProbe;
 use App\Models\System\SystemResult;
 use App\Services\Attack\AttackResultsMessageHandler;
 use Illuminate\Console\Command;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 use Throwable;
@@ -57,6 +58,13 @@ class ConsumeAttackResultsCommand extends Command
                 if ($processed instanceof DispatchProbe) {
                     $this->info("Stored dispatch probe [{$processed->id}] for attack [{$processed->attack_id}] with outcome [{$processed->outcome->value}].");
                 }
+
+                $job->delete();
+            } catch (ModelNotFoundException $exception) {
+                Log::info('Discarding attack result for a missing record.', [
+                    'body' => $job instanceof RabbitMQJob ? $job->getRawBody() : null,
+                    'exception' => $exception->getMessage(),
+                ]);
 
                 $job->delete();
             } catch (Throwable $exception) {

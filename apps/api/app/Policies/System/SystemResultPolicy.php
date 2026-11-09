@@ -33,6 +33,11 @@ class SystemResultPolicy
         return $this->viewBatch($user, $dispatch);
     }
 
+    public function cancelBatch(User $user, AttackDispatch $dispatch): bool
+    {
+        return $this->deleteBatch($user, $dispatch);
+    }
+
     public function deleteAny(User $user, System $system): bool
     {
         return $this->viewAny($user, $system);

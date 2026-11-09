@@ -95,7 +95,7 @@ function defaultMessageForStatus(status: number): string {
     case 404:
       return "Recurso não encontrado.";
     case 410:
-      return "Esta ação não está mais disponível. Configure o login do scanner na página do sistema.";
+      return "Esta ação não está mais disponível. Capture a sessão do navegador na página do sistema.";
     case 422:
       return "Dados inválidos. Verifique os campos destacados.";
     case 429:

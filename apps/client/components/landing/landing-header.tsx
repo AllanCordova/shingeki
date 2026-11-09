@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { LogoMark } from "@/components/logo-mark";
 import { cn } from "@/lib/utils";
 import type { NavTheme } from "./landing-sections";
 
@@ -26,18 +27,21 @@ export function LandingHeader({
         <Link
           href="/"
           className={cn(
-            "flex flex-col leading-none no-underline transition-opacity hover:opacity-80",
+            "flex items-center gap-3 leading-none no-underline transition-opacity hover:opacity-80",
             isLight ? "text-[#0a0a0a]" : "text-white",
           )}
         >
-          <span className="text-sm font-semibold tracking-tight">Shingeki</span>
-          <span
-            className={cn(
-              "text-[10px] uppercase tracking-[0.22em]",
-              isLight ? "text-[#71717a]" : "text-white/55",
-            )}
-          >
-            Security Platform
+          <LogoMark className="h-9 w-9 shrink-0" />
+          <span className="flex flex-col">
+            <span className="text-sm font-semibold tracking-tight">Shingeki</span>
+            <span
+              className={cn(
+                "text-[10px] uppercase tracking-[0.22em]",
+                isLight ? "text-[#71717a]" : "text-white/55",
+              )}
+            >
+              Security Platform
+            </span>
           </span>
         </Link>
 

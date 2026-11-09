@@ -7,10 +7,13 @@ import {
   useDispatchAttack,
   type AttackScanType,
 } from "@/lib/hooks/attack/use-attack";
+import { useCreateSessionCapture } from "@/lib/hooks/attack/use-session-capture";
 import {
   AttackDepthModal,
   type AttackDepthConfirm,
 } from "@/components/attack/attack-depth-modal";
+import { SessionCapturePanel } from "@/components/attack/session-capture-panel";
+import type { SessionCaptureCreated } from "@/lib/contracts/attack/session-capture";
 import type { AttackDepth } from "@/lib/contracts/attack/attack";
 import { notify } from "@/lib/notify";
 import type { ApiError } from "@/lib/api/error-handler";
@@ -56,11 +59,16 @@ export function AttackForm({
   } = useAttackAcknowledgment(projectId, systemId);
   const { dispatchAttack, data, isLoading, pendingScanType, error } =
     useDispatchAttack(projectId, systemId);
+  const { createCapture, isLoading: capturing } = useCreateSessionCapture(
+    projectId,
+    systemId,
+  );
   const [acceptedResponsibility, setAcceptedResponsibility] = useState(false);
   const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [depthScanType, setDepthScanType] = useState<AttackScanType | null>(
     null,
   );
+  const [capture, setCapture] = useState<SessionCaptureCreated | null>(null);
 
   const needsFreshAcceptance = !acknowledged;
   const canDispatch = acknowledged
@@ -79,15 +87,39 @@ export function AttackForm({
           acceptedLegalTerms: acknowledged ? true : acceptedLegalTerms,
         },
         options.depth,
+        { route_map: options.route_map },
       );
       setDepthScanType(null);
+      const routeNote = options.route_map?.length
+        ? ` em ${options.route_map.length} rota(s) do mapa`
+        : "";
       notify.success(
-        `${result.attacks_count} teste(s) ${scanLabels[scanType]} (${depthLabels[options.depth]}) iniciado(s). Acompanhe pelo sininho.`,
+        `${result.attacks_count} teste(s) ${scanLabels[scanType]} (${depthLabels[options.depth]}) iniciado(s)${routeNote}. Acompanhe pelo sininho.`,
       );
     } catch (err) {
       notify.fromApiError(
         err as ApiError,
         `Não foi possível disparar o ataque ${scanLabels[scanType]}.`,
+      );
+    }
+  };
+
+  const startCapture = async (options: AttackDepthConfirm) => {
+    try {
+      const created = await createCapture({
+        acceptedResponsibility: acknowledged ? true : acceptedResponsibility,
+        acceptedLegalTerms: acknowledged ? true : acceptedLegalTerms,
+        scope: {
+          depth: options.depth,
+          route_map: options.route_map,
+        },
+      });
+      setCapture(created);
+      setDepthScanType(null);
+    } catch (err) {
+      notify.fromApiError(
+        err as ApiError,
+        "Não foi possível iniciar a captura da sessão.",
       );
     }
   };
@@ -213,6 +245,13 @@ export function AttackForm({
               </Badge>
             ) : null}
           </div>
+          {capture ? (
+            <SessionCapturePanel
+              projectId={projectId}
+              systemId={systemId}
+              created={capture}
+            />
+          ) : null}
         </div>
       </CardContent>
 
@@ -220,12 +259,17 @@ export function AttackForm({
         open={depthScanType !== null}
         scanType={depthScanType}
         systemId={systemId}
-        isLoading={isLoading}
+        isLoading={isLoading || capturing}
         onClose={() => setDepthScanType(null)}
         onConfirm={(options) => {
           if (!depthScanType) return;
           return submitScan(depthScanType, options);
         }}
+        onCapture={
+          depthScanType === "dast"
+            ? (options) => startCapture(options)
+            : undefined
+        }
       />
     </Card>
   );

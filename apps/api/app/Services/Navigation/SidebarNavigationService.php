@@ -47,6 +47,7 @@ class SidebarNavigationService
                 'projectId' => $project->id,
                 'systemId' => null,
                 'name' => $project->name,
+                'coverPath' => $project->cover_path,
                 'visible' => $projectPref?->visible ?? true,
                 'sortOrder' => $projectPref?->sort_order ?? $fallbackOrder,
             ];
@@ -64,6 +65,7 @@ class SidebarNavigationService
                     'projectName' => $project->name,
                     'systemId' => $system->id,
                     'name' => $system->name,
+                    'coverPath' => $system->cover_path,
                     'visible' => $systemPref?->visible ?? true,
                     'sortOrder' => $systemPref?->sort_order ?? $fallbackOrder,
                 ];
@@ -167,7 +169,7 @@ class SidebarNavigationService
 
     /**
      * @param  list<array<string, mixed>>  $items
-     * @return list<array{id: string, name: string, sortOrder: int, systems: list<array{id: string, name: string, sortOrder: int}>}>
+     * @return list<array{id: string, name: string, coverPath: string|null, sortOrder: int, systems: list<array{id: string, name: string, coverPath: string|null, sortOrder: int}>}>
      */
     private function buildTree(array $items): array
     {
@@ -190,6 +192,7 @@ class SidebarNavigationService
                     ->map(fn (array $system) => [
                         'id' => $system['systemId'],
                         'name' => $system['name'],
+                        'coverPath' => $system['coverPath'] ?? null,
                         'sortOrder' => $system['sortOrder'],
                     ])
                     ->all();
@@ -197,6 +200,7 @@ class SidebarNavigationService
                 return [
                     'id' => $project['projectId'],
                     'name' => $project['name'],
+                    'coverPath' => $project['coverPath'] ?? null,
                     'sortOrder' => $project['sortOrder'],
                     'systems' => $projectSystems,
                 ];

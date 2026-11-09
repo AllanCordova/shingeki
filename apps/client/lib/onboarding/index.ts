@@ -44,9 +44,9 @@ export const GUIDED_SETUP_STEPS: Record<
     description: "Informe URL alvo e repositório. A stack é opcional.",
   },
   target: {
-    title: "Login do scanner",
-    description: "Informe usuário e senha do alvo para o DAST autenticar sozinho.",
-    anchorId: "guided-target-session",
+    title: "Sessão do navegador",
+    description: "No ataque DAST, abra o navegador do painel, vá até o login e capture a sessão.",
+    anchorId: "guided-attack-form",
   },
   dast: {
     title: "Primeiro DAST",

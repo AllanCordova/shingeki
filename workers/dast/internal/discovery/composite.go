@@ -2,7 +2,6 @@ package discovery
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -35,22 +34,14 @@ func (e *CompositeEngine) Discover(
 	auth *contracts.TargetAuth,
 	opts Options,
 ) ([]contracts.AttackVector, error) {
+	if opts.HasRouteMap() {
+		return e.discoverRouteMap(ctx, targetURL, auth, opts)
+	}
+
 	discCfg := ApplyDepthAndScope(e.cfg.Discovery, opts)
 	seedURL, err := ResolveSeedURL(targetURL, opts.StartPath)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := ApplyJSONLogin(ctx, seedURL, auth); err != nil {
-		e.logger.Warn("json credential login failed; form login may still work", "error", err)
-	} else if auth != nil && auth.HasCredentials() && len(contracts.EffectiveAuthHeaders(auth)) > 0 {
-		e.logger.Info("applied json credential login for discovery")
-	}
-
-	if err := ApplyHTTPFormLogin(ctx, seedURL, auth); err != nil {
-		e.logger.Warn("http form login failed; browser form login may still work", "error", err)
-	} else if auth != nil && auth.HasCredentials() && auth.HasSession() && auth.LoginURL != "" {
-		e.logger.Info("applied http form login for discovery")
 	}
 
 	if seedURL != targetURL {
@@ -75,8 +66,8 @@ func (e *CompositeEngine) Discover(
 	if discCfg.RodEnabled {
 		dynamicVectors, rodErr := dynamicEngine.Discover(ctx, targetURL, auth, seedURL)
 		if rodErr != nil {
-			if errors.Is(rodErr, contracts.ErrScannerLogin) {
-				return nil, rodErr
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
 			}
 			e.logger.Warn("dynamic discovery failed; falling back to static crawl", "error", rodErr)
 			staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
@@ -84,18 +75,22 @@ func (e *CompositeEngine) Discover(
 				return nil, staticErr
 			}
 			vectors = staticVectors
-		} else if len(dynamicVectors) < discCfg.MinVectorsForRod {
-			e.logger.Warn("dynamic discovery below threshold; merging static crawl",
-				"dynamic", len(dynamicVectors),
-				"min", discCfg.MinVectorsForRod,
-			)
+		} else {
 			staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
 			if staticErr != nil && len(dynamicVectors) == 0 {
 				return nil, staticErr
 			}
+			if staticErr != nil {
+				e.logger.Warn("static discovery failed; keeping browser routes", "error", staticErr)
+			}
 			vectors = mergeAttackVectors(dynamicVectors, staticVectors)
-		} else {
-			vectors = dynamicVectors
+			if len(dynamicVectors) < discCfg.MinVectorsForRod {
+				e.logger.Warn("dynamic discovery below threshold; static crawl filled the gap",
+					"dynamic", len(dynamicVectors),
+					"static", len(staticVectors),
+					"min", discCfg.MinVectorsForRod,
+				)
+			}
 		}
 	} else {
 		staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
@@ -112,24 +107,6 @@ func (e *CompositeEngine) Discover(
 			"added", len(vectors)-beforeRecorded,
 			"total", len(vectors),
 		)
-	}
-
-	if opts.HasStartPath() {
-		e.logger.Info("skipped SPA/REST training vectors because start_path scopes the crawl",
-			"start_path", opts.StartPath,
-		)
-	} else {
-		beforeSPA := len(vectors)
-		vectors = AppendSPASearchVectors(targetURL, vectors)
-		vectors = AppendSPALoginVectors(targetURL, vectors)
-		vectors = AppendSPAAuthenticatedVectors(targetURL, vectors, auth)
-		vectors = AppendSPACoverageVectors(targetURL, vectors)
-		if len(vectors) > beforeSPA {
-			e.logger.Info("added SPA/REST training vectors",
-				"added", len(vectors)-beforeSPA,
-				"total", len(vectors),
-			)
-		}
 	}
 
 	if len(vectors) == 0 {
@@ -162,22 +139,41 @@ func (e *CompositeEngine) Discover(
 		)
 	}
 
-	if auth.HasCredentials() && !auth.HasSession() {
-		return nil, fmt.Errorf("%w: credentials did not establish a session", contracts.ErrScannerLogin)
+	return vectors, nil
+}
+
+func (e *CompositeEngine) discoverRouteMap(
+	ctx context.Context,
+	targetURL string,
+	auth *contracts.TargetAuth,
+	opts Options,
+) ([]contracts.AttackVector, error) {
+	vectors, err := VectorsFromRouteMap(targetURL, opts.RouteMap)
+	if err != nil {
+		return nil, err
 	}
+	if len(vectors) == 0 {
+		return nil, fmt.Errorf("route map produced no attackable routes")
+	}
+
+	e.logger.Info("using exclusive route map",
+		"routes", len(opts.RouteMap),
+		"vectors", len(vectors),
+	)
 
 	return vectors, nil
 }
 
 func mergeAttackVectors(primary, extra []contracts.AttackVector) []contracts.AttackVector {
-	seen := make(map[string]struct{}, len(primary)+len(extra))
+	index := make(map[string]int, len(primary)+len(extra))
 	out := make([]contracts.AttackVector, 0, len(primary)+len(extra))
 	for _, vector := range append(primary, extra...) {
 		key := vector.Method + " " + vector.Route + " " + vector.TargetLocation
-		if _, exists := seen[key]; exists {
+		if at, exists := index[key]; exists {
+			out[at] = contracts.MergeVector(out[at], vector)
 			continue
 		}
-		seen[key] = struct{}{}
+		index[key] = len(out)
 		out = append(out, vector)
 	}
 	return out

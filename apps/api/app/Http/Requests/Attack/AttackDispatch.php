@@ -4,13 +4,21 @@ namespace App\Http\Requests\Attack;
 
 use App\Enums\Attack\AttackDepth;
 use App\Support\AttackAcknowledgmentTerms;
+use App\Support\DastRouteMap;
 use App\Support\DiscoveryStartPath;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 
 class AttackDispatch extends FormRequest
 {
+    /**
+     * @var list<array<string, mixed>>|null
+     */
+    private ?array $normalizedRouteMap = null;
+
     public function authorize(): bool
     {
         return true;
@@ -30,7 +38,40 @@ class AttackDispatch extends FormRequest
             'depth' => ['nullable', Rule::enum(AttackDepth::class)],
             'start_path' => ['nullable', 'string', 'max:2048'],
             'max_routes' => ['nullable', 'integer', 'min:1', 'max:500'],
+            'route_map' => ['sometimes', 'nullable', 'array', 'max:'.DastRouteMap::MAX_ROUTES],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $routes = $this->input('route_map');
+            if ($routes === null) {
+                return;
+            }
+
+            if ($this->is('*attacks/dispatch/sast')) {
+                $validator->errors()->add('route_map', 'Route maps are only supported for DAST.');
+
+                return;
+            }
+
+            if (! is_array($routes)) {
+                $validator->errors()->add('route_map', 'Route map must be a list of routes.');
+
+                return;
+            }
+
+            try {
+                $this->normalizedRouteMap = DastRouteMap::normalize($routes);
+            } catch (InvalidArgumentException $exception) {
+                $validator->errors()->add('route_map', $exception->getMessage());
+            }
+        });
     }
 
     /**
@@ -71,6 +112,14 @@ class AttackDispatch extends FormRequest
     }
 
     /**
+     * @return list<array<string, mixed>>|null
+     */
+    public function routeMap(): ?array
+    {
+        return $this->normalizedRouteMap;
+    }
+
+    /**
      * @return array<string, string>
      */
     public function messages(): array
@@ -84,6 +133,8 @@ class AttackDispatch extends FormRequest
             'depth.enum' => 'Depth must be quick or full.',
             'max_routes.min' => 'Max routes must be at least 1.',
             'max_routes.max' => 'Max routes cannot exceed 500.',
+            'route_map.array' => 'Route map must be a list of routes.',
+            'route_map.max' => 'Route map cannot exceed '.DastRouteMap::MAX_ROUTES.' routes.',
         ];
     }
 }
