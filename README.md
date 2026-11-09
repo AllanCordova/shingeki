@@ -29,6 +29,10 @@ Quem for executar o código na própria máquina, depois da instalação abaixo,
 | RabbitMQ Management | http://localhost:15672 (`guest` / `guest`) |
 | Captura de sessão (noVNC) | http://127.0.0.1:6080 |
 
+## Documentação do sistema
+
+https://allancordova.github.io/shingeki/
+
 ## Instalação
 
 Requisitos:
