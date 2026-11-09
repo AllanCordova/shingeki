@@ -111,7 +111,7 @@ export default function SystemDetailPage() {
         }
       />
 
-      <RouteMapCard />
+      <RouteMapCard preset={system.lab_routes} />
 
       <div id="guided-attack-form" className="guided-setup-section">
         <AttackForm projectId={projectId} systemId={systemId} />

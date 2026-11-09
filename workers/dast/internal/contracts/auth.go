@@ -6,7 +6,6 @@ import (
 	"strings"
 )
 
-var ErrScannerLogin = errors.New("scanner login failed")
 var ErrSessionExpired = errors.New("browser session expired")
 
 type TargetStorage struct {
@@ -64,20 +63,6 @@ type TargetAuth struct {
 	State             *BrowserStateEnvelope `json:"state,omitempty"`
 }
 
-func (auth *TargetAuth) HasCredentials() bool {
-	if auth == nil {
-		return false
-	}
-	return strings.TrimSpace(auth.Username) != "" && strings.TrimSpace(auth.Password) != ""
-}
-
-func (auth *TargetAuth) WantsRegistration() bool {
-	if auth == nil {
-		return false
-	}
-	return strings.EqualFold(strings.TrimSpace(auth.Mode), "register")
-}
-
 func (auth *TargetAuth) HasSession() bool {
 	if auth == nil {
 		return false
@@ -93,32 +78,6 @@ func (auth *TargetAuth) HasSession() bool {
 		return false
 	}
 	return len(auth.Storage.Local) > 0 || len(auth.Storage.Session) > 0 || len(auth.Storage.Origins) > 0
-}
-
-func ApplyBearerToken(auth *TargetAuth, token string) {
-	if auth == nil {
-		return
-	}
-	token = strings.TrimSpace(token)
-	if token == "" {
-		return
-	}
-	raw := token
-	if strings.HasPrefix(strings.ToLower(token), "bearer ") {
-		raw = strings.TrimSpace(token[7:])
-	}
-	if auth.Headers == nil {
-		auth.Headers = map[string]string{}
-	}
-	auth.Headers["Authorization"] = "Bearer " + raw
-	if auth.Storage == nil {
-		auth.Storage = &TargetStorage{}
-	}
-	if auth.Storage.Local == nil {
-		auth.Storage.Local = StringMap{}
-	}
-	auth.Storage.Local["token"] = raw
-	auth.Storage.Local["access_token"] = raw
 }
 
 func (b DispatchBatch) AuthHeaders() map[string]string {

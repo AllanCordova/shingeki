@@ -411,3 +411,17 @@ func TestPipelineControlUnauthorizedExpiresSession(t *testing.T) {
 		t.Fatalf("status=%s", publisher.completions[0].Status)
 	}
 }
+
+func TestPipelineCancelPublishesCancelledCompletion(t *testing.T) {
+	publisher := &stubPublisher{}
+	pipeline := newTestPipeline(stubDiscovery{}, stubAttack{}, noFinding{}, publisher)
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(contracts.ErrDispatchCancelled)
+
+	if err := pipeline.Run(ctx, testBatch()); err != nil {
+		t.Fatalf("cancel should ack the job: %v", err)
+	}
+	if len(publisher.completions) != 1 || publisher.completions[0].Status != contracts.CompletionStatusCancelled {
+		t.Fatalf("completion=%+v", publisher.completions)
+	}
+}

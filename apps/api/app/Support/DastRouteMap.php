@@ -7,7 +7,7 @@ use JsonException;
 
 final class DastRouteMap
 {
-    public const MAX_ROUTES = 200;
+    public const MAX_ROUTES = 400;
 
     /**
      * @var list<string>
@@ -86,6 +86,22 @@ final class DastRouteMap
         }
         if ($body !== null) {
             $normalized['body'] = $body;
+        }
+
+        $content = strtolower(trim((string) ($route['content'] ?? '')));
+        if ($content !== '') {
+            if (! in_array($content, ['form', 'xml'], true)) {
+                throw new InvalidArgumentException($label.' has an invalid content type.');
+            }
+            $normalized['content'] = $content;
+        }
+
+        $xmlRoot = trim((string) ($route['xml_root'] ?? ''));
+        if ($xmlRoot !== '') {
+            if (preg_match('/^[A-Za-z_][\w:-]{0,40}$/', $xmlRoot) !== 1) {
+                throw new InvalidArgumentException($label.' has an invalid xml root.');
+            }
+            $normalized['xml_root'] = $xmlRoot;
         }
 
         return $normalized;

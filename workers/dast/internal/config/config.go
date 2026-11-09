@@ -25,6 +25,7 @@ type RabbitMQConfig struct {
 	VHost         string
 	DispatchQueue string
 	ResultsQueue  string
+	CancelQueue   string
 	PrefetchCount int
 }
 
@@ -114,9 +115,9 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid ATTACK_MAX_BODY_BYTES: %w", err)
 	}
 
-	maxJobs, err := strconv.Atoi(getEnv("ATTACK_MAX_JOBS", "2500"))
+	maxJobs, err := optionalNonNegativeInt("ATTACK_MAX_JOBS")
 	if err != nil {
-		return Config{}, fmt.Errorf("invalid ATTACK_MAX_JOBS: %w", err)
+		return Config{}, err
 	}
 
 	bodyDiff, err := strconv.Atoi(getEnv("EVIDENCE_BODY_DIFF_THRESHOLD", "100"))
@@ -124,7 +125,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid EVIDENCE_BODY_DIFF_THRESHOLD: %w", err)
 	}
 
-	jobTimeout, err := time.ParseDuration(getEnv("WORKER_JOB_TIMEOUT", "30m"))
+	jobTimeout, err := time.ParseDuration(getEnv("WORKER_JOB_TIMEOUT", "3h"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid WORKER_JOB_TIMEOUT: %w", err)
 	}
@@ -163,6 +164,7 @@ func Load() (Config, error) {
 			VHost:         getEnv("RABBITMQ_VHOST", "/"),
 			DispatchQueue: getEnv("RABBITMQ_ATTACKS_DISPATCH_QUEUE", "attacks.dispatch"),
 			ResultsQueue:  getEnv("RABBITMQ_ATTACKS_RESULTS_QUEUE", "attacks.results"),
+			CancelQueue:   getEnv("RABBITMQ_ATTACKS_CANCEL_QUEUE", "attacks.dispatch.cancel"),
 			PrefetchCount: prefetch,
 		},
 		Worker: WorkerConfig{
@@ -231,8 +233,8 @@ func Load() (Config, error) {
 	if cfg.Attack.MaxBodyBytes < 1 {
 		return Config{}, fmt.Errorf("ATTACK_MAX_BODY_BYTES must be >= 1")
 	}
-	if cfg.Attack.MaxJobs < 1 {
-		return Config{}, fmt.Errorf("ATTACK_MAX_JOBS must be >= 1")
+	if cfg.Attack.MaxJobs < 0 {
+		return Config{}, fmt.Errorf("ATTACK_MAX_JOBS must be >= 0")
 	}
 	if cfg.Evidence.BodyDiffThreshold < 1 {
 		return Config{}, fmt.Errorf("EVIDENCE_BODY_DIFF_THRESHOLD must be >= 1")
@@ -264,4 +266,21 @@ func getEnv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// optionalNonNegativeInt reads key when it is set. An empty variable means 0,
+// which the attack pool treats as no job cap.
+func optionalNonNegativeInt(key string) (int, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return 0, nil
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %w", key, err)
+	}
+	if value < 0 {
+		return 0, fmt.Errorf("%s must be >= 0", key)
+	}
+	return value, nil
 }

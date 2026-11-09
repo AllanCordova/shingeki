@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeleteDispatch } from "@/lib/hooks/results/use-results";
+import { useCancelDispatch, useDeleteDispatch } from "@/lib/hooks/results/use-results";
 import { notify } from "@/lib/notify";
 import { Button, ErrorShow, Modal } from "@/components/ui";
 
@@ -11,6 +11,7 @@ interface DeleteDispatchModalProps {
   systemId: string;
   dispatchId: string;
   dispatchLabel: string;
+  mode?: "delete" | "cancel";
   onDeleted?: () => void;
 }
 
@@ -21,22 +22,30 @@ export function DeleteDispatchModal({
   systemId,
   dispatchId,
   dispatchLabel,
+  mode = "delete",
   onDeleted,
 }: DeleteDispatchModalProps) {
-  const { deleteDispatch, isLoading, error, reset } = useDeleteDispatch(
-    projectId,
-    systemId,
-  );
+  const deleteAction = useDeleteDispatch(projectId, systemId);
+  const cancelAction = useCancelDispatch(projectId, systemId);
+  const isCancel = mode === "cancel";
+  const isLoading = isCancel ? cancelAction.isLoading : deleteAction.isLoading;
+  const error = isCancel ? cancelAction.error : deleteAction.error;
 
   const handleClose = () => {
-    reset();
+    deleteAction.reset();
+    cancelAction.reset();
     onClose();
   };
 
-  const handleDelete = async () => {
+  const handleConfirm = async () => {
     const ok = await notify.run(
-      () => deleteDispatch(dispatchId),
-      { success: "Disparo excluido." },
+      () =>
+        isCancel
+          ? cancelAction.cancelDispatch(dispatchId)
+          : deleteAction.deleteDispatch(dispatchId),
+      {
+        success: isCancel ? "Disparo cancelado." : "Disparo excluido.",
+      },
     );
     if (!ok) return;
     handleClose();
@@ -47,15 +56,23 @@ export function DeleteDispatchModal({
     <Modal
       open={open}
       onClose={handleClose}
-      title="Excluir disparo"
-      description="Esta ação não pode ser desfeita."
+      title={isCancel ? "Cancelar disparo" : "Excluir disparo"}
+      description={
+        isCancel
+          ? "O scan para na hora. Os achados já registrados ficam neste disparo."
+          : "Esta ação não pode ser desfeita."
+      }
       footer={
         <>
           <Button variant="ghost" onClick={handleClose}>
-            Cancelar
+            Voltar
           </Button>
-          <Button variant="danger" isLoading={isLoading} onClick={handleDelete}>
-            Excluir
+          <Button
+            variant={isCancel ? "outline" : "danger"}
+            isLoading={isLoading}
+            onClick={handleConfirm}
+          >
+            {isCancel ? "Cancelar scan" : "Excluir"}
           </Button>
         </>
       }
@@ -64,8 +81,17 @@ export function DeleteDispatchModal({
         <ErrorShow error={error} />
       ) : (
         <p className="text-sm text-muted-foreground">
-          Tem certeza que deseja excluir o disparo de{" "}
-          <strong className="text-foreground">{dispatchLabel}</strong>?
+          {isCancel ? (
+            <>
+              Tem certeza que deseja cancelar o disparo de{" "}
+              <strong className="text-foreground">{dispatchLabel}</strong>?
+            </>
+          ) : (
+            <>
+              Tem certeza que deseja excluir o disparo de{" "}
+              <strong className="text-foreground">{dispatchLabel}</strong>?
+            </>
+          )}
         </p>
       )}
     </Modal>

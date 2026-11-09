@@ -28,38 +28,6 @@ type RodCrawler struct {
 	logger *slog.Logger
 }
 
-func (r *RodCrawler) Authenticate(ctx context.Context, targetURL string, auth *contracts.TargetAuth) error {
-	if !r.cfg.RodEnabled || auth == nil || !auth.HasCredentials() || hasSessionAuth(auth) {
-		return nil
-	}
-	launchTimeout := r.cfg.BrowserLaunchTimeout
-	if launchTimeout <= 0 {
-		launchTimeout = 45 * time.Second
-	}
-	launchCtx, launchCancel := context.WithTimeout(ctx, launchTimeout)
-	defer launchCancel()
-
-	connected, err := connectBrowser(launchCtx, r.cfg, r.logger)
-	if err != nil {
-		return err
-	}
-	defer connected.cleanup()
-
-	page, err := connected.browser.Context(ctx).Page(proto.TargetCreateTarget{URL: "about:blank"})
-	if err != nil {
-		return fmt.Errorf("create page: %w", err)
-	}
-	defer page.Close()
-
-	if err := applyStealth(page, auth.UserAgent); err != nil {
-		r.logger.Warn("stealth profile incomplete", "error", err)
-	}
-	if err := authenticateBrowser(ctx, connected.browser, page, targetURL, auth, r.settle); err != nil && !hasSessionAuth(auth) {
-		return fmt.Errorf("%w: %v", contracts.ErrScannerLogin, err)
-	}
-	return nil
-}
-
 func NewRodCrawler(discoveryCfg config.DiscoveryConfig, attackCfg config.AttackConfig, logger *slog.Logger) *RodCrawler {
 	if logger == nil {
 		logger = slog.Default()
@@ -88,11 +56,18 @@ func (r *RodCrawler) Discover(
 		return nil, err
 	}
 	browser := connected.browser
-	defer connected.cleanup()
 
 	exploreTimeout := r.exploreBudget()
 	exploreCtx, exploreCancel := context.WithTimeout(ctx, exploreTimeout)
 	defer exploreCancel()
+
+	var closeBrowser sync.Once
+	stopBrowser := func() { closeBrowser.Do(connected.cleanup) }
+	defer stopBrowser()
+	go func() {
+		<-exploreCtx.Done()
+		stopBrowser()
+	}()
 
 	page, err := browser.Context(exploreCtx).Page(proto.TargetCreateTarget{URL: "about:blank"})
 	if err != nil {
@@ -116,7 +91,11 @@ func (r *RodCrawler) Discover(
 		}
 		key := vector.Method + " " + vector.Route + " " + vector.TargetLocation
 		mu.Lock()
-		vectors[key] = vector
+		if existing, ok := vectors[key]; ok {
+			vectors[key] = contracts.MergeVector(existing, vector)
+		} else {
+			vectors[key] = vector
+		}
 		mu.Unlock()
 	}
 
@@ -148,7 +127,6 @@ func (r *RodCrawler) Discover(
 			"has_storage", storage != nil && (len(storage.Local) > 0 || len(storage.Session) > 0 || len(storage.Origins) > 0),
 			"structured_cookies", auth != nil && len(auth.Cookies) > 0,
 			"has_user_agent", userAgent != "",
-			"has_credentials", auth.HasCredentials(),
 		)
 	} else {
 		r.logger.Warn("dynamic discovery running without auth; authenticated SPA routes may redirect to login")
@@ -185,6 +163,7 @@ func (r *RodCrawler) Discover(
 	if maxForms <= 0 {
 		maxForms = 8
 	}
+	const maxClicksPerPage = 4
 
 	for {
 		if err := exploreCtx.Err(); err != nil {
@@ -202,11 +181,13 @@ func (r *RodCrawler) Discover(
 			continue
 		}
 
-		if err := page.Navigate(item.URL); err != nil {
+		if err := r.openPage(exploreCtx, page, item.URL); err != nil {
+			if exploreCtx.Err() != nil {
+				break
+			}
 			r.logger.Warn("navigate failed", "url", item.URL, "error", err)
 			continue
 		}
-		_ = page.WaitLoad()
 		r.settle(exploreCtx)
 
 		currentURL := pageURL(page)
@@ -230,13 +211,8 @@ func (r *RodCrawler) Discover(
 		if vector, ok := queryVectorFromPageURL(currentURL); ok {
 			record(vector)
 		}
-		if r.pageHasSearchInput(page) {
-			if vector, ok := hashSearchVector(targetURL); ok {
-				record(vector)
-			}
-		}
 
-		for _, link := range r.collectLinks(page, currentURL) {
+		for _, link := range r.collectLinks(exploreCtx, page, currentURL) {
 			if bfs.IsAttackableDiscoveryURL(targetURL, link) {
 				queue.Enqueue(link, item.Depth+1)
 				if vector, ok := queryVectorFromPageURL(link); ok {
@@ -245,12 +221,24 @@ func (r *RodCrawler) Discover(
 			}
 		}
 
-		candidates, err := r.collectClickables(page, currentURL)
+		forms, err := r.collectForms(exploreCtx, page)
+		if err != nil {
+			r.logger.Warn("collect forms failed", "url", currentURL, "error", err)
+		} else {
+			for _, form := range forms {
+				if vector, ok := vectorFromForm(currentURL, form); ok {
+					record(vector)
+				}
+			}
+		}
+
+		candidates, err := r.collectClickables(exploreCtx, page, currentURL)
 		if err != nil {
 			r.logger.Warn("collect clickables failed", "url", currentURL, "error", err)
 		} else {
+			pageClicks := 0
 			for _, candidate := range candidates {
-				if exploreCtx.Err() != nil || clicks >= maxClicks {
+				if exploreCtx.Err() != nil || clicks >= maxClicks || pageClicks >= maxClicksPerPage {
 					break
 				}
 				if _, done := clicked[candidate.Key]; done {
@@ -258,6 +246,7 @@ func (r *RodCrawler) Discover(
 				}
 				clicked[candidate.Key] = struct{}{}
 				clicks++
+				pageClicks++
 
 				if href := strings.TrimSpace(candidate.Href); href != "" && !hasPrefixFold(href, "#") {
 					if resolved, ok := bfs.ResolveReference(currentURL, href); ok {
@@ -267,14 +256,15 @@ func (r *RodCrawler) Discover(
 					}
 				}
 
-				if err := r.clickCandidate(page, candidate); err != nil {
+				if err := r.clickCandidate(exploreCtx, page, candidate); err != nil {
 					r.logger.Warn("click failed", "text", candidate.Text, "href", candidate.Href, "error", err)
-					_ = page.Navigate(currentURL)
-					_ = page.WaitLoad()
+					if exploreCtx.Err() != nil {
+						break
+					}
+					_ = r.openPage(exploreCtx, page, currentURL)
 					r.settle(exploreCtx)
 					continue
 				}
-				_ = page.WaitLoad()
 				r.settle(exploreCtx)
 
 				afterURL := pageURL(page)
@@ -287,8 +277,9 @@ func (r *RodCrawler) Discover(
 						"to", afterURL,
 					)
 					record(contracts.NewAttackVector(afterURL, "GET", "URL_PATH"))
-					_ = page.Navigate(currentURL)
-					_ = page.WaitLoad()
+					if err := r.openPage(exploreCtx, page, currentURL); err != nil && exploreCtx.Err() != nil {
+						break
+					}
 					r.settle(exploreCtx)
 					continue
 				}
@@ -296,22 +287,18 @@ func (r *RodCrawler) Discover(
 					queue.Enqueue(afterURL, item.Depth+1)
 				}
 				if afterURL != currentURL {
-					_ = page.Navigate(currentURL)
-					_ = page.WaitLoad()
+					if err := r.openPage(exploreCtx, page, currentURL); err != nil && exploreCtx.Err() != nil {
+						break
+					}
 					r.settle(exploreCtx)
 				}
 			}
 		}
 
-		forms, err := r.collectForms(page)
+		forms, err = r.collectForms(exploreCtx, page)
 		if err != nil {
 			r.logger.Warn("collect forms failed", "url", currentURL, "error", err)
 			continue
-		}
-		for _, form := range forms {
-			if vector, ok := vectorFromForm(currentURL, form); ok {
-				record(vector)
-			}
 		}
 		for _, form := range forms {
 			if exploreCtx.Err() != nil || formSubmits >= maxForms {
@@ -326,24 +313,51 @@ func (r *RodCrawler) Discover(
 			}
 			submitted[key] = struct{}{}
 			formSubmits++
-			if err := r.submitForm(page, form); err != nil {
+			if err := r.submitForm(exploreCtx, page, form); err != nil {
 				r.logger.Warn("form submit failed", "action", form.Action, "error", err)
+				if exploreCtx.Err() != nil {
+					break
+				}
 			}
-			_ = page.WaitLoad()
 			r.settle(exploreCtx)
 			afterURL := pageURL(page)
 			if afterURL != "" && bfs.IsAttackableDiscoveryURL(targetURL, afterURL) {
 				queue.Enqueue(afterURL, item.Depth+1)
 			}
 			if afterURL != currentURL {
-				_ = page.Navigate(currentURL)
-				_ = page.WaitLoad()
+				if err := r.openPage(exploreCtx, page, currentURL); err != nil && exploreCtx.Err() != nil {
+					break
+				}
 				r.settle(exploreCtx)
 			}
 		}
 	}
 
+	if err := ctx.Err(); err != nil {
+		r.logger.Warn("dynamic discovery aborted", "error", err, "pages", pagesVisited, "target", targetURL)
+		return nil, err
+	}
+
 	return finalizeVectors(vectors, &mu, r, seedURL, targetURL, pagesVisited, clicks), nil
+}
+
+func (r *RodCrawler) openPage(ctx context.Context, page *rod.Page, rawURL string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	bounded := r.boundedPage(ctx, page)
+	if err := bounded.Navigate(rawURL); err != nil {
+		return err
+	}
+	return bounded.WaitLoad()
+}
+
+func (r *RodCrawler) boundedPage(ctx context.Context, page *rod.Page) *rod.Page {
+	timeout := r.cfg.PageTimeout
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	return page.Context(ctx).Timeout(timeout)
 }
 
 func finalizeVectors(
@@ -401,8 +415,8 @@ func (r *RodCrawler) settle(ctx context.Context) {
 	}
 }
 
-func (r *RodCrawler) collectLinks(page *rod.Page, currentURL string) []string {
-	elements, err := page.Elements("a[href]")
+func (r *RodCrawler) collectLinks(ctx context.Context, page *rod.Page, currentURL string) []string {
+	elements, err := r.boundedPage(ctx, page).Elements("a[href]")
 	if err != nil {
 		return nil
 	}
@@ -428,8 +442,8 @@ func (r *RodCrawler) collectLinks(page *rod.Page, currentURL string) []string {
 	return out
 }
 
-func (r *RodCrawler) collectClickables(page *rod.Page, currentURL string) ([]clickCandidate, error) {
-	elements, err := page.Elements(clickableSelector)
+func (r *RodCrawler) collectClickables(ctx context.Context, page *rod.Page, currentURL string) ([]clickCandidate, error) {
+	elements, err := r.boundedPage(ctx, page).Elements(clickableSelector)
 	if err != nil {
 		return nil, err
 	}
@@ -451,8 +465,8 @@ func (r *RodCrawler) collectClickables(page *rod.Page, currentURL string) ([]cli
 	return rankClickCandidates(currentURL, raw), nil
 }
 
-func (r *RodCrawler) collectForms(page *rod.Page) ([]formCandidate, error) {
-	res, err := page.Eval(`() => {
+func (r *RodCrawler) collectForms(ctx context.Context, page *rod.Page) ([]formCandidate, error) {
+	res, err := r.boundedPage(ctx, page).Timeout(8 * time.Second).Eval(`() => {
 		return [...document.querySelectorAll('form')].slice(0, 20).map((form, index) => ({
 			index,
 			action: form.getAttribute('action') || form.action || '',
@@ -478,7 +492,8 @@ func (r *RodCrawler) collectForms(page *rod.Page) ([]formCandidate, error) {
 	return forms, nil
 }
 
-func (r *RodCrawler) submitForm(page *rod.Page, form formCandidate) error {
+func (r *RodCrawler) submitForm(ctx context.Context, page *rod.Page, form formCandidate) error {
+	page = r.boundedPage(ctx, page)
 	values := map[string]string{}
 	for _, field := range form.Fields {
 		value, ok := fillValueForField(field)
@@ -553,9 +568,10 @@ func truncate(s string, n int) string {
 	return httputil.Truncate(strings.TrimSpace(s), n)
 }
 
-func (r *RodCrawler) clickCandidate(page *rod.Page, candidate clickCandidate) error {
-	currentURL := pageURL(page)
-	live, err := r.collectClickables(page, currentURL)
+func (r *RodCrawler) clickCandidate(ctx context.Context, page *rod.Page, candidate clickCandidate) error {
+	page = r.boundedPage(ctx, page)
+	currentURL := pageURL(r.boundedPage(ctx, page))
+	live, err := r.collectClickables(ctx, page, currentURL)
 	if err != nil {
 		return err
 	}

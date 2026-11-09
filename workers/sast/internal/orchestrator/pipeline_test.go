@@ -233,3 +233,22 @@ func TestRunPublishesCleanProbeForUnmatchedCatalogAttack(t *testing.T) {
 		t.Fatalf("expected probes_count 1, got %d", publisher.completions[0].ProbesCount)
 	}
 }
+
+func TestPipelineCancelPublishesCancelledCompletion(t *testing.T) {
+	publisher := &stubPublisher{}
+	pipeline := &Pipeline{
+		cloner:    stubCloner{dir: t.TempDir()},
+		scanner:   stubScanner{},
+		publisher: publisher,
+		logger:    slog.Default(),
+	}
+	ctx, cancel := context.WithCancelCause(context.Background())
+	cancel(contracts.ErrDispatchCancelled)
+
+	if err := pipeline.Run(ctx, testBatch()); err != nil {
+		t.Fatalf("cancel should ack the job: %v", err)
+	}
+	if len(publisher.completions) != 1 || publisher.completions[0].Status != contracts.CompletionStatusCancelled {
+		t.Fatalf("completion=%+v", publisher.completions)
+	}
+}

@@ -14,6 +14,7 @@ describe("dispatchStatusLabel", () => {
     assert.equal(dispatchStatusLabel("failed"), "Falhou");
     assert.equal(dispatchStatusLabel("pending"), "Processando");
     assert.equal(dispatchStatusLabel("session_expired"), "Sessão expirada");
+    assert.equal(dispatchStatusLabel("cancelled"), "Cancelado");
   });
 });
 
@@ -45,5 +46,6 @@ describe("dispatchStatusTone", () => {
     assert.equal(dispatchStatusTone("failed"), "danger");
     assert.equal(dispatchStatusTone("pending"), "warning");
     assert.equal(dispatchStatusTone("session_expired"), "warning");
+    assert.equal(dispatchStatusTone("cancelled"), "neutral");
   });
 });

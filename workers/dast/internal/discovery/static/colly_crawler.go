@@ -3,7 +3,9 @@ package static
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -98,6 +100,8 @@ func (c *CollyCrawler) Discover(
 func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeaders map[string]string) ([]contracts.AttackVector, []string, error) {
 	var vectors []contracts.AttackVector
 	var links []string
+	var htmlBody string
+	sameOriginLinks := 0
 
 	coll := colly.NewCollector(
 		colly.UserAgent(c.attack.UserAgent),
@@ -111,6 +115,10 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 		}
 	})
 
+	coll.OnResponse(func(r *colly.Response) {
+		htmlBody = string(r.Body)
+	})
+
 	coll.OnHTML("a[href]", func(e *colly.HTMLElement) {
 		href := strings.TrimSpace(e.Attr("href"))
 		if href == "" || strings.HasPrefix(href, "#") || strings.HasPrefix(strings.ToLower(href), "javascript:") {
@@ -120,7 +128,16 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 			if bfs.IsBlockedDiscoveryURL(resolved) {
 				return
 			}
+			if bfs.SameOrigin(pageURL, resolved) {
+				sameOriginLinks++
+			}
 			links = append(links, resolved)
+		}
+		if vector, ok := queryVectorFromHref(pageURL, href); ok {
+			vectors = append(vectors, vector)
+		}
+		if vector, ok := pathVectorFromHref(pageURL, href); ok {
+			vectors = append(vectors, vector)
 		}
 	})
 
@@ -181,7 +198,66 @@ func (c *CollyCrawler) crawlPage(ctx context.Context, pageURL string, authHeader
 	}
 
 	coll.Wait()
+	vectors = augmentStaticPage(pageURL, htmlBody, vectors)
+	if pageLooksLikeSPAShell(htmlBody, sameOriginLinks) {
+		if shell, ok := spaShellVector(pageURL); ok {
+			vectors = append(vectors, shell)
+		}
+	}
+	if pageOffersXML(htmlBody) {
+		extra := make([]contracts.AttackVector, 0)
+		for _, vector := range vectors {
+			if probe, ok := xmlProbeFromForm(vector); ok {
+				extra = append(extra, probe)
+			}
+		}
+		vectors = append(vectors, extra...)
+	}
+	if root := c.lookupXMLRoot(ctx, pageURL, htmlBody, authHeaders); root != "" {
+		for i := range vectors {
+			if vectors[i].TargetLocation == "XML_BODY" {
+				vectors[i].XMLRoot = root
+			}
+		}
+	}
 	return vectors, links, nil
+}
+
+func (c *CollyCrawler) lookupXMLRoot(ctx context.Context, pageURL, html string, authHeaders map[string]string) string {
+	if root := xmlRootFromSource(html); root != "" {
+		return root
+	}
+	scriptURL := xmlScriptURL(pageURL, html)
+	if scriptURL == "" {
+		return ""
+	}
+	timeout := c.cfg.PageTimeout
+	if timeout <= 0 {
+		timeout = 10 * time.Second
+	}
+	reqCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, scriptURL, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("User-Agent", c.attack.UserAgent)
+	for key, value := range authHeaders {
+		req.Header.Set(key, value)
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return ""
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64<<10))
+	if err != nil {
+		return ""
+	}
+	return xmlRootFromSource(string(body))
 }
 
 func formVector(resolved, method string, params map[string]string) (contracts.AttackVector, bool) {

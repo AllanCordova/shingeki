@@ -15,9 +15,11 @@ export type DastRouteMapEntry = {
   path: string;
   query?: Record<string, string>;
   body?: Record<string, unknown>;
+  content?: "form" | "xml";
+  xml_root?: string;
 };
 
-export const DAST_ROUTE_MAP_LIMIT = 200;
+export const DAST_ROUTE_MAP_LIMIT = 400;
 
 export const DAST_ROUTE_MAP_TEMPLATE = `[
   {
@@ -117,6 +119,15 @@ export function parseDastRouteMap(
     }
     if (body && "body" in body) {
       route.body = body.body;
+    }
+    if (record.content === "form" || record.content === "xml") {
+      route.content = record.content;
+    }
+    if (
+      typeof record.xml_root === "string" &&
+      /^[A-Za-z_][\w:-]{0,40}$/.test(record.xml_root)
+    ) {
+      route.xml_root = record.xml_root;
     }
     routes.push(route);
   }

@@ -69,3 +69,50 @@ test('process marks dispatch as session expired without failing it', function ()
         ->and($updated->completed_at)->toBeNull()
         ->and($updated->scanStatus())->toBe('session_expired');
 });
+
+test('process marks dispatch as cancelled', function () {
+    $user = User::factory()->create();
+    $system = System::factory()->create();
+    $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+    $updated = app(AttackDispatchCompletionProcessor::class)->process([
+        'event' => AttackDispatchCompletionProcessor::EVENT,
+        'dispatch_id' => $dispatch->id,
+        'system_id' => $system->id,
+        'status' => 'cancelled',
+        'duration_ms' => 500,
+        'findings_count' => 1,
+        'probes_count' => 3,
+    ]);
+
+    expect($updated->cancelled_at)->not->toBeNull()
+        ->and($updated->completed_at)->toBeNull()
+        ->and($updated->failed_at)->toBeNull()
+        ->and($updated->findings_count)->toBe(1)
+        ->and($updated->scanStatus())->toBe('cancelled');
+});
+
+test('process keeps a user cancellation when the worker later reports completion', function () {
+    $user = User::factory()->create();
+    $system = System::factory()->create();
+    $cancelledAt = now()->subMinute();
+    $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+        'cancelled_at' => $cancelledAt,
+    ]);
+
+    $updated = app(AttackDispatchCompletionProcessor::class)->process([
+        'event' => AttackDispatchCompletionProcessor::EVENT,
+        'dispatch_id' => $dispatch->id,
+        'system_id' => $system->id,
+        'status' => 'completed',
+        'duration_ms' => 900,
+        'findings_count' => 2,
+        'probes_count' => 4,
+    ]);
+
+    expect($updated->scanStatus())->toBe('cancelled')
+        ->and($updated->completed_at)->toBeNull()
+        ->and($updated->findings_count)->toBe(2)
+        ->and($updated->duration_ms)->toBe(900)
+        ->and($updated->cancelled_at?->toDateTimeString())->toBe($cancelledAt->toDateTimeString());
+});

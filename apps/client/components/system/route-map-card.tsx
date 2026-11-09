@@ -13,9 +13,14 @@ import {
 import {
   DAST_ROUTE_MAP_TEMPLATE,
   parseDastRouteMap,
+  type DastRouteMapEntry,
 } from "@/lib/contracts/attack/route-map";
 
-export function RouteMapCard() {
+export function RouteMapCard({
+  preset,
+}: {
+  preset?: DastRouteMapEntry[] | null;
+}) {
   const { replaceRoutes } = useRouteMapPreview();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +36,14 @@ export function RouteMapCard() {
     setError(null);
   };
 
+  const presetRoutes = preset && preset.length > 0 ? preset : null;
+
   const loadTemplate = () => {
+    if (presetRoutes) {
+      replaceRoutes(presetRoutes);
+      setError(null);
+      return;
+    }
     const parsed = parseDastRouteMap(DAST_ROUTE_MAP_TEMPLATE);
     if ("error" in parsed) {
       setError(parsed.error);
@@ -42,9 +54,12 @@ export function RouteMapCard() {
   };
 
   const downloadTemplate = () => {
-    const blob = new Blob([DAST_ROUTE_MAP_TEMPLATE], {
-      type: "application/json",
-    });
+    const blob = new Blob(
+      [presetRoutes ? JSON.stringify(presetRoutes, null, 2) : DAST_ROUTE_MAP_TEMPLATE],
+      {
+        type: "application/json",
+      },
+    );
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;

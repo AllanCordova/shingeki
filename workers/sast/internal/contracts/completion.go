@@ -2,6 +2,7 @@ package contracts
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 )
 
@@ -10,7 +11,10 @@ const EventDispatchCompleted = "attack.dispatch.completed"
 const (
 	CompletionStatusCompleted = "completed"
 	CompletionStatusFailed    = "failed"
+	CompletionStatusCancelled = "cancelled"
 )
+
+var ErrDispatchCancelled = errors.New("dispatch cancelled")
 
 type DispatchCompletionMessage struct {
 	Event         string `json:"event"`
@@ -46,9 +50,9 @@ func (m DispatchCompletionMessage) Validate() error {
 		return fmt.Errorf("system_id is required")
 	}
 	switch m.Status {
-	case CompletionStatusCompleted, CompletionStatusFailed:
+	case CompletionStatusCompleted, CompletionStatusFailed, CompletionStatusCancelled:
 	default:
-		return fmt.Errorf("status must be %q or %q", CompletionStatusCompleted, CompletionStatusFailed)
+		return fmt.Errorf("status must be %q, %q or %q", CompletionStatusCompleted, CompletionStatusFailed, CompletionStatusCancelled)
 	}
 	if m.Status == CompletionStatusFailed && m.Error == "" {
 		return fmt.Errorf("error is required when status is failed")

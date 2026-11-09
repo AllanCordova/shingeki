@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log/slog"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -18,7 +19,10 @@ import (
 	"github.com/shingeki/dast-worker/pkg/targeturl"
 )
 
-const domXSSProbeTimeout = 8 * time.Second
+const (
+	domXSSProbeTimeout    = 8 * time.Second
+	domSourceProbeTimeout = 20 * time.Second
+)
 
 type DOMXSSValidator struct {
 	cfg    config.DiscoveryConfig
@@ -46,7 +50,16 @@ func (v *DOMXSSValidator) Analyze(ctx context.Context, response types.Response) 
 	if strings.TrimSpace(response.PayloadUsed) == "" {
 		return nil
 	}
-	if !shouldProbeDOMXSS(response) {
+	browserSource := strings.EqualFold(response.Job.Attack.TargetLocation, "BROWSER") || response.Job.Placement == "browser"
+	body := response.AttackBody
+	if strings.TrimSpace(body) == "" {
+		body = response.BaselineBody
+	}
+	if browserSource {
+		if planDOMSource(body).Kind == "" {
+			return nil
+		}
+	} else if !shouldProbeDOMXSS(response) {
 		return nil
 	}
 
@@ -55,7 +68,7 @@ func (v *DOMXSSValidator) Analyze(ctx context.Context, response types.Response) 
 		return nil
 	}
 
-	hit, detail, err := v.probe(ctx, spec.URL)
+	hit, detail, err := v.probe(ctx, spec.URL, response.PayloadUsed, body, browserSource)
 	if err != nil {
 		v.logger.Warn("dom xss probe failed", "url", spec.URL, "error", err)
 		return nil
@@ -77,13 +90,18 @@ func (v *DOMXSSValidator) Close() error {
 	return nil
 }
 
-func (v *DOMXSSValidator) probe(ctx context.Context, pageURL string) (bool, string, error) {
+func (v *DOMXSSValidator) probe(ctx context.Context, pageURL, payload, body string, browserSource bool) (bool, string, error) {
 	browser, err := v.ensureBrowser(ctx)
 	if err != nil {
 		return false, "", err
 	}
 
-	probeCtx, cancel := context.WithTimeout(ctx, domXSSProbeTimeout)
+	plan := planDOMSource(body)
+	timeout := domXSSProbeTimeout
+	if browserSource {
+		timeout = domSourceProbeTimeout
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	page, err := browser.Context(probeCtx).Page(proto.TargetCreateTarget{URL: "about:blank"})
@@ -101,13 +119,46 @@ func (v *DOMXSSValidator) probe(ctx context.Context, pageURL string) (bool, stri
 		}
 	})()
 
-	if err := page.Navigate(pageURL); err != nil {
+	if err := driveDOMSource(page, pageURL, payload, plan, browserSource); err != nil {
 		return false, "", err
 	}
 	_ = page.WaitLoad()
+	settle := domSettle(body, payload)
 	select {
 	case <-probeCtx.Done():
-	case <-time.After(1500 * time.Millisecond):
+	case <-time.After(settle):
+	}
+	if browserSource && plan.Kind == "postmessage" {
+		_, _ = page.Eval(`(payload) => {
+			try { window.postMessage(JSON.stringify({html: payload, data: payload}), '*'); } catch (e) {}
+			try { window.postMessage(payload, '*'); } catch (e) {}
+		}`, payload)
+		select {
+		case <-probeCtx.Done():
+		case <-time.After(settle):
+		}
+	}
+	if browserSource && plan.Kind == "event" {
+		_, _ = page.Eval(`(payload) => {
+			const fire = (el) => {
+				el.value = payload;
+				el.dispatchEvent(new Event('input', {bubbles: true}));
+				el.dispatchEvent(new KeyboardEvent('keyup', {bubbles: true}));
+				el.dispatchEvent(new Event('change', {bubbles: true}));
+			};
+			document.querySelectorAll('input, textarea').forEach(fire);
+			document.querySelectorAll('form').forEach((form) => {
+				form.querySelectorAll('input, textarea').forEach(fire);
+				form.dispatchEvent(new Event('submit', {bubbles: true, cancelable: true}));
+			});
+			document.querySelectorAll('input[type=submit], button[type=submit], button:not([type])').forEach((el) => {
+				try { el.click(); } catch (e) {}
+			});
+		}`, payload)
+		select {
+		case <-probeCtx.Done():
+		case <-time.After(settle):
+		}
 	}
 
 	select {
@@ -119,10 +170,67 @@ func (v *DOMXSSValidator) probe(ctx context.Context, pageURL string) (bool, stri
 	default:
 	}
 
-	if sink, ok := domSinkPresent(page); ok {
+	if sink, ok := domSinkPresent(page, payload); ok {
 		return true, "payload opened an HTML JavaScript sink in the rendered DOM (" + sink + ")", nil
 	}
 	return false, "", nil
+}
+
+func driveDOMSource(page *rod.Page, pageURL, payload string, plan domSourcePlan, browserSource bool) error {
+	if !browserSource || plan.Kind == "" {
+		return page.Navigate(pageURL)
+	}
+	switch plan.Kind {
+	case "cookie":
+		if plan.CookieName != "" {
+			_, _ = proto.NetworkSetCookie{URL: pageURL, Name: plan.CookieName, Value: payload, Path: "/"}.Call(page)
+		}
+		return page.Navigate(pageURL)
+	case "name":
+		if err := page.Navigate("about:blank"); err != nil {
+			return err
+		}
+		_, _ = page.Eval(`(payload) => { window.name = payload }`, payload)
+		return page.Navigate(pageURL)
+	case "storage":
+		origin := targeturl.Origin(pageURL)
+		if origin == "" {
+			return page.Navigate(pageURL)
+		}
+		if err := page.Navigate(origin + "/"); err != nil {
+			return err
+		}
+		_ = page.WaitLoad()
+		key := plan.StorageKey
+		if key == "" {
+			key = "badValue"
+		}
+		_, _ = page.Eval(`(payload, key) => {
+			try { localStorage.setItem(key, payload); localStorage[key] = payload; } catch (e) {}
+			try { sessionStorage.setItem(key, payload); sessionStorage[key] = payload; } catch (e) {}
+		}`, payload, key)
+		return page.Navigate(pageURL)
+	case "referrer":
+		origin := targeturl.Origin(pageURL)
+		poison := origin + "/?r=" + url.QueryEscape(payload)
+		if err := page.Navigate(poison); err != nil {
+			return err
+		}
+		_ = page.WaitLoad()
+		return page.Navigate(pageURL)
+	case "url":
+		return page.Navigate(withDOMPayload(pageURL, payload))
+	default:
+		return page.Navigate(pageURL)
+	}
+}
+
+func domSettle(body, payload string) time.Duration {
+	lower := strings.ToLower(body + " " + payload)
+	if strings.Contains(lower, "ng-app") || strings.Contains(lower, "angular") || strings.Contains(payload, "{{") || strings.Contains(payload, "constructor.constructor") {
+		return 4 * time.Second
+	}
+	return 1500 * time.Millisecond
 }
 
 func (v *DOMXSSValidator) ensureBrowser(ctx context.Context) (*rod.Browser, error) {
@@ -169,15 +277,28 @@ func shouldProbeDOMXSS(response types.Response) bool {
 		strings.Contains(lower, "<app-root")
 }
 
-func domSinkPresent(page *rod.Page) (string, bool) {
+func domSinkPresent(page *rod.Page, payload string) (string, bool) {
 	if page == nil {
 		return "", false
 	}
-	res, err := page.Eval(`() => {
+	res, err := page.Eval(`(payload) => {
 		const iframe = document.querySelector('iframe[src*="javascript:"]');
 		if (iframe) return 'iframe[src=javascript:]';
+		const link = document.querySelector('a[href^="javascript:"], area[href^="javascript:"], form[action^="javascript:"], button[formaction^="javascript:"]');
+		if (link) return 'url[javascript:]';
+		const nodes = document.querySelectorAll('*');
+		for (const el of nodes) {
+			for (const attr of Array.from(el.attributes || [])) {
+				const name = attr.name.toLowerCase();
+				const value = attr.value || '';
+				if (name.indexOf('on') !== 0 || value.toLowerCase().indexOf('alert') === -1) continue;
+				if (payload && (payload.indexOf(value) !== -1 || value.indexOf(payload) !== -1)) {
+					return el.tagName.toLowerCase() + '[' + name + ']';
+				}
+			}
+		}
 		return '';
-	}`)
+	}`, payload)
 	if err != nil || res == nil {
 		return "", false
 	}

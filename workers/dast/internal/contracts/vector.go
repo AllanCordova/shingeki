@@ -12,6 +12,8 @@ type AttackVector struct {
 	Params         map[string]string
 	Headers        map[string]string
 	Body           string
+	// XMLRoot is the document element the page itself builds, when discovery saw it.
+	XMLRoot string
 }
 
 func NewAttackVector(route, method, targetLocation string) AttackVector {
@@ -22,6 +24,40 @@ func NewAttackVector(route, method, targetLocation string) AttackVector {
 		Params:         make(map[string]string),
 		Headers:        make(map[string]string),
 	}
+}
+
+// MergeVector keeps one route when discovery saw it twice.
+// Empty fields are filled from the other sighting; a value already found stays.
+func MergeVector(base, extra AttackVector) AttackVector {
+	out := base
+	out.Params = cloneStringMap(base.Params)
+	for key, value := range extra.Params {
+		current, exists := out.Params[key]
+		if !exists || (current == "" && value != "") {
+			out.Params[key] = value
+		}
+	}
+	out.Headers = cloneStringMap(base.Headers)
+	for key, value := range extra.Headers {
+		if _, exists := out.Headers[key]; !exists && value != "" {
+			out.Headers[key] = value
+		}
+	}
+	if strings.TrimSpace(out.Body) == "" {
+		out.Body = extra.Body
+	}
+	if out.XMLRoot == "" {
+		out.XMLRoot = extra.XMLRoot
+	}
+	return out
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	out := make(map[string]string, len(values))
+	for key, value := range values {
+		out[key] = value
+	}
+	return out
 }
 
 // FormTargetLocation maps an HTML form to the HTTP place its fields actually go.

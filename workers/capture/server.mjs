@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
+import net from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -14,7 +15,34 @@ let child = null;
 let vncProcess = null;
 let sessionGeneration = 0;
 
-function armVnc(password) {
+function portOpen(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ host: "127.0.0.1", port }, () => {
+      socket.end();
+      resolve(true);
+    });
+    socket.on("error", () => resolve(false));
+  });
+}
+
+async function stopVnc() {
+  if (vncProcess === null || vncProcess.exitCode !== null) {
+    vncProcess = null;
+    return;
+  }
+  const current = vncProcess;
+  current.kill("SIGTERM");
+  await Promise.race([
+    new Promise((resolve) => current.once("exit", resolve)),
+    delay(1000),
+  ]);
+  if (current.exitCode === null) {
+    current.kill("SIGKILL");
+  }
+  vncProcess = null;
+}
+
+async function armVnc(password) {
   const stored = spawnSync("x11vnc", ["-storepasswd", password, "/tmp/vnc.pass"], {
     stdio: "ignore",
   });
@@ -22,10 +50,9 @@ function armVnc(password) {
     return false;
   }
 
-  if (vncProcess !== null && vncProcess.exitCode === null) {
-    vncProcess.kill("SIGTERM");
-  }
+  await stopVnc();
 
+  let stderr = "";
   const next = spawn(
     "x11vnc",
     [
@@ -39,8 +66,11 @@ function armVnc(password) {
       "-rfbport",
       "5900",
     ],
-    { stdio: "ignore" },
+    { stdio: ["ignore", "ignore", "pipe"] },
   );
+  next.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
   next.on("exit", () => {
     if (vncProcess === next) {
       vncProcess = null;
@@ -48,7 +78,20 @@ function armVnc(password) {
   });
   vncProcess = next;
 
-  return true;
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (next.exitCode !== null) {
+      console.error(stderr.trim() || "x11vnc exited before opening port 5900.");
+      return false;
+    }
+    if (await portOpen(5900)) {
+      return true;
+    }
+    await delay(100);
+  }
+
+  console.error(stderr.trim() || "x11vnc did not open port 5900.");
+  next.kill("SIGTERM");
+  return false;
 }
 
 function send(response, status, payload) {
@@ -87,7 +130,7 @@ const server = createServer((request, response) => {
       request.destroy();
     }
   });
-  request.on("end", () => {
+  request.on("end", async () => {
     let payload;
     try {
       payload = JSON.parse(Buffer.concat(chunks).toString("utf8"));
@@ -105,7 +148,7 @@ const server = createServer((request, response) => {
       return;
     }
 
-    if (!armVnc(vncPassword)) {
+    if (!(await armVnc(vncPassword))) {
       send(response, 500, { message: "Could not lock the capture desktop." });
       return;
     }
@@ -124,14 +167,16 @@ const server = createServer((request, response) => {
         return;
       }
       child = null;
-      armVnc(randomBytes(16).toString("hex"));
+      void armVnc(randomBytes(16).toString("hex"));
     });
     send(response, 202, { message: "Capture browser started." });
   });
 });
 
 server.listen(port, host, async () => {
-  await delay(300);
-  armVnc(randomBytes(16).toString("hex"));
+  const locked = await armVnc(randomBytes(16).toString("hex"));
+  if (!locked) {
+    console.error("VNC desktop did not start.");
+  }
   console.log(`capture service listening on ${port}`);
 });

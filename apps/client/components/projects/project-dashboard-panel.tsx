@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { TrendDirection } from "@/lib/contracts";
+import {
+  dispatchStatusLabel,
+  dispatchStatusTone,
+  type TrendDirection,
+} from "@/lib/contracts";
 import { formatDate } from "@/lib/utils";
 import {
   Badge,
@@ -51,13 +55,9 @@ export function ProjectDashboardPanel({ projectId }: { projectId: string }) {
             <div className="flex flex-wrap items-center gap-2">
               <Badge tone="neutral">{dashboard.last_dispatch.system_name ?? "Sistema"}</Badge>
               <Badge tone="neutral">{dashboard.last_dispatch.scan_type}</Badge>
-              {dashboard.last_dispatch.status === "pending" ? (
-                <Badge tone="warning">Processando</Badge>
-              ) : dashboard.last_dispatch.status === "failed" ? (
-                <Badge tone="danger">Falhou</Badge>
-              ) : (
-                <Badge tone="success">Concluido</Badge>
-              )}
+              <Badge tone={dispatchStatusTone(dashboard.last_dispatch.status)}>
+                {dispatchStatusLabel(dashboard.last_dispatch.status)}
+              </Badge>
             </div>
           ) : (
             <span className="text-xs text-muted-foreground">Dispare um scan em um sistema.</span>

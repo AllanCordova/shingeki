@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { DispatchStatus } from "../attack/attack";
+import type { DastRouteMapEntry } from "../attack/route-map";
 import type { Timestamps } from "../common/common";
 import { createWithCoverSchema, updateWithCoverSchema } from "../cover/cover-selection";
 import type { Stack } from "./stack";
@@ -61,7 +63,13 @@ export interface System extends Timestamps {
   dast_max_routes?: number | null;
   dast_attack_ids?: string[] | null;
   sast_attack_ids?: string[] | null;
+  lab_routes?: DastRouteMapEntry[] | null;
   stacks: Stack[];
+  latest_dispatch?: {
+    id: string;
+    status: DispatchStatus;
+    dispatched_at: string | null;
+  } | null;
   project?: {
     id: string;
     name: string;

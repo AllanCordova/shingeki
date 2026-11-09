@@ -59,9 +59,13 @@ func VectorsFromRouteMap(targetURL string, routes []contracts.DispatchRoute) ([]
 			return nil, fmt.Errorf("route_map[%d]: %w", i, err)
 		}
 		if hasBody || isWriteMethod(method) {
-			bodyVector := contracts.NewAttackVector(resolved, method, "JSON_BODY")
+			location := writeLocation(route.Content)
+			bodyVector := contracts.NewAttackVector(resolved, method, location)
 			bodyVector.Body = body
 			bodyVector.Params = params
+			if location == "XML_BODY" {
+				bodyVector.XMLRoot = strings.TrimSpace(route.XMLRoot)
+			}
 			vectors = append(vectors, bodyVector)
 		}
 	}
@@ -182,6 +186,17 @@ func normalizeRouteMethod(method string) (string, error) {
 		return method, nil
 	default:
 		return "", fmt.Errorf("invalid method %q", method)
+	}
+}
+
+func writeLocation(content string) string {
+	switch strings.ToLower(strings.TrimSpace(content)) {
+	case "form":
+		return "FORM"
+	case "xml":
+		return "XML_BODY"
+	default:
+		return "JSON_BODY"
 	}
 }
 

@@ -24,6 +24,7 @@ type RabbitMQConfig struct {
 	VHost         string
 	DispatchQueue string
 	ResultsQueue  string
+	CancelQueue   string
 	PrefetchCount int
 }
 
@@ -81,6 +82,7 @@ func Load() (Config, error) {
 			VHost:         normalizeVHost(getEnv("RABBITMQ_VHOST", "/")),
 			DispatchQueue: getEnv("RABBITMQ_ATTACKS_DISPATCH_QUEUE", "attacks.sast.dispatch"),
 			ResultsQueue:  getEnv("RABBITMQ_ATTACKS_RESULTS_QUEUE", "attacks.results"),
+			CancelQueue:   getEnv("RABBITMQ_ATTACKS_CANCEL_QUEUE", "attacks.sast.dispatch.cancel"),
 			PrefetchCount: prefetch,
 		},
 		Worker: WorkerConfig{

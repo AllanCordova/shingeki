@@ -113,5 +113,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('projects/{project}/systems/{system}/system-results', [SystemResultController::class, 'deleteAll']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'show']);
     Route::get('projects/{project}/systems/{system}/system-results/{attack_dispatch}/export', [AuditReportController::class, 'export']);
+    Route::post('projects/{project}/systems/{system}/system-results/{attack_dispatch}/cancel', [SystemResultController::class, 'cancel']);
     Route::delete('projects/{project}/systems/{system}/system-results/{attack_dispatch}', [SystemResultController::class, 'destroy']);
 });

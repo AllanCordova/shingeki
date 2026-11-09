@@ -15,6 +15,7 @@ use App\Models\Attack\DispatchProbe;
 use App\Models\Project\Project;
 use App\Models\System\System;
 use App\Models\System\SystemResult;
+use App\Services\Attack\AttackDispatchCanceller;
 use App\Services\Results\DispatchCompareService;
 use App\Services\Source\SourceFileNormalizer;
 use Illuminate\Database\Eloquent\Builder;
@@ -27,6 +28,7 @@ class SystemResultController extends Controller
 
     public function __construct(
         private readonly DispatchCompareService $dispatchCompare,
+        private readonly AttackDispatchCanceller $canceller,
     ) {}
 
     public function index(Project $project, System $system): JsonResponse
@@ -133,9 +135,27 @@ class SystemResultController extends Controller
         );
     }
 
+    public function cancel(Project $project, System $system, AttackDispatch $attackDispatch): JsonResponse
+    {
+        $this->authorize('cancelBatch', $attackDispatch);
+
+        $dispatch = $this->canceller->cancel($attackDispatch);
+
+        return response()->json([
+            'message' => 'Attack dispatch cancelled.',
+            'dispatch' => $this->formatDispatch($dispatch),
+        ]);
+    }
+
     public function destroy(Project $project, System $system, AttackDispatch $attackDispatch): JsonResponse
     {
         $this->authorize('deleteBatch', $attackDispatch);
+
+        if ($attackDispatch->scanStatus() === 'pending') {
+            return response()->json([
+                'message' => 'A running dispatch cannot be removed. Cancel it first.',
+            ], 409);
+        }
 
         $attackDispatch->systemResults()->delete();
         $attackDispatch->dispatchProbes()->delete();
@@ -149,6 +169,15 @@ class SystemResultController extends Controller
     public function deleteAll(Project $project, System $system): JsonResponse
     {
         $this->authorize('deleteAny', [SystemResult::class, $system]);
+
+        AttackDispatch::query()
+            ->where('system_id', $system->id)
+            ->whereNull('completed_at')
+            ->whereNull('failed_at')
+            ->whereNull('session_expired_at')
+            ->whereNull('cancelled_at')
+            ->get()
+            ->each(fn (AttackDispatch $dispatch) => $this->canceller->signal($dispatch));
 
         SystemResult::query()
             ->where('system_id', $system->id)
@@ -193,6 +222,7 @@ class SystemResultController extends Controller
             'max_routes' => $dispatch->max_routes,
             'failed_at' => $dispatch->failed_at,
             'session_expired_at' => $dispatch->session_expired_at,
+            'cancelled_at' => $dispatch->cancelled_at,
             'failure_reason' => $dispatch->failure_reason,
             'status' => $dispatch->scanStatus(),
             'created_at' => $dispatch->created_at,

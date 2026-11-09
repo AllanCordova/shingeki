@@ -4,75 +4,56 @@
 
 - **PHP** 8.4+ e **Composer** 2.x
 - **Node.js** 20+ e **npm**
-- **Docker** e **Docker Compose** (MySQL, RabbitMQ e consumers)
+- **Docker** e **Docker Compose**
 
-## 1. Setup (primeira vez)
+## Desenvolvimento {#desenvolvimento}
 
 Na raiz do monorepo:
 
 ```bash
-cp .env.example .env
-cp apps/api/.env.example apps/api/.env
-cp apps/client/.env.example apps/client/.env.local
-```
-
-Suba a infraestrutura (MySQL, RabbitMQ e `api-consumers`):
-
-```bash
-docker compose up -d --remove-orphans
-```
-
-Instale dependências e prepare a API:
-
-```bash
-npm install
-npm install --prefix apps/client
-cd apps/api
-composer install
-php artisan key:generate
-php artisan migrate --seed
-php artisan storage:link
-```
-
-Arquivos `.env` já existentes **não precisam ser sobrescritos** — copie só se ainda não tiver criado.
-
-## 2. Desenvolvimento {#desenvolvimento}
-
-Na raiz, um comando sobe API e client juntos (`concurrently`):
-
-```bash
-docker compose up -d --remove-orphans
 npm run dev
 ```
+
+O comando cria os `.env` que ainda não existem, instala dependências, sobe MySQL, RabbitMQ, consumers e os workers (profile `stack`, com o serviço de captura) e então inicia a API e o client. Arquivos `.env` já existentes não são sobrescritos.
 
 | Serviço | URL |
 |---------|-----|
 | API | `http://127.0.0.1:8000/api` |
 | Client web | `http://localhost:3000` |
 | RabbitMQ Management | `http://localhost:15672` (guest/guest) |
+| Captura (noVNC) | `http://127.0.0.1:6080` |
 
-Scripts da raiz (`package.json`): `dev` (API + client), `dev:api`, `dev:client`. Para só o client, veja [WEB-DEVELOPMENT.md](WEB-DEVELOPMENT.md).
+Depois de mudar código dos workers, suba de novo com rebuild:
+
+```bash
+npm run dev:build
+```
+
+Para parar os containers: `npm run down`.
 
 ### O que roda onde
 
 | Camada | Onde |
 |--------|------|
-| API + client (`npm run dev`) | Host |
-| Consumers (`attacks:consume-results`, `catalog:consume-imports`) | Docker (`api-consumers`) |
-| MySQL + RabbitMQ | Docker |
-| Workers DAST/SAST | Docker, profile `stack` — opcional, só para disparar scans |
+| API + client | Host, pelo `npm run dev` |
+| MySQL, RabbitMQ, consumers e workers DAST/SAST | Docker, profile `stack` |
 
-**Sem Docker para consumers** (tudo no host): use `composer dev:with-consumers` em `apps/api` no lugar do `dev:api` do `npm run dev`.
+### Seed {#seed}
 
-### Workers DAST/SAST (ataques na UI)
-
-Os workers atacam o `target_url` do sistema cadastrado. Treino de evidência, sem alvo Docker: [goldset](architecture/shingeki-dast-goldset.md).
+O `npm run dev` migra o banco e não popula o catálogo. Para criar o catálogo, os usuários e o projeto Laboratório:
 
 ```bash
-docker compose --profile stack up -d --build
+npm run seed
 ```
 
-Na primeira vez, ou após mudar código dos workers, use `--build`.
+### Credenciais do seed {#credenciais-do-seed}
+
+| E-mail | Senha | Perfil |
+|--------|-------|--------|
+| `test@example.com` | `password` | `SPECIALIST` — projeto Laboratório com quatro alvos públicos de scanner |
+| `admin@admin.com` | `password` | `ADMIN` — catálogo global + o mesmo laboratório |
+
+Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 
 ### Fluxo de um disparo DAST {#fluxo-de-um-disparo-dast}
 
@@ -82,7 +63,7 @@ Na primeira vez, ou após mudar código dos workers, use `--build`.
 | 2. Worker DAST | consome `attacks.dispatch`, publica resultados em `attacks.results` |
 | 3. `api-consumers` | consome `attacks.results`, grava no MySQL e marca o dispatch (sucesso → `completed_at`; falha → `failed_at`; sessão expirada → `session_expired_at`) |
 
-O profile `stack` também sobe o serviço `capture` (Playwright, Xvfb e noVNC) em `127.0.0.1:7900` e `127.0.0.1:6080`. O comando local em `workers/capture` não depende dele. Contrato: [TARGET-SESSION.md](api/TARGET-SESSION.md).
+O profile `stack` também sobe o serviço `capture` (Playwright, Xvfb e noVNC). O comando local em `workers/capture` não depende dele. Contrato: [TARGET-SESSION.md](api/TARGET-SESSION.md).
 
 Se o disparo ficar **pendente** com o worker DAST rodando, verifique se `api-consumers` está ativo e se a fila `attacks.results` tem consumer:
 
@@ -93,7 +74,7 @@ docker exec shingeki-rabbitmq rabbitmqctl list_queues name messages consumers
 
 `attacks.results` com mensagens e **0 consumers** → reinicie o container: `docker compose restart api-consumers`.
 
-## 3. Validar os workers {#validar-os-workers}
+## Validar os workers {#validar-os-workers}
 
 O worker DAST ataca o `target_url` do dispatch. Para treinar evidência e catálogo **sem** UI e **sem** alvo Docker:
 
@@ -106,15 +87,6 @@ Gabarito: [goldset DAST](architecture/shingeki-dast-goldset.md). Contrato de dis
 O worker DAST usa a rede da máquina. Um alvo em `127.0.0.1` ou `localhost` é o da máquina, sem reescrever o host e sem mudar a porta em que o servidor escuta.
 
 **SAST:** o worker clona o `repository_url` do sistema. Defina `GITHUB_TOKEN` no `.env` da raiz para repositórios privados. Amostras de treino: [`workers/sast/testdata/goldset/`](../workers/sast/testdata/goldset/).
-
-## Credenciais do seed {#credenciais-do-seed}
-
-| E-mail | Senha | Perfil |
-|--------|-------|--------|
-| `test@example.com` | `password` | `SPECIALIST` — projeto Laboratório com quatro alvos públicos de scanner |
-| `admin@admin.com` | `password` | `ADMIN` — catálogo global + o mesmo laboratório |
-
-Para disparar ataques e ver resultados: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).
 
 ### Opcionais
 

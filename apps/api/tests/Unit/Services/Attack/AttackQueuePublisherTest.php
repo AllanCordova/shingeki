@@ -96,3 +96,37 @@ test('publishDispatchBatch includes the exclusive route map', function () {
         ['method' => 'POST', 'path' => '/api/v1/product', 'body' => ['name' => 'exemplo']],
     ]);
 });
+
+test('publishDispatchCancel uses the queue for the scan type', function (AttackScanType $scanType) {
+    $queue = match ($scanType) {
+        AttackScanType::Dast => config('attacks.queues.cancel'),
+        AttackScanType::Sast => config('attacks.queues.sast_cancel'),
+    };
+
+    $user = User::factory()->create();
+    $system = System::factory()->create();
+    $dispatch = AttackDispatch::factory()->for($system)->for($user)->create([
+        'scan_type' => $scanType,
+    ]);
+
+    $connection = Mockery::mock(RabbitMQQueue::class);
+    $connection->shouldReceive('declareExchange')->once()->with($queue, 'fanout');
+    $connection->shouldReceive('pushRaw')
+        ->once()
+        ->withArgs(function (string $message, string $publishedQueue, array $options) use ($dispatch, $queue) {
+            $payload = json_decode($message, true, 512, JSON_THROW_ON_ERROR);
+
+            return $publishedQueue === $queue
+                && ($options['exchange'] ?? null) === $queue
+                && ($options['exchange_type'] ?? null) === 'fanout'
+                && $payload['event'] === 'attack.dispatch.cancel'
+                && $payload['dispatch_id'] === $dispatch->id;
+        });
+
+    Queue::shouldReceive('connection')->with('rabbitmq')->andReturn($connection);
+
+    app(AttackQueuePublisher::class)->publishDispatchCancel($dispatch);
+})->with([
+    'dast' => [AttackScanType::Dast],
+    'sast' => [AttackScanType::Sast],
+]);

@@ -1,11 +1,15 @@
 {
   "name": "shingeki",
   "private": true,
-  "description": "Scripts da raiz: npm run dev sobe API e client juntos.",
+  "description": "npm run dev sobe Docker com workers, API e client.",
   "scripts": {
-    "dev": "concurrently -k -n api,client -c blue,green \"npm run dev:api\" \"npm run dev:client\"",
+    "dev": "bash scripts/dev.sh",
+    "dev:build": "bash scripts/dev.sh --build",
+    "dev:servers": "concurrently -k -n api,client -c blue,green \"npm run dev:api\" \"npm run dev:client\"",
     "dev:api": "php apps/api/artisan serve",
     "dev:client": "npm run dev --prefix apps/client",
+    "seed": "php apps/api/artisan db:seed",
+    "down": "docker compose --profile stack down",
     "test:dast": "go test -C workers/dast ./internal/goldset -count=1 && npm run test:dast-secrets && npm run test:dast-access && npm run test:dast-inject",
     "test:dast-secrets": "go run -C workers/dast ./cmd/harness -fixture secrets",
     "test:dast-access": "go run -C workers/dast ./cmd/harness -fixture access",

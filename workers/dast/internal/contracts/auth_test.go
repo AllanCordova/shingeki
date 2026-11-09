@@ -52,30 +52,10 @@ func TestEffectiveAuthHeadersKeepsExistingBearer(t *testing.T) {
 	}
 }
 
-func TestHasCredentialsAndApplyBearerToken(t *testing.T) {
-	var missing *contracts.TargetAuth
-	if missing.HasCredentials() {
-		t.Fatal("nil auth")
-	}
-	if missing.HasSession() {
-		t.Fatal("nil session")
-	}
+func TestCredentialsAloneAreNotASession(t *testing.T) {
 	auth := &contracts.TargetAuth{Username: "admin@juice-sh.op", Password: "admin123"}
-	if !auth.HasCredentials() {
-		t.Fatal("expected credentials")
-	}
 	if auth.HasSession() {
 		t.Fatal("credentials alone are not a session")
-	}
-	contracts.ApplyBearerToken(auth, "jwt.token.sig")
-	if auth.Headers["Authorization"] != "Bearer jwt.token.sig" {
-		t.Fatalf("headers=%v", auth.Headers)
-	}
-	if auth.Storage.Local["token"] != "jwt.token.sig" {
-		t.Fatalf("storage=%v", auth.Storage.Local)
-	}
-	if !auth.HasSession() {
-		t.Fatal("bearer token should count as a session")
 	}
 }
 

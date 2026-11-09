@@ -26,6 +26,7 @@ type SidebarNavItem {
   projectName: String
   systemId: ID
   name: String!
+  coverPath: String
   visible: Boolean!
   sortOrder: Int!
 }
@@ -38,6 +39,7 @@ enum SidebarNavItemType {
 type SidebarNavProject {
   id: ID!
   name: String!
+  coverPath: String
   sortOrder: Int!
   systems: [SidebarNavSystem!]!
 }
@@ -45,6 +47,7 @@ type SidebarNavProject {
 type SidebarNavSystem {
   id: ID!
   name: String!
+  coverPath: String
   sortOrder: Int!
 }
 

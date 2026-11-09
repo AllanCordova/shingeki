@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { SessionCaptureCreated } from "@/lib/contracts/attack/session-capture";
 import {
@@ -9,6 +9,7 @@ import {
 } from "@/lib/hooks/attack/use-session-capture";
 import { notify } from "@/lib/notify";
 import type { ApiError } from "@/lib/api/error-handler";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui";
 
 export function SessionCapturePanel({
@@ -24,6 +25,13 @@ export function SessionCapturePanel({
   const { capture } = useSessionCapture(projectId, systemId, created.capture.id);
   const { openBrowser, isLoading } = useOpenCaptureBrowser(projectId, systemId);
   const [novncUrl, setNovncUrl] = useState<string | null>(null);
+  const openButtonRef = useRef<HTMLDivElement>(null);
+  const browserNeedsOpen = created.remote_available && !novncUrl;
+
+  useEffect(() => {
+    if (!browserNeedsOpen) return;
+    openButtonRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [browserNeedsOpen]);
 
   const startRemote = async () => {
     try {
@@ -53,7 +61,7 @@ export function SessionCapturePanel({
       <p className="text-foreground">
         {created.remote_available ? (
           <>
-            O navegador abre abaixo, na página do sistema. Vá até o login, entre no alvo e clique em{" "}
+            O navegador abre nesta página. Use o botão destacado abaixo, entre no alvo e clique em{" "}
             <strong>Login concluído — iniciar scan</strong>.
           </>
         ) : (
@@ -64,10 +72,17 @@ export function SessionCapturePanel({
           : " Esta página abre o disparo quando a sessão chegar."}
       </p>
       {created.remote_available ? (
-        <div>
+        <div
+          ref={openButtonRef}
+          className={cn(
+            "guided-setup-section w-fit rounded-app",
+            browserNeedsOpen && "guided-setup-highlight",
+          )}
+        >
           <Button
             type="button"
             variant="primary"
+            size="lg"
             isLoading={isLoading}
             onClick={() => void startRemote()}
           >

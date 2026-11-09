@@ -40,43 +40,54 @@ class DemoProjectsSeeder extends Seeder
 
     /**
      * Alvos públicos feitos para teste de scanner. Já estão no ar.
+     * O inventário esperado de cada um está em ScannerTargetExpectations.
      *
      * @var list<array{
      *     name: string,
      *     description: string,
      *     target_url: string,
      *     repository_url: string,
-     *     stack: string
+     *     login_url: string|null,
+     *     stack: string,
+     *     cover: string
      * }>
      */
-    private const TARGETS = [
+    public const TARGETS = [
         [
             'name' => 'OWASP Juice Shop',
             'description' => 'Demonstração oficial do OWASP Juice Shop. Aplicação Node feita para ser atacada.',
             'target_url' => 'https://demo.owasp-juice.shop',
             'repository_url' => 'https://github.com/juice-shop/juice-shop',
+            'login_url' => 'https://demo.owasp-juice.shop/#/login',
             'stack' => 'express',
+            'cover' => 'juice-shop.jpg',
         ],
         [
             'name' => 'Google Firing Range',
             'description' => 'Firing Range do Google. Aplicação Java publicada para exercer ferramentas de segurança.',
             'target_url' => 'https://public-firing-range.appspot.com',
             'repository_url' => 'https://github.com/google/firing-range',
+            'login_url' => null,
             'stack' => 'java',
+            'cover' => 'firing-range.jpg',
         ],
         [
             'name' => 'Acunetix ASP.NET',
             'description' => 'Site de teste da Acunetix em ASP.NET, publicado para scanners. Não tem código-fonte público: o SAST não clona este alvo.',
             'target_url' => 'http://testaspnet.vulnweb.com',
             'repository_url' => 'http://testaspnet.vulnweb.com',
+            'login_url' => 'http://testaspnet.vulnweb.com/login.aspx',
             'stack' => 'aspnet',
+            'cover' => 'acunetix-aspnet.jpg',
         ],
         [
             'name' => 'Gin and Juice',
             'description' => 'Loja vulnerável da PortSwigger, publicada para treino. Não tem repositório público: o SAST não clona este alvo.',
             'target_url' => 'https://ginandjuice.shop',
             'repository_url' => 'https://ginandjuice.shop',
+            'login_url' => 'https://ginandjuice.shop/login',
             'stack' => 'generic',
+            'cover' => 'gin-and-juice.jpg',
         ],
     ];
 
@@ -129,10 +140,10 @@ class DemoProjectsSeeder extends Seeder
                     'name' => $target['name'],
                 ],
                 [
-                    'cover_path' => $this->publishSeedCover('vulnerable-php-target.jpg'),
+                    'cover_path' => $this->publishSeedCover($target['cover']),
                     'target_url' => $target['target_url'],
                     'repository_url' => $target['repository_url'],
-                    'login_url' => null,
+                    'login_url' => $target['login_url'],
                 ],
             );
 

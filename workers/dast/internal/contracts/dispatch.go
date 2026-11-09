@@ -15,7 +15,7 @@ const (
 	ScanTypeSast       = "SAST"
 	DepthQuick         = "quick"
 	DepthFull          = "full"
-	MaxRouteMapEntries = 200
+	MaxRouteMapEntries = 400
 )
 
 type DispatchBatch struct {
@@ -70,10 +70,12 @@ func (b DispatchBatch) EffectiveRouteMap() []DispatchRoute {
 }
 
 type DispatchRoute struct {
-	Method string          `json:"method"`
-	Path   string          `json:"path"`
-	Query  StringMap       `json:"query,omitempty"`
-	Body   json.RawMessage `json:"body,omitempty"`
+	Method  string          `json:"method"`
+	Path    string          `json:"path"`
+	Query   StringMap       `json:"query,omitempty"`
+	Body    json.RawMessage `json:"body,omitempty"`
+	Content string          `json:"content,omitempty"`
+	XMLRoot string          `json:"xml_root,omitempty"`
 }
 
 type AttackItem struct {

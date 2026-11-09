@@ -118,6 +118,42 @@ export function useResults(
   };
 }
 
+export function useCancelDispatch(projectId: string, systemId: string) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async (dispatchId: string) => {
+      await apiClient.post(
+        `/projects/${projectId}/systems/${systemId}/system-results/${dispatchId}/cancel`,
+      );
+      return dispatchId;
+    },
+    onSuccess: (dispatchId) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.dispatches(projectId, systemId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          "projects",
+          projectId,
+          "systems",
+          systemId,
+          "dispatches",
+          dispatchId,
+        ],
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.notificationsAll });
+    },
+  });
+
+  return {
+    cancelDispatch: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: (mutation.error as ApiError | null) ?? null,
+    reset: mutation.reset,
+  };
+}
+
 export function useDeleteDispatch(projectId: string, systemId: string) {
   const queryClient = useQueryClient();
 
@@ -154,6 +190,7 @@ export function useDeleteAllDispatches(projectId: string, systemId: string) {
       await apiClient.delete(
         `/projects/${projectId}/systems/${systemId}/system-results`,
       );
+      return true;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -161,6 +198,12 @@ export function useDeleteAllDispatches(projectId: string, systemId: string) {
       });
       queryClient.removeQueries({
         queryKey: ["projects", projectId, "systems", systemId, "dispatches"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.systems(projectId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.projectDashboard(projectId),
       });
     },
   });

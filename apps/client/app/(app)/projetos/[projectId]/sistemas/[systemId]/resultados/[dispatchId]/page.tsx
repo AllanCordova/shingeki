@@ -171,8 +171,11 @@ export default function ResultsDetailPage() {
                 Exportar relatório
               </Button>
             ) : null}
-            <Button variant="danger" onClick={() => setDeleteOpen(true)}>
-              Remover
+            <Button
+              variant={isPending ? "outline" : "danger"}
+              onClick={() => setDeleteOpen(true)}
+            >
+              {isPending ? "Cancelar" : "Remover"}
             </Button>
           </div>
         ) : null}
@@ -209,6 +212,12 @@ export default function ResultsDetailPage() {
                 ? ` · ${formatDuration(dispatch.duration_ms)}`
                 : ""}
             </p>
+            {dispatch?.status === "cancelled" ? (
+              <p className="text-sm text-muted-foreground">
+                O scan foi cancelado. Os achados registrados até aqui permanecem
+                neste disparo.
+              </p>
+            ) : null}
             {dispatch?.status === "failed" ? (
               <p className="text-sm text-danger">
                 {dispatchFailureCopy(dispatch.failure_reason)}
@@ -361,7 +370,9 @@ export default function ResultsDetailPage() {
         systemId={systemId}
         dispatchId={dispatchId}
         dispatchLabel={dispatchLabel}
+        mode={isPending ? "cancel" : "delete"}
         onDeleted={() => {
+          if (isPending) return;
           router.push(`/projetos/${projectId}/sistemas/${systemId}`);
           router.refresh();
         }}

@@ -140,7 +140,7 @@ export default function ConfiguraçõesSistemasPage() {
             description="A busca não encontrou projeto, sistema ou URL."
           />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {visibleProjects.map((project) => (
               <li key={project.id}>
                 <button
@@ -178,7 +178,7 @@ export default function ConfiguraçõesSistemasPage() {
             description="A busca não encontrou sistema ou URL neste projeto."
           />
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {visibleSystems.map((system) => (
               <li key={system.id}>
                 <Link href={`/configuracoes/sistemas/${system.id}/dispatch`} className="block h-full">

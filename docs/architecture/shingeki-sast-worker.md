@@ -62,6 +62,7 @@ Ver [`workers/sast/.env.example`](https://github.com/AllanCordova/shingeki/blob/
 | Variável | Default | Descrição |
 |----------|---------|-----------|
 | `RABBITMQ_ATTACKS_DISPATCH_QUEUE` | `attacks.sast.dispatch` | Fila de entrada |
+| `RABBITMQ_ATTACKS_CANCEL_QUEUE` | `attacks.sast.dispatch.cancel` | Exchange fanout de cancelamento |
 | `RABBITMQ_ATTACKS_RESULTS_QUEUE` | `attacks.results` | Fila de saída |
 | `SEMGREP_BINARY` | `semgrep` | Binário do Semgrep |
 | `SAST_CLONE_TIMEOUT` | `10m` | Timeout do `git clone` |

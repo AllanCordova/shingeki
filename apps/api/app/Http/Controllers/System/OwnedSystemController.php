@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\System\UpdateSystemDispatchSettings;
 use App\Models\System\System;
 use App\Services\Attack\AttackCatalogService;
+use Database\Seeders\ScannerTargetRoutes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -101,6 +102,7 @@ class OwnedSystemController extends Controller
             'dast_start_path' => $system->dast_start_path,
             'dast_attack_ids' => $system->dast_attack_ids,
             'sast_attack_ids' => $system->sast_attack_ids,
+            'lab_routes' => ($labRoutes = ScannerTargetRoutes::dispatchRoutes($system->name)) !== [] ? $labRoutes : null,
             'stacks' => $system->relationLoaded('stacks')
                 ? $system->stacks
                     ->map(fn ($stack) => [

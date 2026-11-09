@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import type { System, SystemUpdateInput } from "@/lib/contracts";
+import {
+  dispatchStatusLabel,
+  dispatchStatusTone,
+  type System,
+  type SystemUpdateInput,
+} from "@/lib/contracts";
 import {
   useDeleteSystem,
   useUpdateSystem,
@@ -12,6 +17,7 @@ import { FORM_MODAL_SIZE } from "@/lib/ui";
 import { StackChips } from "@/components/system/stack-chips";
 import { SystemForm } from "@/components/system/system-form";
 import {
+  Badge,
   Card,
   CardContent,
   ConfirmActionModal,
@@ -69,9 +75,16 @@ export function SystemCard({
             alt={`Capa de ${system.name}`}
           />
           <CardContent className="flex flex-col gap-2 pr-12">
-            <h3 className="text-base font-semibold text-foreground">
-              {system.name}
-            </h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground">
+                {system.name}
+              </h3>
+              {system.latest_dispatch ? (
+                <Badge tone={dispatchStatusTone(system.latest_dispatch.status)}>
+                  {dispatchStatusLabel(system.latest_dispatch.status)}
+                </Badge>
+              ) : null}
+            </div>
             <p className="truncate text-sm text-muted-foreground">
               {system.target_url}
             </p>

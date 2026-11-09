@@ -40,6 +40,7 @@ export function DispatchesList({
   const [deleteTarget, setDeleteTarget] = useState<{
     id: string;
     label: string;
+    cancel: boolean;
   } | null>(null);
   const [exportTarget, setExportTarget] = useState<{
     id: string;
@@ -150,17 +151,22 @@ export function DispatchesList({
                         </Button>
                       ) : null}
                       <Button
-                        variant="ghost"
+                        variant={dispatch.status === "pending" ? "outline" : "ghost"}
                         size="sm"
-                        className="text-danger hover:bg-danger-surface hover:text-danger"
+                        className={
+                          dispatch.status === "pending"
+                            ? undefined
+                            : "text-danger hover:bg-danger-surface hover:text-danger"
+                        }
                         onClick={() =>
                           setDeleteTarget({
                             id: dispatch.id,
                             label: formatDate(dispatch.dispatched_at),
+                            cancel: dispatch.status === "pending",
                           })
                         }
                       >
-                        Remover
+                        {dispatch.status === "pending" ? "Cancelar" : "Remover"}
                       </Button>
                     </div>
                   </div>
@@ -179,6 +185,7 @@ export function DispatchesList({
           systemId={systemId}
           dispatchId={deleteTarget.id}
           dispatchLabel={deleteTarget.label}
+          mode={deleteTarget.cancel ? "cancel" : "delete"}
         />
       ) : null}
 
