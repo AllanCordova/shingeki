@@ -2,9 +2,14 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  RouteMapPreviewList,
+  useRouteMapPreview,
+} from "@/components/attack/route-map-preview";
 import type { AttackDepth } from "@/lib/contracts/attack/attack";
+import type { DastRouteMapEntry } from "@/lib/contracts/attack/route-map";
 import type { AttackScanType } from "@/lib/hooks/attack/use-attack";
-import { Button, Modal } from "@/components/ui";
+import { Button, Checkbox, Modal } from "@/components/ui";
 import { SettingsIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +39,7 @@ const depthOptions: Array<{
 
 export type AttackDepthConfirm = {
   depth: AttackDepth;
+  route_map?: DastRouteMapEntry[];
 };
 
 interface AttackDepthModalProps {
@@ -43,6 +49,7 @@ interface AttackDepthModalProps {
   isLoading?: boolean;
   onClose: () => void;
   onConfirm: (options: AttackDepthConfirm) => void | Promise<void>;
+  onCapture?: (options: AttackDepthConfirm) => void | Promise<void>;
 }
 
 export function AttackDepthModal({
@@ -52,41 +59,82 @@ export function AttackDepthModal({
   isLoading = false,
   onClose,
   onConfirm,
+  onCapture,
 }: AttackDepthModalProps) {
+  const preview = useRouteMapPreview();
   const [depth, setDepth] = useState<AttackDepth>("full");
+  const [useRouteMapOverride, setUseRouteMapOverride] = useState<boolean | null>(null);
+  const useRouteMap = useRouteMapOverride ?? preview.routes.length > 0;
+  const [routeMapError, setRouteMapError] = useState<string | null>(null);
   const [resetKey, setResetKey] = useState(`${open}:${scanType ?? ""}`);
   const nextKey = `${open}:${scanType ?? ""}`;
   if (nextKey !== resetKey) {
     setResetKey(nextKey);
     if (open) {
       setDepth("full");
+      setRouteMapError(null);
+      setUseRouteMapOverride(null);
     }
   }
 
   const label = scanType ? scanLabels[scanType] : "ataque";
   const settingsHref = `/configuracoes/sistemas/${systemId}/dispatch`;
+  const showRouteMap = scanType === "dast";
+
+  const options = (): AttackDepthConfirm | null => {
+    if (showRouteMap && useRouteMap) {
+      if (preview.selectedRoutes.length === 0) {
+        setRouteMapError("Marque pelo menos uma rota para o scan.");
+        return null;
+      }
+      return { depth, route_map: preview.selectedRoutes };
+    }
+    return { depth };
+  };
+
+  const confirm = () => {
+    const next = options();
+    if (!next) return;
+    return onConfirm(next);
+  };
+
+  const capture = () => {
+    const next = options();
+    if (!next || !onCapture) return;
+    return onCapture(next);
+  };
 
   return (
     <Modal
       open={open}
       onClose={onClose}
       title={`Profundidade do ${label}`}
+      size={showRouteMap ? "lg" : "md"}
       description={
         scanType === "sast"
           ? "Escolha a profundidade. No SAST o valor é registrado, mas não altera a análise estática."
-          : "Escolha a profundidade do scan."
+          : "Escolha a profundidade. O mapa de rotas carregado neste sistema pode limitar o scan."
       }
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={isLoading}>
             Cancelar
           </Button>
+          {showRouteMap && onCapture ? (
+            <Button
+              variant="outline"
+              isLoading={isLoading}
+              onClick={() => void confirm()}
+            >
+              Disparar sem sessão
+            </Button>
+          ) : null}
           <Button
             variant="primary"
             isLoading={isLoading}
-            onClick={() => void onConfirm({ depth })}
+            onClick={() => void (showRouteMap && onCapture ? capture() : confirm())}
           >
-            Disparar {label}
+            {showRouteMap && onCapture ? "Capturar sessão e iniciar" : `Disparar ${label}`}
           </Button>
         </>
       }
@@ -135,6 +183,33 @@ export function AttackDepthModal({
             );
           })}
         </div>
+
+        {showRouteMap ? (
+          <div className="flex flex-col gap-3 rounded-app border border-border p-3">
+            <Checkbox
+              checked={useRouteMap}
+              onChange={(event) => {
+                setUseRouteMapOverride(event.target.checked);
+                setRouteMapError(null);
+              }}
+              disabled={preview.routes.length === 0}
+              label="Atacar somente as rotas do mapa"
+              description={
+                preview.routes.length === 0
+                  ? "Carregue o mapa de rotas nesta página para escolher os caminhos."
+                  : "O DAST testa só as rotas marcadas no mapa deste sistema."
+              }
+            />
+            {useRouteMap && preview.routes.length > 0 ? (
+              <div className="flex flex-col gap-3">
+                {routeMapError ? (
+                  <p className="text-xs text-danger">{routeMapError}</p>
+                ) : null}
+                <RouteMapPreviewList />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </Modal>
   );

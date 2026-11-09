@@ -86,6 +86,7 @@ func (e *RestyEngine) ExecutePool(ctx context.Context, jobs []types.Job) []types
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 	cache := &baselineCache{values: map[string]baselineResult{}}
+	public := &publicRouteCache{values: map[string]bool{}}
 
 	for i, job := range jobs {
 		select {
@@ -99,7 +100,7 @@ func (e *RestyEngine) ExecutePool(ctx context.Context, jobs []types.Job) []types
 		go func(idx int, j types.Job) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			results[idx] = e.executeJob(ctx, j, cache)
+			results[idx] = e.executeJob(ctx, j, cache, public)
 		}(i, job)
 	}
 
@@ -125,8 +126,36 @@ func (c *baselineCache) put(key string, result baselineResult) {
 	c.values[key] = result
 }
 
-func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *baselineCache) types.Response {
+type publicRouteCache struct {
+	mu     sync.Mutex
+	values map[string]bool
+}
+
+func (c *publicRouteCache) get(key string) (bool, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	got, ok := c.values[key]
+	return got, ok
+}
+
+func (c *publicRouteCache) put(key string, public bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.values[key] = public
+}
+
+func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *baselineCache, public *publicRouteCache) types.Response {
 	resp := types.Response{Job: job, PayloadUsed: job.Payload.Value}
+
+	if isJWTCategory(job.Attack.Category) {
+		open, err := e.routeIsPublic(ctx, job, public)
+		if err != nil {
+			e.logger.Warn("jwt public-route probe failed", "route", job.Vector.Route, "error", err)
+		} else if open {
+			resp.Skipped = true
+			return resp
+		}
+	}
 
 	baselineSpec, err := injectors.BuildBaseline(job)
 	if err != nil {
@@ -143,7 +172,7 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *base
 	key := baselineKey(baselineSpec)
 	cached, ok := cache.get(key)
 	if !ok {
-		status, body, location, ms, sendErr := e.send(ctx, baselineSpec)
+		status, body, _, location, ms, sendErr := e.send(ctx, baselineSpec)
 		cached = baselineResult{status: status, body: body, location: location, ms: ms, err: sendErr}
 		if sendErr == nil {
 			cache.put(key, cached)
@@ -160,7 +189,7 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *base
 	resp.BaselineLocation = cached.location
 	resp.BaselineMs = cached.ms
 
-	attackStatus, attackBody, attackLocation, attackMs, err := e.send(ctx, attackSpec)
+	attackStatus, attackBody, attackType, attackLocation, attackMs, err := e.send(ctx, attackSpec)
 	if err != nil {
 		resp.Error = err
 		resp.AttackMs = attackMs
@@ -169,14 +198,15 @@ func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *base
 	}
 	resp.AttackStatus = attackStatus
 	resp.AttackBody = attackBody
+	resp.AttackContentType = attackType
 	resp.AttackLocation = attackLocation
 	resp.AttackMs = attackMs
 	return resp
 }
 
-func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int, string, string, int64, error) {
+func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int, string, string, string, int64, error) {
 	if err := e.limit.Wait(ctx); err != nil {
-		return 0, "", "", 0, err
+		return 0, "", "", "", 0, err
 	}
 
 	req := e.client.R().SetContext(ctx).SetDoNotParseResponse(true)
@@ -191,13 +221,14 @@ func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int
 	httpResp, err := req.Execute(spec.Method, spec.URL)
 	elapsed := time.Since(start).Milliseconds()
 	if err != nil {
-		return 0, "", "", elapsed, err
+		return 0, "", "", "", elapsed, err
 	}
 
 	location := httpResp.Header().Get("Location")
+	contentType := httpResp.Header().Get("Content-Type")
 	raw := httpResp.RawBody()
 	if raw == nil {
-		return httpResp.StatusCode(), "", location, elapsed, nil
+		return httpResp.StatusCode(), "", contentType, location, elapsed, nil
 	}
 	defer raw.Close()
 
@@ -207,13 +238,35 @@ func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int
 	}
 	limited, err := io.ReadAll(io.LimitReader(raw, int64(max)+1))
 	if err != nil {
-		return httpResp.StatusCode(), "", location, elapsed, err
+		return httpResp.StatusCode(), "", contentType, location, elapsed, err
 	}
 	if len(limited) > max {
 		e.logger.Warn("truncated oversized response body", "bytes", len(limited), "max", max, "url", spec.URL)
 		limited = limited[:max]
 	}
-	return httpResp.StatusCode(), httputil.Truncate(string(limited), max), location, elapsed, nil
+	return httpResp.StatusCode(), httputil.Truncate(string(limited), max), contentType, location, elapsed, nil
+}
+
+func (e *RestyEngine) routeIsPublic(ctx context.Context, job types.Job, cache *publicRouteCache) (bool, error) {
+	spec, err := injectors.BuildUnauthenticated(job)
+	if err != nil {
+		return false, err
+	}
+	key := spec.Method + "\n" + spec.URL
+	if known, ok := cache.get(key); ok {
+		return known, nil
+	}
+	status, _, _, _, _, err := e.send(ctx, spec)
+	if err != nil {
+		return false, err
+	}
+	open := status >= 200 && status < 300
+	cache.put(key, open)
+	return open, nil
+}
+
+func isJWTCategory(category string) bool {
+	return strings.Contains(strings.ToUpper(category), "JWT")
 }
 
 func baselineKey(spec injectors.RequestSpec) string {

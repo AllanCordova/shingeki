@@ -67,6 +67,7 @@ export const ATTACK_TARGET_LOCATIONS = [
   "HEADER",
   "COOKIE",
   "JSON_BODY",
+  "XML_BODY",
   "URL_PATH",
   "FILE_UPLOAD",
   "API_ENDPOINT",

@@ -22,4 +22,9 @@ func TestDispatchCompletionMessageValidate(t *testing.T) {
 	if err := msg.Validate(); err != nil {
 		t.Fatalf("expected valid completion message: %v", err)
 	}
+
+	msg.Status = contracts.CompletionStatusCancelled
+	if err := msg.Validate(); err != nil {
+		t.Fatalf("expected cancelled completion to be valid: %v", err)
+	}
 }

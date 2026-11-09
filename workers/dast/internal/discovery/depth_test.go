@@ -92,8 +92,8 @@ func TestCanonicalizeQueryVectorsMergesSameSink(t *testing.T) {
 	if got[0].Route != "http://127.0.0.1:3010/preview?q=" {
 		t.Fatalf("query route=%s", got[0].Route)
 	}
-	if got[0].Params["q"] != "" {
-		t.Fatalf("expected blank q, got %q", got[0].Params["q"])
+	if got[0].Params["q"] != "hoje" {
+		t.Fatalf("expected the sample query value to be kept, got %q", got[0].Params["q"])
 	}
 }
 

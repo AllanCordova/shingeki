@@ -9,7 +9,14 @@ import {
   dispatchStatusLabel,
   dispatchStatusTone,
   dispatchFailureCopy,
+  sessionExpiredCopy,
 } from "@/lib/contracts/attack/attack";
+import type { SessionCaptureCreated } from "@/lib/contracts/attack/session-capture";
+import { SessionCapturePanel } from "@/components/attack/session-capture-panel";
+import { useAttackAcknowledgment } from "@/lib/hooks/attack/use-attack";
+import { useCreateSessionCapture } from "@/lib/hooks/attack/use-session-capture";
+import { notify } from "@/lib/notify";
+import type { ApiError } from "@/lib/api/error-handler";
 import type { AttackDispatch } from "@/lib/contracts/attack/attack";
 import type { PaginationMeta, SystemResult } from "@/lib/contracts/results/result";
 import { DEFAULT_PAGE_SIZE } from "@/lib/contracts/common/common";
@@ -71,6 +78,15 @@ export default function ResultsDetailPage() {
     route: "",
     q: "",
   });
+  const [renewal, setRenewal] = useState<SessionCaptureCreated | null>(null);
+  const { acknowledged, isLoading: loadingAck } = useAttackAcknowledgment(
+    projectId,
+    systemId,
+  );
+  const { createCapture, isLoading: renewing } = useCreateSessionCapture(
+    projectId,
+    systemId,
+  );
 
   const {
     dispatch,
@@ -155,8 +171,11 @@ export default function ResultsDetailPage() {
                 Exportar relatório
               </Button>
             ) : null}
-            <Button variant="danger" onClick={() => setDeleteOpen(true)}>
-              Remover
+            <Button
+              variant={isPending ? "outline" : "danger"}
+              onClick={() => setDeleteOpen(true)}
+            >
+              {isPending ? "Cancelar" : "Remover"}
             </Button>
           </div>
         ) : null}
@@ -193,10 +212,66 @@ export default function ResultsDetailPage() {
                 ? ` · ${formatDuration(dispatch.duration_ms)}`
                 : ""}
             </p>
+            {dispatch?.status === "cancelled" ? (
+              <p className="text-sm text-muted-foreground">
+                O scan foi cancelado. Os achados registrados até aqui permanecem
+                neste disparo.
+              </p>
+            ) : null}
             {dispatch?.status === "failed" ? (
               <p className="text-sm text-danger">
                 {dispatchFailureCopy(dispatch.failure_reason)}
               </p>
+            ) : null}
+            {dispatch && dispatch.status === "session_expired" ? (
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-warning">{sessionExpiredCopy()}</p>
+                <div>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    isLoading={renewing}
+                    disabled={!acknowledged || loadingAck}
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          const created = await createCapture({
+                            acceptedResponsibility: acknowledged,
+                            acceptedLegalTerms: acknowledged,
+                            scope: {
+                              depth: dispatch.depth ?? "full",
+                              ...(dispatch.start_path
+                                ? { start_path: dispatch.start_path }
+                                : {}),
+                              ...(typeof dispatch.max_routes === "number"
+                                ? { max_routes: dispatch.max_routes }
+                                : {}),
+                              ...(dispatch.route_map && dispatch.route_map.length > 0
+                                ? { route_map: dispatch.route_map }
+                                : {}),
+                            },
+                          });
+                          setRenewal(created);
+                        } catch (err) {
+                          notify.fromApiError(
+                            err as ApiError,
+                            "Não foi possível renovar a sessão.",
+                          );
+                        }
+                      })();
+                    }}
+                  >
+                    Capturar sessão de novo
+                  </Button>
+                </div>
+                {renewal ? (
+                  <SessionCapturePanel
+                    projectId={projectId}
+                    systemId={systemId}
+                    created={renewal}
+                  />
+                ) : null}
+              </div>
             ) : null}
           </div>
 
@@ -295,7 +370,9 @@ export default function ResultsDetailPage() {
         systemId={systemId}
         dispatchId={dispatchId}
         dispatchLabel={dispatchLabel}
+        mode={isPending ? "cancel" : "delete"}
         onDeleted={() => {
+          if (isPending) return;
           router.push(`/projetos/${projectId}/sistemas/${systemId}`);
           router.refresh();
         }}

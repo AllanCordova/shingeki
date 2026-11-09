@@ -61,7 +61,7 @@ Exemplo de validação:
 | Módulo | Guia |
 |--------|------|
 | Aceite de responsabilidade | [api/ATTACK-ACKNOWLEDGMENT.md](api/ATTACK-ACKNOWLEDGMENT.md) |
-| Login do scanner | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
+| Sessão capturada do navegador | [api/TARGET-SESSION.md](api/TARGET-SESSION.md) |
 | Ataques, probes, resultados, comparar, PDF | [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md) |
 | Arsenal manual (proxy) | [api/MANUAL-PROXY.md](api/MANUAL-PROXY.md) |
 | Notificações in-app | [api/NOTIFICATIONS.md](api/NOTIFICATIONS.md) |
@@ -108,7 +108,7 @@ Não é REST. Schema e regra de uso: [architecture/shingeki-api.md](architecture
 - `GET /api/projects/{project}/dashboard`
 - `GET|POST /api/projects/{project}/systems`
 - `GET|PUT|DELETE /api/projects/{project}/systems/{system}`
-- Login do scanner: `login_url` / `login_username` / `login_password` no sistema — [TARGET-SESSION.md](api/TARGET-SESSION.md)
+- Sessão do navegador: `login_url` no sistema e `POST .../attacks/session-captures` — [TARGET-SESSION.md](api/TARGET-SESSION.md)
 - `GET .../attack-acknowledgment`
 - `POST .../attacks/dispatch` (DAST) · `POST .../attacks/dispatch/sast` (SAST)
 - `GET|POST .../manual-proxy/send` e CRUD `/manual-proxy/routes` (`ADMIN`, `SPECIALIST`)

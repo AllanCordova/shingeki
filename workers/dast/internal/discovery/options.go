@@ -13,6 +13,7 @@ type Options struct {
 	Depth     string
 	StartPath string
 	MaxRoutes int
+	RouteMap  []contracts.DispatchRoute
 }
 
 func OptionsFromBatch(batch contracts.DispatchBatch) Options {
@@ -20,6 +21,7 @@ func OptionsFromBatch(batch contracts.DispatchBatch) Options {
 		Depth:     batch.EffectiveDepth(),
 		StartPath: batch.EffectiveStartPath(),
 		MaxRoutes: batch.EffectiveMaxRoutes(),
+		RouteMap:  batch.EffectiveRouteMap(),
 	}
 }
 
@@ -29,6 +31,10 @@ func (o Options) HasMaxRoutes() bool {
 
 func (o Options) HasStartPath() bool {
 	return strings.TrimSpace(o.StartPath) != ""
+}
+
+func (o Options) HasRouteMap() bool {
+	return len(o.RouteMap) > 0
 }
 
 func ApplyDepthAndScope(base config.DiscoveryConfig, opts Options) config.DiscoveryConfig {

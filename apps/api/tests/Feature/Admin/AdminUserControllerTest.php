@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\User\UserRole;
+use App\Models\Attack\Attack;
 use App\Models\User\User;
 use App\Services\Admin\AdminUserService;
 use Illuminate\Validation\ValidationException;
@@ -195,7 +196,7 @@ describe('DELETE /api/admin/users/{user}', function () {
     test('reassigns catalog attacks to the acting admin before delete', function () {
         $actor = actingAsPlatformAdmin();
         $target = User::factory()->specialist()->create();
-        $attack = \App\Models\Attack\Attack::factory()->create([
+        $attack = Attack::factory()->create([
             'user_id' => $target->id,
         ]);
 

@@ -1,5 +1,8 @@
 @import "tailwindcss" source("..");
 
+/* O tema do app é a classe `.dark`, não o prefers-color-scheme do sistema. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
   Tema minimalista preto e branco.
   Toda a estilizacao do app deve usar estas variaveis (via utilitarios do
@@ -129,20 +132,20 @@ body {
 }
 
 .guided-setup-highlight {
-  outline: 2px solid var(--primary);
-  outline-offset: 4px;
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+  outline: 1px solid var(--success);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 22%, transparent);
   animation: guided-setup-highlight-pulse 1.5s ease-in-out 3;
 }
 
 @keyframes guided-setup-highlight-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--success) 22%, transparent);
   }
 
   50% {
-    box-shadow: 0 0 0 10px color-mix(in srgb, var(--primary) 32%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--success) 28%, transparent);
   }
 }
 

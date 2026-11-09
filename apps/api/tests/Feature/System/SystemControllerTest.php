@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Attack\AttackDispatch;
 use App\Models\Project\Project;
 use App\Models\System\Stack;
 use App\Models\System\System;
@@ -137,6 +138,32 @@ describe('GET /api/projects/{project}/systems', function () {
             ->assertJson(['systems' => []]);
     });
 
+    test('includes the latest dispatch status and omits it when the system never ran', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $withDispatch = System::factory()->for($project)->create();
+        $withoutDispatch = System::factory()->for($project)->create();
+
+        AttackDispatch::factory()->for($withDispatch)->for($user)->create([
+            'dispatched_at' => now()->subHour(),
+            'completed_at' => now()->subMinutes(50),
+        ]);
+        $latest = AttackDispatch::factory()->for($withDispatch)->for($user)->create([
+            'dispatched_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $systems = collect($this->getJson(systemsIndexUrl($project))->assertOk()->json('systems'))
+            ->keyBy('id');
+
+        expect($systems[$withDispatch->id]['latest_dispatch'])->toMatchArray([
+            'id' => $latest->id,
+            'status' => 'pending',
+        ]);
+        expect($systems[$withoutDispatch->id]['latest_dispatch'])->toBeNull();
+    });
+
     test('returns not found for another users project', function () {
         $owner = User::factory()->create();
         $intruder = User::factory()->create();
@@ -240,38 +267,19 @@ describe('POST /api/projects/{project}/systems', function () {
         expect($system->fresh()->stacks)->toHaveCount(0);
     });
 
-    test('stores scanner login credentials without returning the password', function () {
+    test('stores the login page used by browser capture', function () {
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
 
         Sanctum::actingAs($user);
 
-        $response = postSystem($project, [
+        postSystem($project, [
             'login_url' => 'https://app.example.com/login',
-            'login_username' => 'scanner@example.com',
-            'login_password' => 'secret-pass-123',
-            'logged_in_indicator' => 'Logout',
-        ]);
-
-        $response
+        ])
             ->assertCreated()
             ->assertJsonPath('system.login_url', 'https://app.example.com/login')
-            ->assertJsonPath('system.login_username', 'scanner@example.com')
-            ->assertJsonPath('system.login_configured', true)
-            ->assertJsonPath('system.logged_in_indicator', 'Logout')
-            ->assertJsonMissingPath('system.login_password');
-
-        $system = System::query()->where('project_id', $project->id)->first();
-
-        expect($system)->not->toBeNull()
-            ->and($system->hasScannerLogin())->toBeTrue()
-            ->and($system->queueAuth())->toMatchArray([
-                'type' => 'credentials',
-                'username' => 'scanner@example.com',
-                'password' => 'secret-pass-123',
-                'login_url' => 'https://app.example.com/login',
-                'logged_in_indicator' => 'Logout',
-            ]);
+            ->assertJsonMissingPath('system.login_password')
+            ->assertJsonMissingPath('system.login_username');
     });
 
     test('rejects invalid target_url', function () {
@@ -286,6 +294,19 @@ describe('POST /api/projects/{project}/systems', function () {
         ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['target_url']);
+    });
+
+    test('rejects a login page on another host', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+
+        Sanctum::actingAs($user);
+
+        postSystem($project, [
+            'login_url' => 'http://169.254.169.254/latest/meta-data',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['login_url']);
     });
 
     test('rejects docker internal hostnames in target_url', function () {
@@ -424,68 +445,27 @@ describe('PUT /api/projects/{project}/systems/{system}', function () {
             ->assertJsonPath('system.target_url', 'https://keep.example.com');
     });
 
-    test('updates scanner login and keeps the password when omitted', function () {
+    test('updates and clears the login page', function () {
         $user = User::factory()->create();
         $project = Project::factory()->for($user)->create();
         $system = System::factory()->for($project)->create([
+            'target_url' => 'https://app.example.com',
             'login_url' => 'https://app.example.com/login',
-            'login_username' => 'old@example.com',
-            'login_password' => 'old-pass-123',
-            'logged_in_indicator' => 'Logout',
         ]);
 
         Sanctum::actingAs($user);
 
         $this->putJson(systemUrl($project, $system), [
-            'login_username' => 'new@example.com',
-            'logged_in_indicator' => 'Sair',
+            'login_url' => 'https://app.example.com/entrar',
         ])
             ->assertOk()
-            ->assertJsonPath('system.login_username', 'new@example.com')
-            ->assertJsonPath('system.logged_in_indicator', 'Sair')
-            ->assertJsonPath('system.login_configured', true)
-            ->assertJsonMissingPath('system.login_password');
-
-        $system->refresh();
-
-        expect($system->queueAuth())->toMatchArray([
-            'type' => 'credentials',
-            'username' => 'new@example.com',
-            'password' => 'old-pass-123',
-            'login_url' => 'https://app.example.com/login',
-            'logged_in_indicator' => 'Sair',
-        ]);
-    });
-
-    test('clears scanner login when username is blank', function () {
-        $user = User::factory()->create();
-        $project = Project::factory()->for($user)->create();
-        $system = System::factory()->for($project)->create([
-            'login_url' => 'https://app.example.com/login',
-            'login_username' => 'scanner@example.com',
-            'login_password' => 'secret-pass-123',
-            'logged_in_indicator' => 'Logout',
-        ]);
-
-        Sanctum::actingAs($user);
+            ->assertJsonPath('system.login_url', 'https://app.example.com/entrar');
 
         $this->putJson(systemUrl($project, $system), [
             'login_url' => '',
-            'login_username' => '',
-            'login_password' => '',
-            'logged_in_indicator' => '',
         ])
             ->assertOk()
-            ->assertJsonPath('system.login_url', null)
-            ->assertJsonPath('system.login_username', null)
-            ->assertJsonPath('system.logged_in_indicator', null)
-            ->assertJsonPath('system.login_configured', false)
-            ->assertJsonMissingPath('system.login_password');
-
-        $system->refresh();
-
-        expect($system->hasScannerLogin())->toBeFalse()
-            ->and($system->queueAuth())->toBeNull();
+            ->assertJsonPath('system.login_url', null);
     });
 
     test('returns not found when system belongs to another project', function () {

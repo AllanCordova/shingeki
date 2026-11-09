@@ -86,6 +86,12 @@ docker compose --env-file .env.production -f docker-compose.prod.yml --profile s
 
 Se o build morrer por memória, repita com um serviço por vez (`--build` no `client`, depois `api`, `sast-worker`, `dast-worker`).
 
+A subida roda as migrations. Não roda o seed. Dados de demonstração, só se você pedir:
+
+```bash
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api php artisan db:seed --force
+```
+
 Acompanhe a API até o migrate terminar:
 
 ```bash
@@ -161,3 +167,5 @@ MySQL e os arquivos de capa ficam nos volumes `shingeki-prod_mysql_data` e `shin
 Há dois workers DAST (`shingeki-prod-dast-worker-1` e `shingeki-prod-dast-worker-2`) na mesma fila `attacks.dispatch`. O RabbitMQ entrega o próximo scan ao worker livre. Não há balanceador HTTP.
 
 O seed cria projetos demo com hosts `*.example`. Eles não são alvos reais. Para um teste, cadastre um sistema com a URL pública do alvo.
+
+O worker DAST usa a rede da máquina. `127.0.0.1` e `localhost` no alvo são os da máquina, inclusive um servidor que escuta só no loopback. O RabbitMQ publica `127.0.0.1:5673` só para esse worker entrar na fila.

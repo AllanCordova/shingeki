@@ -27,6 +27,7 @@ describe('GET /api/systems', function () {
         expect($response->json('systems'))->toHaveCount(1);
         expect($response->json('systems.0.id'))->toBe($system->id);
         expect($response->json('systems.0.project.name'))->toBe('Meu projeto');
+        expect($response->json('systems.0.project.cover_path'))->toBe($project->cover_path);
         expect($response->json('systems.0.dast_start_path'))->toBeNull();
         expect($response->json('systems.0.dast_attack_ids'))->toBeNull();
         expect($response->json('systems.0.sast_attack_ids'))->toBeNull();

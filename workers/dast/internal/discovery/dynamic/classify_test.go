@@ -20,6 +20,8 @@ func TestClassifyTargetLocation(t *testing.T) {
 		{http.MethodPost, "multipart/form-data; boundary=x", "https://app.example/upload", "", "FORM"},
 		{http.MethodPost, "", "https://app.example/api", "", "API_ENDPOINT"},
 		{http.MethodPost, "application/json", "https://app.example/graphql", `{"operationName":"SaveProduct"}`, "JSON_BODY"},
+		{http.MethodPost, "application/xml", "https://app.example/stock", `<stockCheck></stockCheck>`, "XML_BODY"},
+		{http.MethodPost, "", "https://app.example/stock", `%3C%3Fxml%20version%3D%221.0%22%3F%3E%3CstockCheck%3E%3C%2FstockCheck%3E`, "XML_BODY"},
 	}
 	for _, tt := range tests {
 		if got := classifyTargetLocation(tt.method, tt.contentType, tt.route, tt.body); got != tt.want {
@@ -64,5 +66,19 @@ func TestNetworkVectorCapturesGraphQLOperation(t *testing.T) {
 	}
 	if _, ok := vector.Params["input"]; !ok {
 		t.Fatalf("expected graphql variable keys, got %v", vector.Params)
+	}
+}
+
+func TestNetworkVectorReadsXMLFields(t *testing.T) {
+	body := `<?xml version="1.0" encoding="UTF-8"?><stockCheck><productId>1</productId><storeId>2</storeId></stockCheck>`
+	vector, ok := networkVector("https://shop.example", http.MethodPost, "https://shop.example/catalog/product/stock", "application/xml", body)
+	if !ok {
+		t.Fatal("expected xml vector")
+	}
+	if vector.TargetLocation != "XML_BODY" {
+		t.Fatalf("location=%s", vector.TargetLocation)
+	}
+	if vector.XMLRoot != "stockCheck" || vector.Params["productId"] != "1" || vector.Params["storeId"] != "2" {
+		t.Fatalf("vector=%+v", vector)
 	}
 }

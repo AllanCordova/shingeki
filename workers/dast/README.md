@@ -2,6 +2,8 @@
 
 Worker Go (DAST) do monorepo Shingeki.
 
+**Código:** [docs/](docs/README.md) (estrutura, filas, pipeline e funções).
+
 **Arquitetura:** [docs/architecture/shingeki-dast-worker.md](../../docs/architecture/shingeki-dast-worker.md) · [site](https://allancordova.github.io/shingeki/architecture/shingeki-dast-worker/)
 
 **Como rodar:** [docs/RUN-PROJECT.md](../../docs/RUN-PROJECT.md) · gabarito: [goldset](../../docs/architecture/shingeki-dast-goldset.md)

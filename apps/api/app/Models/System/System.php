@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class System extends Model
 {
@@ -32,21 +33,11 @@ class System extends Model
         'name',
         'target_url',
         'login_url',
-        'login_username',
-        'login_password',
-        'logged_in_indicator',
         'repository_url',
         'dast_max_routes',
         'dast_start_path',
         'dast_attack_ids',
         'sast_attack_ids',
-    ];
-
-    /**
-     * @var list<string>
-     */
-    protected $hidden = [
-        'login_password',
     ];
 
     /**
@@ -58,46 +49,7 @@ class System extends Model
             'dast_max_routes' => 'integer',
             'dast_attack_ids' => 'array',
             'sast_attack_ids' => 'array',
-            'login_username' => 'encrypted',
-            'login_password' => 'encrypted',
         ];
-    }
-
-    public function hasScannerLogin(): bool
-    {
-        return filled($this->login_username) && filled($this->login_password);
-    }
-
-    /**
-     * @return array{
-     *     type: string,
-     *     username: string,
-     *     password: string,
-     *     login_url?: string,
-     *     logged_in_indicator?: string
-     * }|null
-     */
-    public function queueAuth(): ?array
-    {
-        if (! $this->hasScannerLogin()) {
-            return null;
-        }
-
-        $payload = [
-            'type' => 'credentials',
-            'username' => (string) $this->login_username,
-            'password' => (string) $this->login_password,
-        ];
-
-        if (filled($this->login_url)) {
-            $payload['login_url'] = $this->login_url;
-        }
-
-        if (filled($this->logged_in_indicator)) {
-            $payload['logged_in_indicator'] = $this->logged_in_indicator;
-        }
-
-        return $payload;
     }
 
     public function project(): BelongsTo
@@ -139,6 +91,11 @@ class System extends Model
     public function attackDispatches(): HasMany
     {
         return $this->hasMany(AttackDispatch::class);
+    }
+
+    public function latestDispatch(): HasOne
+    {
+        return $this->hasOne(AttackDispatch::class)->latestOfMany('dispatched_at');
     }
 
     public function stacks(): BelongsToMany

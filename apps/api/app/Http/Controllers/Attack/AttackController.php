@@ -16,6 +16,7 @@ use App\Services\Attack\AttackCatalogService;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Services\Notification\UserNotificationService;
 use App\Support\AttackAcknowledgmentTerms;
+use Database\Seeders\ScannerTargetRoutes;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
@@ -37,6 +38,12 @@ class AttackController extends Controller
         if (blank($system->repository_url)) {
             return response()->json([
                 'message' => 'System repository_url is required for SAST dispatch.',
+            ], 422);
+        }
+
+        if ($this->repositoryPointsAtTarget($system)) {
+            return response()->json([
+                'message' => 'Este sistema não tem repositório de código. O SAST precisa de um Git diferente do alvo.',
             ], 422);
         }
 
@@ -77,8 +84,17 @@ class AttackController extends Controller
         }
 
         $depth = $request->attackDepth();
-        $startPath = $request->startPath() ?? $system->dast_start_path;
-        $maxRoutes = $request->maxRoutes() ?? $system->dast_max_routes;
+        $routeMap = $scanType === AttackScanType::Dast ? $request->routeMap() : null;
+        if ($routeMap === null && $scanType === AttackScanType::Dast) {
+            $labRoutes = ScannerTargetRoutes::dispatchRoutes($system->name);
+            $routeMap = $labRoutes === [] ? null : $labRoutes;
+        }
+        $startPath = $routeMap === null
+            ? ($request->startPath() ?? $system->dast_start_path)
+            : null;
+        $maxRoutes = $routeMap === null
+            ? ($request->maxRoutes() ?? $system->dast_max_routes)
+            : null;
 
         $dispatch = AttackDispatch::create([
             'system_id' => $system->id,
@@ -87,6 +103,7 @@ class AttackController extends Controller
             'depth' => $depth,
             'start_path' => $startPath,
             'max_routes' => $maxRoutes,
+            'route_map' => $routeMap,
             'attacks_count' => $attacks->count(),
             'dispatched_at' => now(),
         ]);
@@ -110,7 +127,7 @@ class AttackController extends Controller
             $request->user(),
             $attacks,
             $scanType,
-            $system->queueAuth(),
+            null,
         );
 
         $this->userNotificationService->trackAttackDispatchPending($dispatch);
@@ -122,8 +139,24 @@ class AttackController extends Controller
             'dispatch' => $this->formatDispatch($dispatch),
             'attacks_count' => $attacks->count(),
             'attacks' => $attacks->map(fn (Attack $attack) => $this->formatAttack($attack)),
-            'scanner_login_configured' => $system->hasScannerLogin(),
         ], 202);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function repositoryPointsAtTarget(System $system): bool
+    {
+        $repository = parse_url((string) $system->repository_url);
+        $target = parse_url((string) $system->target_url);
+        if (! is_array($repository) || ! is_array($target)) {
+            return false;
+        }
+
+        $repositoryHost = strtolower((string) ($repository['host'] ?? ''));
+        $targetHost = strtolower((string) ($target['host'] ?? ''));
+
+        return $repositoryHost !== '' && $repositoryHost === $targetHost;
     }
 
     /**
@@ -139,6 +172,7 @@ class AttackController extends Controller
             'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
             'start_path' => $dispatch->start_path,
             'max_routes' => $dispatch->max_routes,
+            'route_map' => $dispatch->route_map,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,

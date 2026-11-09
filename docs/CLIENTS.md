@@ -8,7 +8,7 @@
 
 O browser nunca vê o token Sanctum: cookie http-only no BFF.
 
-Login autenticado do DAST: [TARGET-SESSION.md](api/TARGET-SESSION.md) (credenciais no sistema).
+DAST autenticado: [TARGET-SESSION.md](api/TARGET-SESSION.md) (sessão capturada no navegador).
 
 ## Recursos no client web
 
@@ -24,4 +24,4 @@ Login autenticado do DAST: [TARGET-SESSION.md](api/TARGET-SESSION.md) (credencia
 | Sidebar | GraphQL — `/configuracoes/navegacao` |
 | Notificações | Sininho + `/notificacoes` |
 | Arsenal manual | `/projetos/.../arsenal` |
-| Login do scanner | Card na página do sistema (usuário/senha do alvo) |
+| Login do scanner | Card na página do sistema: conta existente ou cadastro automático no alvo |

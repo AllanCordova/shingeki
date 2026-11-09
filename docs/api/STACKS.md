@@ -63,7 +63,7 @@ A stack `generic` não entra no formulário do sistema. Ela guarda as remediaç�
 
 `StackCatalogSeeder` é a fonte da lista. Além de `generic`, o catálogo cobre linguagens web (PHP, JavaScript, TypeScript, Python, Ruby, Java, C#, Go, Kotlin, Elixir) e frameworks (Laravel, Symfony, CodeIgniter, CakePHP, WordPress, Livewire, Express, NestJS, Fastify, Hono, React, Next.js, Angular, Vue, Nuxt, Svelte, SvelteKit, Remix, Astro, htmx, Django, Flask, FastAPI, Ruby on Rails, Spring Boot, Ktor, ASP.NET, Blazor, Gin, Phoenix).
 
-O seed associa stacks aos sistemas demo (`DemoProjectsSeeder`). O treino DAST não usa alvos Docker; o gabarito é [goldset](../architecture/shingeki-dast-goldset.md).
+O seed de demonstração cria quatro alvos e associa Express, Java, ASP.NET e a stack genérica (`DemoProjectsSeeder`). O treino DAST não usa alvos Docker; o gabarito é [goldset](../architecture/shingeki-dast-goldset.md).
 
 ## Uso na remediação
 

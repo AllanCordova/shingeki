@@ -277,7 +277,7 @@ class RemediationCatalogSeeder extends Seeder
             AttackCategory::LdapInjection->value => [
                 'title' => 'Escape filtros LDAP',
                 'description' => 'Não concatene entrada em filtros LDAP. Escape os caracteres especiais ou use uma API de filtro parametrizado.',
-                'code_snippet' => "filter = \"(uid=\" + ldap_escape(username) + \")\"",
+                'code_snippet' => 'filter = "(uid=" + ldap_escape(username) + ")"',
                 'references' => ['https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html'],
             ],
             AttackCategory::NosqlInjection->value => [

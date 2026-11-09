@@ -36,12 +36,42 @@ O worker DAST ataca o `target_url` do dispatch — qualquer origem autorizada no
 | `workers/sast` | [architecture/shingeki-sast-worker.md](architecture/shingeki-sast-worker.md) |
 | Goldset DAST | [architecture/shingeki-dast-goldset.md](architecture/shingeki-dast-goldset.md) |
 
+## Fluxo do operador
+
+O mesmo catálogo atende qualquer quantidade de sistemas. A correção não é genérica para o projeto: ela sai da stack cadastrada naquele sistema.
+
+```mermaid
+flowchart TB
+  projeto[Projeto]
+  s1[Sistema A]
+  s2[Sistema B]
+  sN[Sistema N]
+  catalogo[Catálogo de ataques]
+  fila[(RabbitMQ)]
+  dast[Worker DAST]
+  sast[Worker SAST]
+  achado[Achado persistido]
+  snippet[Snippet literal da stack]
+  projeto --> s1
+  projeto --> s2
+  projeto --> sN
+  s1 --> catalogo
+  s2 --> catalogo
+  sN --> catalogo
+  catalogo --> fila
+  fila --> dast
+  fila --> sast
+  dast --> achado
+  sast --> achado
+  achado --> snippet
+```
+
 ## Fluxo de um disparo DAST
 
 1. O client chama `POST .../attacks/dispatch` com aceite (`accepted_responsibility`, `accepted_legal_terms`, `terms_version`).
-2. A API valida policy e o aceite, grava `attack_acknowledgments` e enfileira o lote em `attacks.dispatch` (com `auth` de credenciais se o login do scanner estiver configurado).
-3. O worker descobre superfície, executa payloads, publica **probes** (`attack.probe`) e **achados** (`attack.result`) em `attacks.results`, e fecha com `attack.dispatch.completed` (`completed` ou `failed`).
-4. O comando `attacks:consume-results` persiste probes/`SystemResult`. Sucesso grava `completed_at`; falha grava `failed_at` (sem `completed_at`).
+2. A API valida policy e o aceite, grava `attack_acknowledgments` e enfileira o lote em `attacks.dispatch`. O DAST autenticado nasce antes, em `POST .../session-captures`: o `complete` cifra a sessão e só então cria o disparo, com `auth.type=browser_state`.
+3. O worker descobre superfície, executa payloads, publica **probes** (`attack.probe`) e **achados** (`attack.result`) em `attacks.results`, e fecha com `attack.dispatch.completed` (`completed`, `failed` ou `session_expired`).
+4. O comando `attacks:consume-results` persiste probes/`SystemResult`. Sucesso grava `completed_at`; falha grava `failed_at`; sessão expirada grava `session_expired_at`.
 5. O client consulta `system-results` (polling enquanto o dispatch está pendente).
 
 Quem publica/consome em Docker: [RUN-PROJECT.md](RUN-PROJECT.md#fluxo-de-um-disparo-dast). Filas e payloads: [architecture/shingeki-dast-worker.md](architecture/shingeki-dast-worker.md). HTTP: [api/ATTACKS-AND-RESULTS.md](api/ATTACKS-AND-RESULTS.md).

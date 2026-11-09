@@ -26,7 +26,7 @@ func TestSplitCookieHeader(t *testing.T) {
 }
 
 func TestCookieParamsFromHeaderDoesNotForceSameSite(t *testing.T) {
-	params := cookieParamsFromAuth("https://app.example/dashboard", &contracts.TargetAuth{
+	params := cookieParamsFromAuth("https://app.example/dashboard", "https://app.example/dashboard", &contracts.TargetAuth{
 		Headers: map[string]string{
 			"Cookie": "session=abc; access_token=xyz",
 		},
@@ -52,7 +52,7 @@ func TestCookieParamsFromHeaderDoesNotForceSameSite(t *testing.T) {
 }
 
 func TestCookieParamsFromCapturedKeepsAttributes(t *testing.T) {
-	params := cookieParamsFromAuth("https://www.example.com/app", &contracts.TargetAuth{
+	params := cookieParamsFromAuth("https://www.example.com/app", "https://www.example.com/app", &contracts.TargetAuth{
 		Cookies: []contracts.CapturedCookie{
 			{
 				Name:     "PHPSESSID",
@@ -79,8 +79,8 @@ func TestCookieParamsFromCapturedKeepsAttributes(t *testing.T) {
 	if len(params) != 2 {
 		t.Fatalf("expected 2 cookies, got %d", len(params))
 	}
-	if params[0].Domain != ".example.com" {
-		t.Fatalf("expected captured domain, got %q", params[0].Domain)
+	if params[0].Domain != "" {
+		t.Fatalf("browser cookies are host-only on the target, got domain %q", params[0].Domain)
 	}
 	if params[0].SameSite != proto.NetworkCookieSameSiteLax {
 		t.Fatalf("expected SameSite=Lax, got %q", params[0].SameSite)

@@ -35,11 +35,19 @@ func main() {
 
 	pipeline := orchestrator.NewPipeline(cfg, publisher, logger)
 
+	cancels := queue.NewCancelRegistry()
+	go func() {
+		err := queue.RunCancelConsumer(ctx, cfg.RabbitMQURL(), cfg.RabbitMQ.CancelQueue, cancels, logger)
+		if err != nil && err != context.Canceled {
+			logger.Error("cancel consumer stopped", "error", err)
+		}
+	}()
+
 	consumer := queue.NewConsumer(cfg.RabbitMQ, func(jobCtx context.Context, batch contracts.DispatchBatch) error {
 		runCtx, cancel := context.WithTimeout(jobCtx, cfg.Worker.JobTimeout)
 		defer cancel()
 		return pipeline.Run(runCtx, batch)
-	}, logger)
+	}, logger, cancels)
 
 	logger.Info("sast worker started")
 	if err := consumer.Run(ctx, cfg.RabbitMQURL()); err != nil && err != context.Canceled {
