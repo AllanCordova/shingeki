@@ -67,7 +67,7 @@ flowchart LR
 
 `depth` (`quick` | `full`) ajusta discovery: **quick** usa limites menores e desliga Rod; **full** (padrão) usa `DISCOVERY_MAX_*`.
 
-`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica. Com `start_path`, o worker **não** acrescenta vetores SPA/REST de treino (`/#/search`, login JSON, basket, `/ftp`, redirect) — esses rotas site-wide furariam o recorte.
+`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica. O worker ataca só rotas que o crawl, a sessão capturada ou o `route_map` entregaram.
 
 ### Saída: `attacks.results`
 
@@ -110,11 +110,11 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 
 - **Dinâmico (principal)**: Rod/Chromium, quando `DISCOVERY_ROD_ENABLED=true`. Abre o seed, espera o JavaScript (`WaitLoad` + settle), clica botões/`role=button`/`onclick`, preenche formulários com dados fictícios e observa o tráfego de rede. URLs entram numa **fila de prioridade** (score): rotas com `api`/`admin`/`estoque`/CRUD sobem; `blog`/`faq`/paginação descem.
 - **Rede**: observação passiva (`NetworkRequestWillBeSent`). POST/PUT/PATCH/DELETE no mesmo registrable domain (REST e GraphQL, inclusive `api.`) viram vetores.
-- **SPA hash**: links `#/…` entram no crawl; se o app tem router hash **e** uma API de search (`q`), o discovery acrescenta `GET /#/search?q=` como `QUERY_PARAMETER` (sink DOM, não o JSON `/rest/.../search`). Inputs com cara de busca também geram esse vetor.
+- **SPA hash**: links `#/…` que o crawl realmente abriu, e a query que já está no fragmento, entram como vetor. O worker não inventa `/#/search`, login JSON nem rotas REST de laboratório.
 - **Sessão**: com `auth.type=browser_state`, o worker decifra o envelope AES-256-GCM (`BROWSER_STATE_KEY`) e injeta cookies e `localStorage`/`sessionStorage` só no host do alvo. Não preenche login nem cadastro. Sem sessão, o crawl é a superfície pública. Um GET de controle, sem payload, mede a sessão: `401` ou `403` nesse GET encerra o disparo com `session_expired` e publica o que já foi coletado. `401` ou `403` de um payload continua sendo probe.
 - **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless. `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair por um proxy.
 - **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML.
-- **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Com `start_path`, vetores SPA de treino não são semeados. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
+- **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
 
 ### Variáveis úteis (discovery)
 

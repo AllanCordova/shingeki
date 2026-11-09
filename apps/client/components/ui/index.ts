@@ -1,4 +1,5 @@
 ﻿export { CoverImage } from "@/components/cover/cover-image";
+export { CoverThumb } from "./cover-thumb";
 export { CoverHero } from "@/components/cover/cover-hero";
 export { CoverUpload } from "@/components/cover/cover-upload";
 export { CoverLibraryPicker } from "@/components/cover/cover-library-picker";

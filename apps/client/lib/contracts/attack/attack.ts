@@ -48,12 +48,18 @@ export interface Attack extends Timestamps {
   payload: Record<string, unknown> | null;
 }
 
-export type DispatchStatus = "pending" | "completed" | "failed" | "session_expired";
+export type DispatchStatus =
+  | "pending"
+  | "completed"
+  | "failed"
+  | "session_expired"
+  | "cancelled";
 
 export function dispatchStatusLabel(status: DispatchStatus): string {
   if (status === "completed") return "Concluído";
   if (status === "failed") return "Falhou";
   if (status === "session_expired") return "Sessão expirada";
+  if (status === "cancelled") return "Cancelado";
   return "Processando";
 }
 
@@ -71,9 +77,10 @@ export function dispatchFailureCopy(reason?: string | null): string {
 
 export function dispatchStatusTone(
   status: DispatchStatus,
-): "success" | "danger" | "warning" {
+): "success" | "danger" | "warning" | "neutral" {
   if (status === "completed") return "success";
   if (status === "failed") return "danger";
+  if (status === "cancelled") return "neutral";
   if (status === "session_expired") return "warning";
   return "warning";
 }
@@ -97,6 +104,8 @@ export interface AttackDispatch extends Timestamps {
   vectors_discovered: number | null;
   jobs_planned: number | null;
   failed_at?: string | null;
+  session_expired_at?: string | null;
+  cancelled_at?: string | null;
   failure_reason?: string | null;
   status: DispatchStatus;
   probe_counts?: {

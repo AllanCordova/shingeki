@@ -45,7 +45,7 @@ export function DeleteAllDispatchesModal({
       open={open}
       onClose={handleClose}
       title="Excluir todos os disparos"
-      description="Esta ação não pode ser desfeita."
+      description="Disparos ainda em andamento são interrompidos antes da exclusão. Esta ação não pode ser desfeita."
       footer={
         <>
           <Button variant="ghost" onClick={handleClose}>

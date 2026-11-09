@@ -15,6 +15,15 @@
 		reverse_proxy api:80
 	}
 
+	# noVNC do navegador de captura. A senha VNC é por sessão e vai na query.
+	# vnc.html fica em /capture-browser/, mas o cliente conecta em /websockify na raiz.
+	handle /websockify* {
+		reverse_proxy capture:6080
+	}
+	handle_path /capture-browser/* {
+		reverse_proxy capture:6080
+	}
+
 	handle {
 		reverse_proxy client:3000
 	}

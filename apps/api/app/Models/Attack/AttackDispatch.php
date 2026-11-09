@@ -47,6 +47,7 @@ class AttackDispatch extends Model
         'completed_at',
         'failed_at',
         'session_expired_at',
+        'cancelled_at',
         'failure_reason',
         'duration_ms',
         'findings_count',
@@ -70,6 +71,7 @@ class AttackDispatch extends Model
             'completed_at' => 'datetime',
             'failed_at' => 'datetime',
             'session_expired_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'duration_ms' => 'integer',
             'findings_count' => 'integer',
             'probes_count' => 'integer',
@@ -118,6 +120,10 @@ class AttackDispatch extends Model
 
     public function scanStatus(): string
     {
+        if ($this->cancelled_at !== null) {
+            return 'cancelled';
+        }
+
         if ($this->session_expired_at !== null) {
             return 'session_expired';
         }

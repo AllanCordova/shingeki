@@ -20,16 +20,19 @@ export const SIDEBAR_NAVIGATION_QUERY = gql`
         projectName
         systemId
         name
+        coverPath
         visible
         sortOrder
       }
       tree {
         id
         name
+        coverPath
         sortOrder
         systems {
           id
           name
+          coverPath
           sortOrder
         }
       }
@@ -51,16 +54,19 @@ export const SYNC_SIDEBAR_NAVIGATION_MUTATION = gql`
         projectName
         systemId
         name
+        coverPath
         visible
         sortOrder
       }
       tree {
         id
         name
+        coverPath
         sortOrder
         systems {
           id
           name
+          coverPath
           sortOrder
         }
       }
@@ -75,6 +81,7 @@ type GqlSidebarNavItem = {
   projectName?: string | null;
   systemId?: string | null;
   name: string;
+  coverPath?: string | null;
   visible: boolean;
   sortOrder: number;
 };
@@ -82,10 +89,12 @@ type GqlSidebarNavItem = {
 type GqlSidebarNavProject = {
   id: string;
   name: string;
+  coverPath?: string | null;
   sortOrder: number;
   systems: Array<{
     id: string;
     name: string;
+    coverPath?: string | null;
     sortOrder: number;
   }>;
 };
@@ -107,6 +116,7 @@ function mapItem(item: GqlSidebarNavItem): SidebarNavItem {
     project_name: item.projectName ?? undefined,
     system_id: item.systemId ?? null,
     name: item.name,
+    cover_path: item.coverPath ?? null,
     visible: item.visible,
     sort_order: item.sortOrder,
   };
@@ -116,10 +126,12 @@ function mapProject(project: GqlSidebarNavProject): SidebarNavProject {
   return {
     id: project.id,
     name: project.name,
+    cover_path: project.coverPath ?? null,
     sort_order: project.sortOrder,
     systems: project.systems.map((system) => ({
       id: system.id,
       name: system.name,
+      cover_path: system.coverPath ?? null,
       sort_order: system.sortOrder,
     })),
   };

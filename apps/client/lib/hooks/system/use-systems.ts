@@ -29,6 +29,13 @@ export function useSystems(projectId: string, options?: { enabled?: boolean }) {
       return data.systems;
     },
     enabled: Boolean(projectId) && (options?.enabled ?? true),
+    staleTime: 0,
+    refetchInterval: (query) => {
+      const hasPending = query.state.data?.some(
+        (system) => system.latest_dispatch?.status === "pending",
+      );
+      return hasPending ? 5000 : false;
+    },
   });
 
   return {

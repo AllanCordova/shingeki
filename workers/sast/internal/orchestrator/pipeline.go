@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -64,7 +65,11 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 		}
 		status := contracts.CompletionStatusCompleted
 		errorMsg := ""
-		if err != nil {
+		switch {
+		case errors.Is(context.Cause(ctx), contracts.ErrDispatchCancelled):
+			status = contracts.CompletionStatusCancelled
+			err = nil
+		case err != nil:
 			status = contracts.CompletionStatusFailed
 			errorMsg = err.Error()
 		}
@@ -85,6 +90,10 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 			p.logger.Error("failed to publish dispatch completion", "error", pubErr, "dispatch_id", batch.DispatchID)
 		}
 	}()
+
+	if err = ctx.Err(); err != nil {
+		return err
+	}
 
 	p.logger.Info("starting sast pipeline",
 		"system_id", batch.SystemID,

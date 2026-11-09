@@ -16,6 +16,7 @@ use App\Services\Attack\AttackCatalogService;
 use App\Services\Attack\AttackQueuePublisher;
 use App\Services\Notification\UserNotificationService;
 use App\Support\AttackAcknowledgmentTerms;
+use Database\Seeders\ScannerTargetRoutes;
 use Illuminate\Http\JsonResponse;
 use RuntimeException;
 
@@ -37,6 +38,12 @@ class AttackController extends Controller
         if (blank($system->repository_url)) {
             return response()->json([
                 'message' => 'System repository_url is required for SAST dispatch.',
+            ], 422);
+        }
+
+        if ($this->repositoryPointsAtTarget($system)) {
+            return response()->json([
+                'message' => 'Este sistema não tem repositório de código. O SAST precisa de um Git diferente do alvo.',
             ], 422);
         }
 
@@ -78,6 +85,10 @@ class AttackController extends Controller
 
         $depth = $request->attackDepth();
         $routeMap = $scanType === AttackScanType::Dast ? $request->routeMap() : null;
+        if ($routeMap === null && $scanType === AttackScanType::Dast) {
+            $labRoutes = ScannerTargetRoutes::dispatchRoutes($system->name);
+            $routeMap = $labRoutes === [] ? null : $labRoutes;
+        }
         $startPath = $routeMap === null
             ? ($request->startPath() ?? $system->dast_start_path)
             : null;
@@ -129,6 +140,23 @@ class AttackController extends Controller
             'attacks_count' => $attacks->count(),
             'attacks' => $attacks->map(fn (Attack $attack) => $this->formatAttack($attack)),
         ], 202);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function repositoryPointsAtTarget(System $system): bool
+    {
+        $repository = parse_url((string) $system->repository_url);
+        $target = parse_url((string) $system->target_url);
+        if (! is_array($repository) || ! is_array($target)) {
+            return false;
+        }
+
+        $repositoryHost = strtolower((string) ($repository['host'] ?? ''));
+        $targetHost = strtolower((string) ($target['host'] ?? ''));
+
+        return $repositoryHost !== '' && $repositoryHost === $targetHost;
     }
 
     /**

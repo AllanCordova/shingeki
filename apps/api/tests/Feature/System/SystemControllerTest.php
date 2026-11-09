@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Attack\AttackDispatch;
 use App\Models\Project\Project;
 use App\Models\System\Stack;
 use App\Models\System\System;
@@ -135,6 +136,32 @@ describe('GET /api/projects/{project}/systems', function () {
         $this->getJson(systemsIndexUrl($project))
             ->assertOk()
             ->assertJson(['systems' => []]);
+    });
+
+    test('includes the latest dispatch status and omits it when the system never ran', function () {
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $withDispatch = System::factory()->for($project)->create();
+        $withoutDispatch = System::factory()->for($project)->create();
+
+        AttackDispatch::factory()->for($withDispatch)->for($user)->create([
+            'dispatched_at' => now()->subHour(),
+            'completed_at' => now()->subMinutes(50),
+        ]);
+        $latest = AttackDispatch::factory()->for($withDispatch)->for($user)->create([
+            'dispatched_at' => now(),
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $systems = collect($this->getJson(systemsIndexUrl($project))->assertOk()->json('systems'))
+            ->keyBy('id');
+
+        expect($systems[$withDispatch->id]['latest_dispatch'])->toMatchArray([
+            'id' => $latest->id,
+            'status' => 'pending',
+        ]);
+        expect($systems[$withoutDispatch->id]['latest_dispatch'])->toBeNull();
     });
 
     test('returns not found for another users project', function () {

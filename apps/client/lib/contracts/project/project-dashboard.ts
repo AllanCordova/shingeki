@@ -1,3 +1,5 @@
+import type { DispatchStatus } from "../attack/attack";
+
 export type TrendDirection = "up" | "down" | "flat";
 
 export interface ProjectDashboardDispatchSummary {
@@ -5,7 +7,7 @@ export interface ProjectDashboardDispatchSummary {
   system_id: string;
   system_name: string | null;
   scan_type: string;
-  status: "pending" | "completed" | "failed";
+  status: DispatchStatus;
   dispatched_at: string | null;
   findings_count: number | null;
   attacks_count: number;

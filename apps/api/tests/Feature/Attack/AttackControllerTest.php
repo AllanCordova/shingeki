@@ -125,6 +125,35 @@ describe('POST attacks/dispatch', function () {
             ->and($acknowledgment->terms_version)->toBe(AttackAcknowledgmentTerms::VERSION);
     });
 
+    test('attaches the seeded lab routes when the client sends no map', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $catalogAttacks = Attack::factory()->count(1)->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'name' => 'OWASP Juice Shop',
+            'target_url' => 'https://demo.owasp-juice.shop',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->mock(AttackQueuePublisher::class)
+            ->shouldReceive('publishDispatchBatch')
+            ->once();
+
+        $this->postJson(
+            attackDispatchUrl($project, $system),
+            validAttackDispatchPayload($catalogAttacks->pluck('id')->all()),
+        )->assertAccepted();
+
+        $dispatch = AttackDispatch::query()->where('system_id', $system->id)->first();
+
+        expect($dispatch?->route_map)->toBeArray()
+            ->and(collect($dispatch->route_map)->pluck('path'))->toContain('/rest/user/login')
+            ->and(collect($dispatch->route_map)->pluck('path'))->toContain('/ftp/legal.md');
+    });
+
     test('dispatches the public surface without embedding credentials', function () {
         $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
         $catalogAttacks = Attack::factory()->count(1)->for($admin)->create();
@@ -522,6 +551,29 @@ describe('POST attacks/dispatch/sast', function () {
         )
             ->assertUnprocessable()
             ->assertJsonPath('message', 'System repository_url is required for SAST dispatch.');
+    });
+
+    test('rejects sast when the repository is the same site as the target', function () {
+        $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+        $sastAttack = Attack::factory()->sast()->for($admin)->create();
+
+        $user = User::factory()->create();
+        $project = Project::factory()->for($user)->create();
+        $system = System::factory()->for($project)->create([
+            'target_url' => 'https://ginandjuice.shop',
+            'repository_url' => 'https://ginandjuice.shop',
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->postJson(
+            attackSastDispatchUrl($project, $system),
+            validAttackDispatchPayload([$sastAttack->id]),
+        )
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Este sistema não tem repositório de código. O SAST precisa de um Git diferente do alvo.');
+
+        expect(AttackDispatch::query()->where('system_id', $system->id)->count())->toBe(0);
     });
 });
 

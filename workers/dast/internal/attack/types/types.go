@@ -11,6 +11,9 @@ type Job struct {
 	Vector   contracts.AttackVector
 	ParamKey string
 	Payload  PayloadSpec
+	// Placement is set when the payload is applied outside the HTTP request,
+	// for example a browser-only DOM source.
+	Placement string
 }
 
 type PayloadSpec struct {
@@ -21,18 +24,19 @@ type PayloadSpec struct {
 }
 
 type Response struct {
-	Job              Job
-	BaselineStatus   int
-	BaselineBody     string
-	BaselineMs       int64
-	AttackStatus     int
-	AttackBody       string
-	AttackMs         int64
-	AttackLocation   string
-	BaselineLocation string
-	RawRequest       string
-	PayloadUsed      string
-	TimedOut         bool
-	Skipped          bool
-	Error            error
+	Job               Job
+	BaselineStatus    int
+	BaselineBody      string
+	BaselineMs        int64
+	AttackStatus      int
+	AttackBody        string
+	AttackContentType string
+	AttackMs          int64
+	AttackLocation    string
+	BaselineLocation  string
+	RawRequest        string
+	PayloadUsed       string
+	TimedOut          bool
+	Skipped           bool
+	Error             error
 }

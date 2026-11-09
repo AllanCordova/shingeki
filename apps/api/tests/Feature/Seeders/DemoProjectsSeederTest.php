@@ -48,6 +48,13 @@ test('demo projects seeder replaces old projects with four public scanner target
                 'https://ginandjuice.shop',
                 'https://public-firing-range.appspot.com',
             ])
-            ->and($systems->every(fn (System $system) => $system->cover_path !== null && $system->stacks->count() === 1))->toBeTrue();
+            ->and($systems->every(fn (System $system) => $system->cover_path !== null && $system->stacks->count() === 1))->toBeTrue()
+            ->and($systems->pluck('cover_path')->unique())->toHaveCount(4)
+            ->and($systems->mapWithKeys(fn (System $system) => [$system->name => $system->cover_path])->all())->toBe([
+                'Acunetix ASP.NET' => '/storage/covers/acunetix-aspnet.jpg',
+                'Gin and Juice' => '/storage/covers/gin-and-juice.jpg',
+                'Google Firing Range' => '/storage/covers/firing-range.jpg',
+                'OWASP Juice Shop' => '/storage/covers/juice-shop.jpg',
+            ]);
     }
 });

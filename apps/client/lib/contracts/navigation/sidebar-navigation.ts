@@ -5,6 +5,7 @@ export interface SidebarNavItem {
   project_name?: string;
   system_id: string | null;
   name: string;
+  cover_path: string | null;
   visible: boolean;
   sort_order: number;
 }
@@ -12,10 +13,12 @@ export interface SidebarNavItem {
 export interface SidebarNavProject {
   id: string;
   name: string;
+  cover_path: string | null;
   sort_order: number;
   systems: Array<{
     id: string;
     name: string;
+    cover_path: string | null;
     sort_order: number;
   }>;
 }

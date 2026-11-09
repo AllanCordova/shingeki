@@ -21,7 +21,7 @@ test('attack catalog seeder creates generic dast payloads for every category', f
         ->where('scan_type', AttackScanType::Dast)
         ->get();
 
-    expect($dast)->toHaveCount(29);
+    expect($dast)->toHaveCount(30);
 
     $categories = $dast->pluck('category')->map(fn ($c) => $c->value)->unique()->sort()->values();
     expect($categories->all())->toEqualCanonicalizing([

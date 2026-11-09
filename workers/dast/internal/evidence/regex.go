@@ -2,7 +2,6 @@ package evidence
 
 import (
 	"context"
-	"html"
 	"regexp"
 	"strings"
 
@@ -24,6 +23,12 @@ var sqlErrorNeedles = []string{
 	"sqlite3",
 	"sequelize",
 	"incomplete input",
+	"incorrect syntax near",
+	"microsoft ole db",
+	"sqlexception",
+	"system.data.sqlclient",
+	"odbc sql server driver",
+	"conversion failed when converting",
 }
 
 var sqlErrorPatterns = []*regexp.Regexp{
@@ -50,8 +55,11 @@ func (v *RegexValidator) Analyze(_ context.Context, response types.Response) *Fi
 	}
 
 	if strings.Contains(strings.ToUpper(category), "XSS") {
-		if reflectedHTMLXSS(response.AttackBody, response.PayloadUsed) {
-			return newFinding(response, "unescaped payload reflected in response body")
+		if executableHTMLXSS(response.BaselineBody, response.AttackBody, response.PayloadUsed, response.AttackContentType) {
+			return newFinding(response, "payload opened an executable HTML sink")
+		}
+		if jsonXSSAllowed(response.AttackContentType) && reflectedAPIXSS(response.AttackBody, response.PayloadUsed) {
+			return newFinding(response, "unescaped markup reflected in a JSON API response")
 		}
 	}
 
@@ -94,14 +102,14 @@ func sqlErrorStatus(response types.Response) bool {
 	return looksLikeSQLInjectionPayload(response.PayloadUsed)
 }
 
-func reflectedHTMLXSS(body, payload string) bool {
-	if !strings.Contains(payload, "<") {
+func reflectedAPIXSS(body, payload string) bool {
+	if !strings.Contains(payload, "<") || !looksLikeJSON(body) {
 		return false
 	}
-	if looksLikeJSON(body) || !looksLikeHTML(body) {
+	if strings.Contains(body, `\u003c`) && !strings.Contains(body, payload) {
 		return false
 	}
-	return unescapedReflection(body, payload)
+	return strings.Contains(body, payload)
 }
 
 func looksLikeJSON(body string) bool {
@@ -120,20 +128,6 @@ func looksLikeHTML(body string) bool {
 		strings.Contains(lower, "<body") ||
 		strings.Contains(lower, "<div") ||
 		strings.Contains(lower, "<p>")
-}
-
-func unescapedReflection(body, payload string) bool {
-	if payload == "" || !strings.Contains(body, payload) {
-		return false
-	}
-	encoded := html.EscapeString(payload)
-	if payload != encoded && strings.Contains(body, encoded) && !strings.Contains(strings.ToLower(body), strings.ToLower(payload)) {
-		return false
-	}
-	if payload != encoded && !strings.Contains(body, payload) {
-		return false
-	}
-	return true
 }
 
 func capBody(body string) string {

@@ -32,6 +32,8 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - ./docker/rabbitmq/20-consumer-timeout.conf:/etc/rabbitmq/conf.d/20-consumer-timeout.conf:ro
     ports:
       - "${RABBITMQ_PORT}:5672"
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
@@ -69,6 +71,7 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
+      RUN_DB_SEED: "false"
     depends_on:
       mysql:
         condition: service_healthy
@@ -95,6 +98,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RABBITMQ_ATTACKS_DISPATCH_QUEUE: ${RABBITMQ_ATTACKS_SAST_DISPATCH_QUEUE:-attacks.sast.dispatch}
+      RABBITMQ_ATTACKS_CANCEL_QUEUE: ${RABBITMQ_ATTACKS_SAST_CANCEL_QUEUE:-attacks.sast.dispatch.cancel}
       RABBITMQ_ATTACKS_RESULTS_QUEUE: ${RABBITMQ_ATTACKS_RESULTS_QUEUE:-attacks.results}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     depends_on:
@@ -103,11 +107,12 @@ services:
     networks:
       - shingeki
 
-  dast-worker:
+  dast-worker: &dast-worker
     profiles: ["stack"]
     build:
       context: ./workers/dast
       dockerfile: deployments/Dockerfile
+    image: shingeki-dast-worker
     container_name: shingeki-dast-worker
     restart: unless-stopped
     env_file:
@@ -122,6 +127,7 @@ services:
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
       RABBITMQ_ATTACKS_DISPATCH_QUEUE: ${RABBITMQ_ATTACKS_DISPATCH_QUEUE:-attacks.dispatch}
+      RABBITMQ_ATTACKS_CANCEL_QUEUE: ${RABBITMQ_ATTACKS_CANCEL_QUEUE:-attacks.dispatch.cancel}
       RABBITMQ_ATTACKS_RESULTS_QUEUE: ${RABBITMQ_ATTACKS_RESULTS_QUEUE:-attacks.results}
       DISCOVERY_ROD_ENABLED: "true"
       CHROME_PATH: /usr/bin/chromium
@@ -132,9 +138,14 @@ services:
       TARGET_LOCALHOST_REWRITE: ""
       ATTACK_REQUEST_TIMEOUT: ${ATTACK_REQUEST_TIMEOUT:-30s}
       BROWSER_STATE_KEY: ${BROWSER_STATE_KEY:-}
+      WORKER_JOB_TIMEOUT: 3h
     depends_on:
       rabbitmq:
         condition: service_healthy
+
+  dast-worker-2:
+    <<: *dast-worker
+    container_name: shingeki-dast-worker-2
 
   capture:
     profiles: ["stack"]

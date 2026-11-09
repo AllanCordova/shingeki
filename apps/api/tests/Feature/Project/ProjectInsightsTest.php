@@ -124,15 +124,18 @@ describe('sidebar navigation', function () {
                         projectId
                         systemId
                         name
+                        coverPath
                         visible
                         sortOrder
                     }
                     tree {
                         id
                         name
+                        coverPath
                         systems {
                             id
                             name
+                            coverPath
                         }
                     }
                 }
@@ -141,7 +144,11 @@ describe('sidebar navigation', function () {
             ->assertGraphQLErrorFree()
             ->assertJsonPath('data.sidebarNavigation.meta.projectsCount', 1)
             ->assertJsonPath('data.sidebarNavigation.meta.systemsCount', 1)
-            ->assertJsonCount(2, 'data.sidebarNavigation.items');
+            ->assertJsonCount(2, 'data.sidebarNavigation.items')
+            ->assertJsonPath('data.sidebarNavigation.items.0.coverPath', $project->cover_path)
+            ->assertJsonPath('data.sidebarNavigation.items.1.coverPath', $system->cover_path)
+            ->assertJsonPath('data.sidebarNavigation.tree.0.coverPath', $project->cover_path)
+            ->assertJsonPath('data.sidebarNavigation.tree.0.systems.0.coverPath', $system->cover_path);
 
         $this->graphQL(/** @lang GraphQL */ '
             mutation ($items: [SidebarNavItemInput!]!) {

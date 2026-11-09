@@ -51,9 +51,6 @@ func CanonicalizeQueryVectors(vectors []contracts.AttackVector) []contracts.Atta
 		next := cloneVector(vector)
 		if next.TargetLocation == "QUERY_PARAMETER" {
 			next.Route = targeturl.CanonicalSinkRoute(next.Route)
-			for key := range next.Params {
-				next.Params[key] = ""
-			}
 		}
 		key := next.Method + " " + next.Route + " " + next.TargetLocation
 		if index, ok := seen[key]; ok {
@@ -61,9 +58,13 @@ func CanonicalizeQueryVectors(vectors []contracts.AttackVector) []contracts.Atta
 				out[index].Params = map[string]string{}
 			}
 			for param, value := range next.Params {
-				if _, exists := out[index].Params[param]; !exists {
+				current, exists := out[index].Params[param]
+				if !exists || (current == "" && value != "") {
 					out[index].Params[param] = value
 				}
+			}
+			if out[index].XMLRoot == "" && next.XMLRoot != "" {
+				out[index].XMLRoot = next.XMLRoot
 			}
 			continue
 		}

@@ -94,6 +94,97 @@ func TestRegexValidatorXSSDetectsReflectedPayload(t *testing.T) {
 	}
 }
 
+func TestRegexValidatorXSSIgnoresQuotedAttributeAndComment(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "<script>alert(1)</script>"
+	quoted := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/reflected/parameter/attribute_quoted"},
+		},
+		PayloadUsed:       payload,
+		AttackContentType: "text/html;charset=utf-8",
+		AttackBody:        `<html><body><tag attribute="` + payload + `"></tag></body></html>`,
+	}
+	if finding := validator.Analyze(context.Background(), quoted); finding != nil {
+		t.Fatalf("quoted attribute reflection must not confirm: %q", finding.Evidence)
+	}
+
+	comment := quoted
+	comment.AttackBody = "<html><body><!-- " + payload + " --></body></html>"
+	if finding := validator.Analyze(context.Background(), comment); finding != nil {
+		t.Fatalf("comment reflection must not confirm: %q", finding.Evidence)
+	}
+}
+
+func TestRegexValidatorXSSConfirmsBreakoutAndJavaScriptURL(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	breakout := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/reflected/parameter/attribute_quoted"},
+		},
+		PayloadUsed:       `"><script>alert(1)</script>`,
+		AttackContentType: "text/html",
+		BaselineBody:      `<html><body><tag attribute="a"></tag></body></html>`,
+		AttackBody:        `<html><body><tag attribute=""><script>alert(1)</script>"></tag></body></html>`,
+	}
+	if validator.Analyze(context.Background(), breakout) == nil {
+		t.Fatal("expected attribute breakout to confirm")
+	}
+
+	link := breakout
+	link.PayloadUsed = "javascript:alert(1)"
+	link.BaselineBody = `<html><body><a href="/safe">Link!</a></body></html>`
+	link.AttackBody = `<html><body><a href="javascript:alert(1)">Link!</a></body></html>`
+	if validator.Analyze(context.Background(), link) == nil {
+		t.Fatal("expected javascript URL sink to confirm")
+	}
+}
+
+func TestRegexValidatorXSSIgnoresNonHTMLContentType(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "<script>alert(1)</script>"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/reflected/contentsniffing/json"},
+		},
+		PayloadUsed:       payload,
+		AttackContentType: "application/json",
+		AttackBody:        `{"parameter":"` + payload + `"}`,
+	}
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("application/json echo must not confirm: %q", finding.Evidence)
+	}
+	resp.AttackContentType = "text/plain;charset=iso-8859-1"
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("text/plain echo must not confirm: %q", finding.Evidence)
+	}
+	resp.AttackContentType = "text/html"
+	if validator.Analyze(context.Background(), resp) == nil {
+		t.Fatal("expected the same body to confirm when served as HTML")
+	}
+}
+
+func TestRegexValidatorXSSConfirmsAttackerScriptSource(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := `<script src="https://evil.invalid/xss.js"></script>`
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/tags/tag/script/src"},
+		},
+		PayloadUsed:       payload,
+		AttackContentType: "text/html",
+		BaselineBody:      "<html><body></body></html>",
+		AttackBody:        "<html><body>" + payload + "</body></html>",
+	}
+	if validator.Analyze(context.Background(), resp) == nil {
+		t.Fatal("expected an attacker-controlled script source to confirm")
+	}
+}
+
 func TestRegexValidatorXSSIgnoresHTMLEncodedPayload(t *testing.T) {
 	validator := evidence.NewRegexValidator()
 	payload := "<script>alert(1)</script>"
@@ -128,6 +219,42 @@ func TestRegexValidatorXSSIgnoresJSONReflection(t *testing.T) {
 	}
 	if finding := validator.Analyze(context.Background(), resp); finding != nil {
 		t.Fatalf("JSON echo is not XSS: %q", finding.Evidence)
+	}
+}
+
+func TestRegexValidatorDetectsUnescapedJSONMarkup(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	payload := "<script>alert(1)</script>"
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector: contracts.AttackVector{Route: "/rest/products/search"},
+		},
+		PayloadUsed: payload,
+		AttackBody:  `{"data":[{"description":"` + payload + `"}]}`,
+	}
+	if validator.Analyze(context.Background(), resp) == nil {
+		t.Fatal("expected JSON markup reflection")
+	}
+
+	resp.AttackBody = `{"data":[{"description":"\u003cscript\u003ealert(1)\u003c/script\u003e"}]}`
+	if finding := validator.Analyze(context.Background(), resp); finding != nil {
+		t.Fatalf("escaped JSON must not confirm: %q", finding.Evidence)
+	}
+}
+
+func TestRegexValidatorDetectsSQLServerError(t *testing.T) {
+	validator := evidence.NewRegexValidator()
+	resp := types.Response{
+		Job: types.Job{
+			Attack: contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
+			Vector: contracts.AttackVector{Route: "/ReadNews.aspx?id=1"},
+		},
+		PayloadUsed: "' OR 1=1 --",
+		AttackBody:  "Microsoft OLE DB Provider for SQL Server error '80040e14'",
+	}
+	if validator.Analyze(context.Background(), resp) == nil {
+		t.Fatal("expected SQL Server error finding")
 	}
 }
 

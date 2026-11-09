@@ -46,6 +46,34 @@ func TestVectorsFromRouteMapAttacksOnlyListedRoutes(t *testing.T) {
 	}
 }
 
+func TestVectorsFromRouteMapKeepsFormAndXMLBodies(t *testing.T) {
+	vectors, err := VectorsFromRouteMap("https://lab.test", []contracts.DispatchRoute{
+		{Method: "POST", Path: "/login.aspx", Content: "form", Body: []byte(`{"tbUsername":"user","tbPassword":"password"}`)},
+		{Method: "POST", Path: "/catalog/product/stock", Content: "xml", XMLRoot: "stockCheck", Body: []byte(`{"productId":"1","storeId":"1"}`)},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var form, xml contracts.AttackVector
+	for _, vector := range vectors {
+		switch vector.TargetLocation {
+		case "FORM":
+			form = vector
+		case "XML_BODY":
+			xml = vector
+		case "JSON_BODY":
+			t.Fatalf("form and xml routes must not become JSON: %+v", vector)
+		}
+	}
+	if form.Params["tbUsername"] != "user" {
+		t.Fatalf("form vector = %+v", form)
+	}
+	if xml.XMLRoot != "stockCheck" || xml.Params["productId"] != "1" {
+		t.Fatalf("xml vector = %+v", xml)
+	}
+}
+
 func TestVectorsFromRouteMapRejectsOffTargetPaths(t *testing.T) {
 	cases := []contracts.DispatchRoute{
 		{Path: "https://evil.example/api/v1/user"},

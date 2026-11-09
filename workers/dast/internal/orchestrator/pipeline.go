@@ -76,9 +76,13 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	defer func() {
 		status := contracts.CompletionStatusCompleted
 		errText := ""
-		if errors.Is(err, contracts.ErrSessionExpired) {
+		switch {
+		case errors.Is(context.Cause(ctx), contracts.ErrDispatchCancelled):
+			status = contracts.CompletionStatusCancelled
+			err = nil
+		case errors.Is(err, contracts.ErrSessionExpired):
 			status = contracts.CompletionStatusSessionExpired
-		} else if err != nil {
+		case err != nil:
 			status = contracts.CompletionStatusFailed
 			errText = err.Error()
 		}
@@ -101,6 +105,10 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 			p.logger.Error("failed to publish dispatch completion", "error", pubErr, "dispatch_id", batch.DispatchID)
 		}
 	}()
+
+	if err = ctx.Err(); err != nil {
+		return err
+	}
 
 	p.logger.Info("starting pipeline",
 		"system_id", batch.SystemID,
@@ -164,6 +172,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	}
 
 	for start := 0; start < len(jobs); start += batchSize {
+		if err = ctx.Err(); err != nil {
+			return err
+		}
 		if start > 0 && controlURL != "" {
 			expired, checkErr := p.guard.Expired(ctx, targetURL, controlURL, batch.Auth)
 			if checkErr != nil {
@@ -179,6 +190,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 		}
 		responses := p.attack.ExecutePool(ctx, jobs[start:end])
 		for _, response := range responses {
+			if response.Error != nil && errors.Is(response.Error, context.Canceled) {
+				continue
+			}
 			if response.Skipped {
 				if err = p.publishProbe(skippedProbe(batch, response)); err != nil {
 					return err
@@ -243,6 +257,9 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 				return err
 			}
 			probesPublished++
+		}
+		if err = ctx.Err(); err != nil {
+			return err
 		}
 	}
 

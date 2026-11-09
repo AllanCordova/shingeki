@@ -9,6 +9,7 @@ enum AttackTargetLocation: string
     case Header = 'HEADER';
     case Cookie = 'COOKIE';
     case JsonBody = 'JSON_BODY';
+    case XmlBody = 'XML_BODY';
     case UrlPath = 'URL_PATH';
     case FileUpload = 'FILE_UPLOAD';
     case ApiEndpoint = 'API_ENDPOINT';

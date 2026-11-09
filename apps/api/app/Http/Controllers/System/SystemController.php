@@ -8,6 +8,7 @@ use App\Http\Requests\System\SystemUpdate;
 use App\Models\Project\Project;
 use App\Models\System\System;
 use App\Services\Cover\UserCoverLibraryService;
+use Database\Seeders\ScannerTargetRoutes;
 use Illuminate\Http\JsonResponse;
 
 class SystemController extends Controller
@@ -20,7 +21,7 @@ class SystemController extends Controller
     {
         $this->authorize('viewAny', [System::class, $project]);
 
-        $systems = $project->systems()->with('stacks')->latest()->get();
+        $systems = $project->systems()->with(['stacks', 'latestDispatch'])->latest()->get();
 
         return response()->json([
             'systems' => $systems->map(fn (System $system) => $this->formatSystem($system)),
@@ -146,6 +147,7 @@ class SystemController extends Controller
             'dast_start_path' => $system->dast_start_path,
             'dast_attack_ids' => $system->dast_attack_ids,
             'sast_attack_ids' => $system->sast_attack_ids,
+            'lab_routes' => ($labRoutes = ScannerTargetRoutes::dispatchRoutes($system->name)) !== [] ? $labRoutes : null,
             'stacks' => $system->relationLoaded('stacks')
                 ? $system->stacks
                     ->map(fn ($stack) => [
@@ -167,6 +169,27 @@ class SystemController extends Controller
                 : null,
             'created_at' => $system->created_at,
             'updated_at' => $system->updated_at,
+            ...($system->relationLoaded('latestDispatch')
+                ? ['latest_dispatch' => $this->formatLatestDispatch($system)]
+                : []),
+        ];
+    }
+
+    /**
+     * @return array{id: string, status: string, dispatched_at: mixed}|null
+     */
+    private function formatLatestDispatch(System $system): ?array
+    {
+        $dispatch = $system->latestDispatch;
+
+        if ($dispatch === null) {
+            return null;
+        }
+
+        return [
+            'id' => $dispatch->id,
+            'status' => $dispatch->scanStatus(),
+            'dispatched_at' => $dispatch->dispatched_at,
         ];
     }
 }

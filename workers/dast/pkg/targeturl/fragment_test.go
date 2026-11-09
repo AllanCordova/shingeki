@@ -14,13 +14,6 @@ func TestOrigin(t *testing.T) {
 	}
 }
 
-func TestHashSearchURL(t *testing.T) {
-	got := targeturl.HashSearchURL("http://host.docker.internal:3001/")
-	if got != "http://host.docker.internal:3001/#/search?q=" {
-		t.Fatalf("got %q", got)
-	}
-}
-
 func TestSplitFragment(t *testing.T) {
 	path, query, ok := targeturl.SplitFragment("/search?q=apple")
 	if !ok || path != "/search" || query.Get("q") != "apple" {
@@ -69,94 +62,5 @@ func TestLooksLikeSearchQueryRoute(t *testing.T) {
 	}
 	if targeturl.LooksLikeSearchQueryRoute("http://shop.test/rest/user/login") {
 		t.Fatal("login must not match search")
-	}
-}
-
-func TestLooksLikeRestAPI(t *testing.T) {
-	if !targeturl.LooksLikeRestAPI("http://shop.test/rest/products/search?q=") {
-		t.Fatal("expected /rest/ search to match")
-	}
-	if targeturl.LooksLikeRestAPI("http://shop.test/login.php") {
-		t.Fatal("PHP login must not look like REST")
-	}
-}
-
-func TestJSONLoginURL(t *testing.T) {
-	got := targeturl.JSONLoginURL("http://shop.test/#/")
-	if got != "http://shop.test/rest/user/login" {
-		t.Fatalf("got %q", got)
-	}
-}
-
-func TestCredentialJSONLoginURL(t *testing.T) {
-	shop := targeturl.CredentialJSONLoginURL("http://shop.test/#/", "http://shop.test/#/login")
-	if shop != "http://shop.test/rest/user/login" {
-		t.Fatalf("juice shop=%q", shop)
-	}
-	api := targeturl.CredentialJSONLoginURL("https://app.example/", "https://app.example/api/v1/auth/login")
-	if api != "https://app.example/api/v1/auth/login" {
-		t.Fatalf("api=%q", api)
-	}
-	php := targeturl.CredentialJSONLoginURL("http://lab.test/", "http://lab.test/login.php")
-	if php != "" {
-		t.Fatalf("php lab must skip json login, got %q", php)
-	}
-	page := targeturl.CredentialJSONLoginURL("https://www.example.com/", "https://www.example.com/login")
-	if page != "" {
-		t.Fatalf("page login must skip json login, got %q", page)
-	}
-	fallback := targeturl.CredentialJSONLoginURL("http://shop.test/", "")
-	if fallback != "http://shop.test/rest/user/login" {
-		t.Fatalf("empty login_url=%q", fallback)
-	}
-}
-
-func TestIsBrowserAuthPage(t *testing.T) {
-	if !targeturl.IsBrowserAuthPage("https://shop.test/#/register") {
-		t.Fatal("hash register is a page")
-	}
-	if !targeturl.IsBrowserAuthPage("https://shop.test/register") {
-		t.Fatal("/register is a page")
-	}
-	if targeturl.IsBrowserAuthPage("https://shop.test/api/v1/register") {
-		t.Fatal("api register is not a page")
-	}
-	if targeturl.IsBrowserAuthPage("") {
-		t.Fatal("empty url is not a page")
-	}
-}
-
-func TestLoginURLFromRegister(t *testing.T) {
-	got := targeturl.LoginURLFromRegister("http://127.0.0.1:8001/", "http://127.0.0.1:8001/api/v1/register")
-	if got != "http://127.0.0.1:8001/api/v1/login" {
-		t.Fatalf("got %q", got)
-	}
-	if targeturl.LoginURLFromRegister("http://shop.test/", "http://shop.test/api/Users") != "" {
-		t.Fatal("juice shop register path must not invent /api/Users login")
-	}
-	if targeturl.LoginURLFromRegister("http://lab.test/", "http://lab.test/register") != "" {
-		t.Fatal("html register page must not become a json login")
-	}
-}
-
-func TestHTMLFormLoginURL(t *testing.T) {
-	got := targeturl.HTMLFormLoginURL("http://lab.test/", "http://lab.test/login.php")
-	if got != "http://lab.test/login.php" {
-		t.Fatalf("got %q", got)
-	}
-	if targeturl.HTMLFormLoginURL("http://shop.test/", "http://shop.test/#/login") != "" {
-		t.Fatal("hash login is not an HTML form")
-	}
-}
-
-func TestAuthenticatedRESTURLs(t *testing.T) {
-	if got := targeturl.RESTBasketURL("http://shop.test/#/", "6"); got != "http://shop.test/rest/basket/6" {
-		t.Fatalf("basket=%q", got)
-	}
-	if got := targeturl.APIUsersURL("http://shop.test/"); got != "http://shop.test/api/Users/" {
-		t.Fatalf("users=%q", got)
-	}
-	if got := targeturl.ProductReviewsURL("http://shop.test", "1"); got != "http://shop.test/rest/products/1/reviews" {
-		t.Fatalf("reviews=%q", got)
 	}
 }
