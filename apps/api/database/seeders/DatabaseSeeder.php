@@ -39,7 +39,6 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
-        // $this->call(UsersSeeder::class);
         $this->call(DemoProjectsSeeder::class);
     }
 }

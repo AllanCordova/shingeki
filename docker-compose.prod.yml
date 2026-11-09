@@ -100,7 +100,11 @@ services:
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
-      RUN_DB_SEED: ${RUN_DB_SEED:-true}
+      BROWSER_STATE_KEY: ${BROWSER_STATE_KEY:-}
+      BROWSER_CAPTURE_TTL_MINUTES: ${BROWSER_CAPTURE_TTL_MINUTES:-15}
+      CAPTURE_SERVICE_URL: http://capture:7900
+      CAPTURE_SERVICE_TOKEN: ${CAPTURE_SERVICE_TOKEN:-}
+      CAPTURE_NOVNC_PUBLIC_URL: ${CAPTURE_NOVNC_PUBLIC_URL:-}
     volumes:
       - api_storage:/var/www/html/storage
     depends_on:
@@ -155,6 +159,8 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "127.0.0.1:5673:5672"
     healthcheck:
       test:
         [
@@ -201,9 +207,10 @@ services:
     init: true
     shm_size: "512mb"
     mem_limit: 1536m
+    network_mode: host
     environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
+      RABBITMQ_HOST: 127.0.0.1
+      RABBITMQ_PORT: 5673
       RABBITMQ_USER: ${RABBITMQ_USER}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       RABBITMQ_VHOST: ${RABBITMQ_VHOST:-/}
@@ -214,9 +221,24 @@ services:
       DISCOVERY_ROD_NO_SANDBOX: "true"
       DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
       ATTACK_REQUEST_TIMEOUT: 30s
+      BROWSER_STATE_KEY: ${BROWSER_STATE_KEY:-}
     depends_on:
       rabbitmq:
         condition: service_healthy
+    logging: *default-logging
+
+  capture:
+    build:
+      context: ./workers/capture
+      dockerfile: Dockerfile
+    container_name: shingeki-prod-capture
+    restart: unless-stopped
+    shm_size: "1gb"
+    environment:
+      CAPTURE_SERVICE_TOKEN: ${CAPTURE_SERVICE_TOKEN:-}
+      CAPTURE_SERVICE_PORT: "7900"
+    ports:
+      - "127.0.0.1:6080:6080"
     networks:
       - shingeki
     logging: *default-logging

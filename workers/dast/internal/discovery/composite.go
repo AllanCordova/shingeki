@@ -35,22 +35,14 @@ func (e *CompositeEngine) Discover(
 	auth *contracts.TargetAuth,
 	opts Options,
 ) ([]contracts.AttackVector, error) {
+	if opts.HasRouteMap() {
+		return e.discoverRouteMap(ctx, targetURL, auth, opts)
+	}
+
 	discCfg := ApplyDepthAndScope(e.cfg.Discovery, opts)
 	seedURL, err := ResolveSeedURL(targetURL, opts.StartPath)
 	if err != nil {
 		return nil, err
-	}
-
-	if err := ApplyJSONLogin(ctx, seedURL, auth); err != nil {
-		e.logger.Warn("json credential login failed; form login may still work", "error", err)
-	} else if auth != nil && auth.HasCredentials() && len(contracts.EffectiveAuthHeaders(auth)) > 0 {
-		e.logger.Info("applied json credential login for discovery")
-	}
-
-	if err := ApplyHTTPFormLogin(ctx, seedURL, auth); err != nil {
-		e.logger.Warn("http form login failed; browser form login may still work", "error", err)
-	} else if auth != nil && auth.HasCredentials() && auth.HasSession() && auth.LoginURL != "" {
-		e.logger.Info("applied http form login for discovery")
 	}
 
 	if seedURL != targetURL {
@@ -162,9 +154,27 @@ func (e *CompositeEngine) Discover(
 		)
 	}
 
-	if auth.HasCredentials() && !auth.HasSession() {
-		return nil, fmt.Errorf("%w: credentials did not establish a session", contracts.ErrScannerLogin)
+	return vectors, nil
+}
+
+func (e *CompositeEngine) discoverRouteMap(
+	ctx context.Context,
+	targetURL string,
+	auth *contracts.TargetAuth,
+	opts Options,
+) ([]contracts.AttackVector, error) {
+	vectors, err := VectorsFromRouteMap(targetURL, opts.RouteMap)
+	if err != nil {
+		return nil, err
 	}
+	if len(vectors) == 0 {
+		return nil, fmt.Errorf("route map produced no attackable routes")
+	}
+
+	e.logger.Info("using exclusive route map",
+		"routes", len(opts.RouteMap),
+		"vectors", len(vectors),
+	)
 
 	return vectors, nil
 }

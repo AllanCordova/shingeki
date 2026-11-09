@@ -23,165 +23,69 @@ class DemoProjectsSeeder extends Seeder
         'admin@admin.com',
     ];
 
+    public const PROJECT_NAME = 'Laboratório';
+
     /**
+     * Projetos do seed antigo. Um novo seed apaga esses nomes em qualquer conta.
+     *
+     * @var list<string>
+     */
+    private const RETIRED_PROJECT_NAMES = [
+        'Netflix',
+        'Mercado Livre',
+        'Nubank',
+        'iFood',
+        'Pentest Lab',
+    ];
+
+    /**
+     * Alvos públicos feitos para teste de scanner. Já estão no ar.
+     *
      * @var list<array{
      *     name: string,
      *     description: string,
-     *     cover: string,
-     *     systems: list<array{
-     *         name: string,
-     *         target_url: string,
-     *         repository_url: string,
-     *         stack: string,
-     *         cover: string
-     *     }>
+     *     target_url: string,
+     *     repository_url: string,
+     *     stack: string
      * }>
      */
-    private const DEMO_PROJECTS = [
+    private const TARGETS = [
         [
-            'name' => 'Netflix',
-            'description' => 'Plataforma de streaming, catalogo de midia e experiencia do assinante.',
-            'cover' => 'netflix.jpg',
-            'systems' => [
-                [
-                    'name' => 'API de Catalogo',
-                    'target_url' => 'https://catalog.api.netflix.example',
-                    'repository_url' => 'https://github.com/netflix/catalog-api',
-                    'stack' => 'nextjs',
-                    'cover' => 'netflix-api-catalogo.jpg',
-                ],
-                [
-                    'name' => 'Servico de Autenticacao',
-                    'target_url' => 'https://auth.netflix.example',
-                    'repository_url' => 'https://github.com/netflix/auth-service',
-                    'stack' => 'laravel',
-                    'cover' => 'netflix-servico-autenticacao.jpg',
-                ],
-                [
-                    'name' => 'Motor de Recomendacoes',
-                    'target_url' => 'https://recommendations.netflix.example',
-                    'repository_url' => 'https://github.com/netflix/recommendation-engine',
-                    'stack' => 'express',
-                    'cover' => 'netflix-motor-recomendacoes.jpg',
-                ],
-                [
-                    'name' => 'Portal de Billing',
-                    'target_url' => 'https://billing.netflix.example',
-                    'repository_url' => 'https://github.com/netflix/billing-portal',
-                    'stack' => 'react',
-                    'cover' => 'netflix-portal-billing.jpg',
-                ],
-            ],
+            'name' => 'OWASP Juice Shop',
+            'description' => 'Demonstração oficial do OWASP Juice Shop. Aplicação Node feita para ser atacada.',
+            'target_url' => 'https://demo.owasp-juice.shop',
+            'repository_url' => 'https://github.com/juice-shop/juice-shop',
+            'stack' => 'express',
         ],
         [
-            'name' => 'Mercado Livre',
-            'description' => 'Marketplace, pagamentos e operacoes para vendedores e compradores.',
-            'cover' => 'mercado-livre.webp',
-            'systems' => [
-                [
-                    'name' => 'API do Marketplace',
-                    'target_url' => 'https://api.mercadolivre.example',
-                    'repository_url' => 'https://github.com/mercadolibre/marketplace-api',
-                    'stack' => 'laravel',
-                    'cover' => 'mercado-livre-api-marketplace.jpg',
-                ],
-                [
-                    'name' => 'Plataforma de Pagamentos',
-                    'target_url' => 'https://payments.mercadolivre.example',
-                    'repository_url' => 'https://github.com/mercadolibre/payments-core',
-                    'stack' => 'express',
-                    'cover' => 'mercado-livre-plataforma-pagamentos.jpg',
-                ],
-                [
-                    'name' => 'Logistica e Envios',
-                    'target_url' => 'https://logistics.mercadolivre.example',
-                    'repository_url' => 'https://github.com/mercadolibre/logistics-service',
-                    'stack' => 'nextjs',
-                    'cover' => 'mercado-livre-logistica-envios.jpg',
-                ],
-                [
-                    'name' => 'Portal do Vendedor',
-                    'target_url' => 'https://seller.mercadolivre.example',
-                    'repository_url' => 'https://github.com/mercadolibre/seller-portal',
-                    'stack' => 'react',
-                    'cover' => 'mercado-livre-portal-vendedor.jpg',
-                ],
-            ],
+            'name' => 'Google Firing Range',
+            'description' => 'Firing Range do Google. Aplicação Java publicada para exercer ferramentas de segurança.',
+            'target_url' => 'https://public-firing-range.appspot.com',
+            'repository_url' => 'https://github.com/google/firing-range',
+            'stack' => 'java',
         ],
         [
-            'name' => 'Nubank',
-            'description' => 'Servicos financeiros digitais, credito e integracoes open finance.',
-            'cover' => 'nubank.jpg',
-            'systems' => [
-                [
-                    'name' => 'API do Aplicativo',
-                    'target_url' => 'https://api.nubank.example',
-                    'repository_url' => 'https://github.com/nubank/mobile-api',
-                    'stack' => 'express',
-                    'cover' => 'nubank-api-aplicativo.jpg',
-                ],
-                [
-                    'name' => 'Servico Pix',
-                    'target_url' => 'https://pix.nubank.example',
-                    'repository_url' => 'https://github.com/nubank/pix-service',
-                    'stack' => 'laravel',
-                    'cover' => 'nubank-servico-pix.jpg',
-                ],
-                [
-                    'name' => 'Motor de Credito',
-                    'target_url' => 'https://credit.nubank.example',
-                    'repository_url' => 'https://github.com/nubank/credit-engine',
-                    'stack' => 'nextjs',
-                    'cover' => 'nubank-motor-credito.jpg',
-                ],
-                [
-                    'name' => 'Open Finance Gateway',
-                    'target_url' => 'https://openfinance.nubank.example',
-                    'repository_url' => 'https://github.com/nubank/open-finance-gateway',
-                    'stack' => 'react',
-                    'cover' => 'nubank-open-finance-gateway.jpg',
-                ],
-            ],
+            'name' => 'Acunetix ASP.NET',
+            'description' => 'Site de teste da Acunetix em ASP.NET, publicado para scanners. Não tem código-fonte público: o SAST não clona este alvo.',
+            'target_url' => 'http://testaspnet.vulnweb.com',
+            'repository_url' => 'http://testaspnet.vulnweb.com',
+            'stack' => 'aspnet',
         ],
         [
-            'name' => 'iFood',
-            'description' => 'Pedidos online, restaurantes parceiros e operacao de entregas.',
-            'cover' => 'ifood.jpg',
-            'systems' => [
-                [
-                    'name' => 'API de Restaurantes',
-                    'target_url' => 'https://restaurants.ifood.example',
-                    'repository_url' => 'https://github.com/ifood/restaurants-api',
-                    'stack' => 'laravel',
-                    'cover' => 'ifood-api-restaurantes.jpg',
-                ],
-                [
-                    'name' => 'Servico de Pedidos',
-                    'target_url' => 'https://orders.ifood.example',
-                    'repository_url' => 'https://github.com/ifood/orders-service',
-                    'stack' => 'express',
-                    'cover' => 'ifood-servico-pedidos.jpg',
-                ],
-                [
-                    'name' => 'Dispatch de Entregas',
-                    'target_url' => 'https://dispatch.ifood.example',
-                    'repository_url' => 'https://github.com/ifood/dispatch-service',
-                    'stack' => 'nextjs',
-                    'cover' => 'ifood-dispatch-entregas.jpg',
-                ],
-                [
-                    'name' => 'API do Cliente',
-                    'target_url' => 'https://consumer.ifood.example',
-                    'repository_url' => 'https://github.com/ifood/consumer-api',
-                    'stack' => 'react',
-                    'cover' => 'ifood-api-cliente.jpg',
-                ],
-            ],
+            'name' => 'Gin and Juice',
+            'description' => 'Loja vulnerável da PortSwigger, publicada para treino. Não tem repositório público: o SAST não clona este alvo.',
+            'target_url' => 'https://ginandjuice.shop',
+            'repository_url' => 'https://ginandjuice.shop',
+            'stack' => 'generic',
         ],
     ];
 
     public function run(): void
     {
+        Project::query()
+            ->whereIn('name', self::RETIRED_PROJECT_NAMES)
+            ->delete();
+
         foreach (self::DEMO_USER_EMAILS as $email) {
             $user = User::query()->where('email', $email)->first();
 
@@ -189,44 +93,55 @@ class DemoProjectsSeeder extends Seeder
                 continue;
             }
 
-            $this->seedProjectsForUser($user);
+            $this->seedTargetsForUser($user);
         }
     }
 
-    private function seedProjectsForUser(User $user): void
+    private function seedTargetsForUser(User $user): void
     {
-        foreach (self::DEMO_PROJECTS as $definition) {
-            $project = Project::query()->updateOrCreate(
+        Project::query()
+            ->where('user_id', $user->id)
+            ->where('name', '!=', self::PROJECT_NAME)
+            ->delete();
+
+        $project = Project::query()->updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'name' => self::PROJECT_NAME,
+            ],
+            [
+                'description' => 'Quatro aplicações que já existem e foram publicadas para teste de scanner. O mesmo catálogo ataca cada uma; a correção segue a stack do sistema.',
+                'cover_path' => $this->publishSeedCover('pentest-lab.jpg'),
+            ],
+        );
+
+        $names = array_column(self::TARGETS, 'name');
+
+        System::query()
+            ->where('project_id', $project->id)
+            ->whereNotIn('name', $names)
+            ->delete();
+
+        foreach (self::TARGETS as $target) {
+            $system = System::query()->updateOrCreate(
                 [
-                    'user_id' => $user->id,
-                    'name' => $definition['name'],
+                    'project_id' => $project->id,
+                    'name' => $target['name'],
                 ],
                 [
-                    'description' => $definition['description'],
-                    'cover_path' => $this->publishSeedCover($definition['cover']),
+                    'cover_path' => $this->publishSeedCover('vulnerable-php-target.jpg'),
+                    'target_url' => $target['target_url'],
+                    'repository_url' => $target['repository_url'],
+                    'login_url' => null,
                 ],
             );
 
-            foreach ($definition['systems'] as $systemDefinition) {
-                $system = System::query()->updateOrCreate(
-                    [
-                        'project_id' => $project->id,
-                        'name' => $systemDefinition['name'],
-                    ],
-                    [
-                        'cover_path' => $this->publishSeedCover($systemDefinition['cover']),
-                        'target_url' => $systemDefinition['target_url'],
-                        'repository_url' => $systemDefinition['repository_url'],
-                    ],
-                );
+            $stack = Stack::query()->where('slug', $target['stack'])->first();
 
-                $stack = Stack::query()->where('slug', $systemDefinition['stack'])->first();
-
-                if ($stack !== null) {
-                    $system->stacks()->sync([
-                        $stack->id => ['is_primary' => true],
-                    ]);
-                }
+            if ($stack !== null) {
+                $system->stacks()->sync([
+                    $stack->id => ['is_primary' => true],
+                ]);
             }
         }
     }

@@ -59,6 +59,10 @@ class AttackQueuePublisher
             $payload['max_routes'] = $dispatch->max_routes;
         }
 
+        if (is_array($dispatch->route_map) && $dispatch->route_map !== []) {
+            $payload['route_map'] = $dispatch->route_map;
+        }
+
         if ($targetAuth !== null) {
             $payload['auth'] = $this->objectifyAuthStorageMaps($targetAuth);
         }

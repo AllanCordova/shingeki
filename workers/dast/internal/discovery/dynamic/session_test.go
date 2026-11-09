@@ -28,11 +28,8 @@ func TestExtraHeaderPairsSkipsCookie(t *testing.T) {
 			foundAuth = true
 		}
 	}
-	if foundCookie {
-		t.Fatalf("Cookie must be injected via CDP, not extra headers: %v", pairs)
-	}
-	if !foundAuth {
-		t.Fatalf("missing Authorization in %v", pairs)
+	if foundCookie || foundAuth {
+		t.Fatalf("Cookie and Authorization stay off extra headers: %v", pairs)
 	}
 }
 

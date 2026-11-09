@@ -1,0 +1,12 @@
+{
+  "name": "@shingeki/capture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs",
+    "test": "node --test state.test.mjs"
+  },
+  "dependencies": {
+    "playwright": "1.49.1"
+  }
+}

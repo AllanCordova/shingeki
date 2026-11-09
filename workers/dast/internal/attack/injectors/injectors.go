@@ -30,6 +30,21 @@ func BuildAttack(job types.Job) (RequestSpec, error) {
 	return build(job, true)
 }
 
+// BuildUnauthenticated is the same request with credentials removed.
+// JWT confusion is only meaningful when this request is rejected.
+func BuildUnauthenticated(job types.Job) (RequestSpec, error) {
+	spec, err := build(job, false)
+	if err != nil {
+		return RequestSpec{}, err
+	}
+	for key := range spec.Headers {
+		if strings.EqualFold(key, "Authorization") || strings.EqualFold(key, "Cookie") {
+			delete(spec.Headers, key)
+		}
+	}
+	return spec, nil
+}
+
 func build(job types.Job, inject bool) (RequestSpec, error) {
 	location := job.Attack.TargetLocation
 	if location == "" {

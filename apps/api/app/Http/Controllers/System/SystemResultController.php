@@ -46,7 +46,7 @@ class SystemResultController extends Controller
             'dispatches' => $dispatches
                 ->map(function (AttackDispatch $dispatch) use ($probeCountsByDispatch) {
                     return [
-                        ...$this->formatDispatch($dispatch),
+                        ...$this->formatDispatch($dispatch, includeRouteMap: false),
                         'probe_counts' => $probeCountsByDispatch[$dispatch->id] ?? [
                             'all' => 0,
                             'vulnerable' => 0,
@@ -170,14 +170,17 @@ class SystemResultController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function formatDispatch(AttackDispatch $dispatch): array
+    private function formatDispatch(AttackDispatch $dispatch, bool $includeRouteMap = true): array
     {
-        return [
+        $payload = [
             'id' => $dispatch->id,
             'system_id' => $dispatch->system_id,
             'user_id' => $dispatch->user_id,
             'scan_type' => $dispatch->scan_type->value,
             'depth' => ($dispatch->depth ?? AttackDepth::Full)->value,
+            'route_map_count' => is_array($dispatch->route_map) && $dispatch->route_map !== []
+                ? count($dispatch->route_map)
+                : null,
             'attacks_count' => $dispatch->attacks_count,
             'dispatched_at' => $dispatch->dispatched_at,
             'completed_at' => $dispatch->completed_at,
@@ -186,12 +189,21 @@ class SystemResultController extends Controller
             'probes_count' => $dispatch->probes_count,
             'vectors_discovered' => $dispatch->vectors_discovered,
             'jobs_planned' => $dispatch->jobs_planned,
+            'start_path' => $dispatch->start_path,
+            'max_routes' => $dispatch->max_routes,
             'failed_at' => $dispatch->failed_at,
+            'session_expired_at' => $dispatch->session_expired_at,
             'failure_reason' => $dispatch->failure_reason,
             'status' => $dispatch->scanStatus(),
             'created_at' => $dispatch->created_at,
             'updated_at' => $dispatch->updated_at,
         ];
+
+        if ($includeRouteMap) {
+            $payload['route_map'] = $dispatch->route_map;
+        }
+
+        return $payload;
     }
 
     /**

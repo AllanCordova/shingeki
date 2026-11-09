@@ -10,9 +10,13 @@ import {
 } from "@/lib/hooks/system/use-systems";
 import { CoverUpdateModal } from "@/components/cover/cover-update-modal";
 import { SystemForm } from "@/components/system/system-form";
-import { ScannerLoginCard } from "@/components/system/scanner-login-card";
 import { SystemDetailHero } from "@/components/system/system-detail-hero";
 import { AttackForm } from "@/components/attack/attack-form";
+import {
+  RouteMapPreviewProvider,
+  useRouteMapPreviewState,
+} from "@/components/attack/route-map-preview";
+import { RouteMapCard } from "@/components/system/route-map-card";
 import { useMe } from "@/lib/hooks/auth/use-auth";
 import { DispatchesList } from "@/components/results/dispatches-list";
 import { RemediationHistoryPanel } from "@/components/remediation/remediation-history-panel";
@@ -44,6 +48,7 @@ export default function SystemDetailPage() {
   const deleteSystem = useDeleteSystem(projectId);
   const { user } = useMe();
 
+  const routeMap = useRouteMapPreviewState(systemId);
   const [editOpen, setEditOpen] = useState(false);
   const [coverOpen, setCoverOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -65,6 +70,7 @@ export default function SystemDetailPage() {
   const arsenalHref = `/projetos/${projectId}/sistemas/${systemId}/arsenal`;
 
   return (
+    <RouteMapPreviewProvider value={routeMap}>
     <div className="flex flex-col gap-8">
       <SystemDetailHero
         system={system}
@@ -105,28 +111,10 @@ export default function SystemDetailPage() {
         }
       />
 
+      <RouteMapCard />
+
       <div id="guided-attack-form" className="guided-setup-section">
         <AttackForm projectId={projectId} systemId={systemId} />
-      </div>
-
-      <div id="guided-target-session" className="guided-setup-section">
-        <ScannerLoginCard
-          system={system}
-          isLoading={updateSystem.isLoading}
-          error={updateSystem.error}
-          onSave={async (values) => {
-            const cleared = !values.login_username;
-            const result = await notify.run(
-              () => updateSystem.updateSystem(values),
-              {
-                success: cleared
-                  ? "Login do scanner removido."
-                  : "Login do scanner salvo.",
-              },
-            );
-            return result !== undefined;
-          }}
-        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -220,5 +208,6 @@ export default function SystemDetailPage() {
         )}
       </Modal>
     </div>
+    </RouteMapPreviewProvider>
   );
 }

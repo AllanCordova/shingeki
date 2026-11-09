@@ -13,6 +13,7 @@ import type {
   DispatchCatalogAttack,
   DispatchCatalogResponse,
 } from "@/lib/contracts/attack/attack";
+import type { DastRouteMapEntry } from "@/lib/contracts/attack/route-map";
 import { queryKeys } from "@/lib/query-keys";
 import type { AttackDispatchResponse } from "@/lib/contracts";
 
@@ -93,6 +94,7 @@ export function useDispatchAttack(projectId: string, systemId: string) {
       depth,
       start_path,
       max_routes,
+      route_map,
       acceptedResponsibility,
       acceptedLegalTerms,
     }: {
@@ -100,6 +102,7 @@ export function useDispatchAttack(projectId: string, systemId: string) {
       depth: AttackDepth;
       start_path?: string;
       max_routes?: number;
+      route_map?: DastRouteMapEntry[];
       acceptedResponsibility: boolean;
       acceptedLegalTerms: boolean;
     }) => {
@@ -112,6 +115,7 @@ export function useDispatchAttack(projectId: string, systemId: string) {
           depth,
           ...(start_path ? { start_path } : {}),
           ...(typeof max_routes === "number" ? { max_routes } : {}),
+          ...(route_map && route_map.length > 0 ? { route_map } : {}),
         },
       );
       return { ...data, scanType };
@@ -147,6 +151,7 @@ export function useDispatchAttack(projectId: string, systemId: string) {
         depth,
         start_path: scope.start_path,
         max_routes: scope.max_routes,
+        route_map: scope.route_map,
         acceptedResponsibility: acknowledgment.acceptedResponsibility,
         acceptedLegalTerms: acknowledgment.acceptedLegalTerms,
       }),

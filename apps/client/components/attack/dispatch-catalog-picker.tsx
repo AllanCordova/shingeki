@@ -1,8 +1,20 @@
 "use client";
 
+import { useState } from "react";
 import type { DispatchCatalogAttack } from "@/lib/contracts/attack/attack";
+import type { PaginationMeta } from "@/lib/contracts/common/common";
 import type { ApiError } from "@/lib/api/error-handler";
-import { Button, Checkbox, ErrorShow, Spinner } from "@/components/ui";
+import {
+  Button,
+  Checkbox,
+  ErrorShow,
+  Input,
+  ListPagination,
+  Select,
+  Spinner,
+} from "@/components/ui";
+
+const PAGE_SIZE = 8;
 
 export function DispatchCatalogPicker({
   attacks,
@@ -21,7 +33,31 @@ export function DispatchCatalogPicker({
   error: ApiError | null;
   onRetry: () => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [scanType, setScanType] = useState("all");
+  const [page, setPage] = useState(1);
   const selectedSet = new Set(selectedIds);
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filtered = attacks.filter((attack) => {
+    if (scanType !== "all" && attack.scan_type !== scanType) return false;
+    if (normalizedQuery === "") return true;
+    const haystack = `${attack.category} ${attack.target_location} ${attack.risk_level}`.toLowerCase();
+    return haystack.includes(normalizedQuery);
+  });
+
+  const lastPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, lastPage);
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const visible = filtered.slice(start, start + PAGE_SIZE);
+  const pagination: PaginationMeta = {
+    current_page: currentPage,
+    last_page: lastPage,
+    per_page: PAGE_SIZE,
+    total: filtered.length,
+    from: filtered.length === 0 ? null : start + 1,
+    to: filtered.length === 0 ? null : start + visible.length,
+  };
 
   const toggleAttack = (attackId: string, checked: boolean) => {
     onChange(
@@ -33,9 +69,37 @@ export function DispatchCatalogPicker({
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_9rem]">
+        <Input
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setPage(1);
+          }}
+          placeholder="Filtrar por categoria"
+          aria-label="Filtrar ataques"
+          autoComplete="off"
+        />
+        <Select
+          value={scanType}
+          aria-label="Tipo de scan"
+          onChange={(event) => {
+            setScanType(event.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="all">DAST e SAST</option>
+          <option value="DAST">DAST</option>
+          <option value="SAST">SAST</option>
+        </Select>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">
           {selectedIds.length} de {attacks.length} selecionados
+          {filtered.length !== attacks.length
+            ? ` · ${filtered.length} no filtro`
+            : ""}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
@@ -70,13 +134,17 @@ export function DispatchCatalogPicker({
         <p className="text-sm text-muted-foreground">
           Não há ataques no catálogo para este sistema.
         </p>
+      ) : filtered.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nenhum ataque corresponde ao filtro.
+        </p>
       ) : (
         <div
           className="flex flex-col gap-2"
           role="group"
           aria-label="Ataques do catálogo"
         >
-          {attacks.map((attack) => (
+          {visible.map((attack) => (
             <Checkbox
               key={attack.id}
               id={`dispatch-attack-${attack.id}`}
@@ -90,6 +158,10 @@ export function DispatchCatalogPicker({
           ))}
         </div>
       )}
+
+      {!isLoading && !isError ? (
+        <ListPagination pagination={pagination} onPageChange={setPage} />
+      ) : null}
     </div>
   );
 }

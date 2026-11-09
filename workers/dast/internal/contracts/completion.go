@@ -6,9 +6,10 @@ import (
 )
 
 const (
-	EventDispatchCompleted    = "attack.dispatch.completed"
-	CompletionStatusCompleted = "completed"
-	CompletionStatusFailed    = "failed"
+	EventDispatchCompleted         = "attack.dispatch.completed"
+	CompletionStatusCompleted      = "completed"
+	CompletionStatusFailed         = "failed"
+	CompletionStatusSessionExpired = "session_expired"
 )
 
 type DispatchCompletionMessage struct {
@@ -46,9 +47,9 @@ func (m DispatchCompletionMessage) Validate() error {
 		return fmt.Errorf("system_id is required")
 	}
 	switch m.Status {
-	case CompletionStatusCompleted, CompletionStatusFailed:
+	case CompletionStatusCompleted, CompletionStatusFailed, CompletionStatusSessionExpired:
 	default:
-		return fmt.Errorf("status must be %q or %q", CompletionStatusCompleted, CompletionStatusFailed)
+		return fmt.Errorf("status must be %q, %q or %q", CompletionStatusCompleted, CompletionStatusFailed, CompletionStatusSessionExpired)
 	}
 	if m.Status == CompletionStatusFailed && m.Error == "" {
 		return fmt.Errorf("error is required when status is failed")

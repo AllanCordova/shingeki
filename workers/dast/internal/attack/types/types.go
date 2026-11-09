@@ -33,5 +33,6 @@ type Response struct {
 	RawRequest       string
 	PayloadUsed      string
 	TimedOut         bool
+	Skipped          bool
 	Error            error
 }

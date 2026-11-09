@@ -101,9 +101,41 @@ func TestCredentialJSONLoginURL(t *testing.T) {
 	if php != "" {
 		t.Fatalf("php lab must skip json login, got %q", php)
 	}
+	page := targeturl.CredentialJSONLoginURL("https://www.example.com/", "https://www.example.com/login")
+	if page != "" {
+		t.Fatalf("page login must skip json login, got %q", page)
+	}
 	fallback := targeturl.CredentialJSONLoginURL("http://shop.test/", "")
 	if fallback != "http://shop.test/rest/user/login" {
 		t.Fatalf("empty login_url=%q", fallback)
+	}
+}
+
+func TestIsBrowserAuthPage(t *testing.T) {
+	if !targeturl.IsBrowserAuthPage("https://shop.test/#/register") {
+		t.Fatal("hash register is a page")
+	}
+	if !targeturl.IsBrowserAuthPage("https://shop.test/register") {
+		t.Fatal("/register is a page")
+	}
+	if targeturl.IsBrowserAuthPage("https://shop.test/api/v1/register") {
+		t.Fatal("api register is not a page")
+	}
+	if targeturl.IsBrowserAuthPage("") {
+		t.Fatal("empty url is not a page")
+	}
+}
+
+func TestLoginURLFromRegister(t *testing.T) {
+	got := targeturl.LoginURLFromRegister("http://127.0.0.1:8001/", "http://127.0.0.1:8001/api/v1/register")
+	if got != "http://127.0.0.1:8001/api/v1/login" {
+		t.Fatalf("got %q", got)
+	}
+	if targeturl.LoginURLFromRegister("http://shop.test/", "http://shop.test/api/Users") != "" {
+		t.Fatal("juice shop register path must not invent /api/Users login")
+	}
+	if targeturl.LoginURLFromRegister("http://lab.test/", "http://lab.test/register") != "" {
+		t.Fatal("html register page must not become a json login")
 	}
 }
 

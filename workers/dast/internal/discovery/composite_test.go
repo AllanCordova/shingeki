@@ -126,7 +126,7 @@ func TestCompositeMergesStaticWhenRodReturnsNothing(t *testing.T) {
 	}
 }
 
-func TestCompositeFailsWhenCredentialsHaveNoSession(t *testing.T) {
+func TestCompositeIgnoresCredentialsWithoutACapturedSession(t *testing.T) {
 	rod := &stubCrawl{vectors: []contracts.AttackVector{
 		contracts.NewAttackVector("http://127.0.0.1:1/", "GET", "URL_PATH"),
 	}}
@@ -143,15 +143,15 @@ func TestCompositeFailsWhenCredentialsHaveNoSession(t *testing.T) {
 	}
 
 	auth := &contracts.TargetAuth{Type: "credentials", Username: "user", Password: "pass"}
-	_, err := engine.Discover(context.Background(), "http://127.0.0.1:1", auth, Options{})
-	if err == nil {
-		t.Fatal("expected scanner login failure")
-	}
-	if !errors.Is(err, contracts.ErrScannerLogin) {
-		t.Fatalf("got %v", err)
+	vectors, err := engine.Discover(context.Background(), "http://127.0.0.1:1", auth, Options{})
+	if err != nil {
+		t.Fatalf("credentials must not fail discovery: %v", err)
 	}
 	if rod.calls != 1 {
 		t.Fatalf("rod calls=%d", rod.calls)
+	}
+	if len(vectors) == 0 {
+		t.Fatal("expected discovery vectors")
 	}
 }
 
@@ -179,6 +179,44 @@ func TestCompositeDoesNotFallbackWhenRodReportsScannerLoginFailure(t *testing.T)
 	}
 	if colly.calls != 0 {
 		t.Fatalf("static crawl must not run after login failure, calls=%d", colly.calls)
+	}
+}
+
+func TestCompositeRouteMapSkipsCrawl(t *testing.T) {
+	rod := &stubCrawl{vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("https://api.example/secret", "GET", "URL_PATH"),
+	}}
+	colly := &stubCrawl{vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("https://api.example/", "GET", "URL_PATH"),
+	}}
+	engine := &CompositeEngine{
+		cfg: config.Config{
+			Discovery: config.DiscoveryConfig{RodEnabled: true, MaxPages: 50},
+		},
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		static:  colly,
+		dynamic: rod,
+	}
+
+	vectors, err := engine.Discover(context.Background(), "https://api.example", nil, Options{
+		RouteMap: []contracts.DispatchRoute{
+			{Method: "GET", Path: "/api/v1/user"},
+			{Method: "GET", Path: "/api/v1/product"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rod.calls != 0 || colly.calls != 0 {
+		t.Fatalf("route map must skip crawl, rod=%d colly=%d", rod.calls, colly.calls)
+	}
+	if len(vectors) != 2 {
+		t.Fatalf("expected only mapped routes, got %#v", vectors)
+	}
+	for _, vector := range vectors {
+		if !strings.HasPrefix(vector.Route, "https://api.example/api/v1/") {
+			t.Fatalf("unexpected route %s", vector.Route)
+		}
 	}
 }
 
@@ -222,3 +260,4 @@ func TestCompositeSkipsSPATrainingWhenStartPathSet(t *testing.T) {
 		t.Fatalf("unscoped crawl should add SPA training vectors, scoped=%d full=%d", len(scoped), len(full))
 	}
 }
+

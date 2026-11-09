@@ -32,13 +32,13 @@ class SystemController extends Controller
         $this->authorize('create', [System::class, $project]);
 
         $system = $project->systems()->create([
-            ...$request->safe()->only(['name', 'target_url', 'login_url', 'repository_url', 'login_username', 'logged_in_indicator']),
-            ...($request->filled('login_password') ? ['login_password' => $request->input('login_password')] : []),
+            ...$request->safe()->only(['name', 'target_url', 'repository_url']),
             'cover_path' => $this->coverLibrary->resolveCoverForCreate(
                 $request->user(),
                 $request->file('cover'),
                 $request->input('cover_upload_id'),
             ),
+            'login_url' => $request->validated()['login_url'] ?? null,
         ]);
 
         $system->stacks()->sync($this->stackSyncPayload($request->validated('stack_ids') ?? []));
@@ -69,20 +69,9 @@ class SystemController extends Controller
             'name',
             'target_url',
             'login_url',
-            'login_username',
-            'logged_in_indicator',
             'repository_url',
             'dast_max_routes',
         ]);
-
-        if ($request->filled('login_password')) {
-            $data['login_password'] = $request->input('login_password');
-        }
-
-        if ($request->exists('login_username') && blank($request->input('login_username'))) {
-            $data['login_username'] = null;
-            $data['login_password'] = null;
-        }
 
         if ($request->exists('dast_max_routes') && $request->input('dast_max_routes') === null) {
             $data['dast_max_routes'] = null;
@@ -152,9 +141,6 @@ class SystemController extends Controller
             'name' => $system->name,
             'target_url' => $system->target_url,
             'login_url' => $system->login_url,
-            'login_username' => $system->login_username,
-            'login_configured' => $system->hasScannerLogin(),
-            'logged_in_indicator' => $system->logged_in_indicator,
             'repository_url' => $system->repository_url,
             'dast_max_routes' => $system->dast_max_routes,
             'dast_start_path' => $system->dast_start_path,

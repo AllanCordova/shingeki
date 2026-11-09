@@ -20,42 +20,91 @@ func ApplyJSONLogin(ctx context.Context, targetURL string, auth *contracts.Targe
 	if !auth.HasCredentials() {
 		return nil
 	}
-	loginURL := ""
-	if auth != nil {
-		loginURL = auth.LoginURL
-	}
-	route := targeturl.CredentialJSONLoginURL(targetURL, loginURL)
-	if route == "" {
+	routes := jsonLoginRoutes(targetURL, auth)
+	if len(routes) == 0 {
 		return nil
 	}
 
-	bodies := []map[string]string{
-		{"email": strings.TrimSpace(auth.Username), "password": auth.Password},
-		{"username": strings.TrimSpace(auth.Username), "password": auth.Password},
+	var bodies []any
+	if resolved := contracts.ResolveAuthBody(auth.LoginBody, auth.Username, auth.Password); resolved != nil {
+		bodies = []any{resolved}
+	} else {
+		bodies = []any{
+			map[string]string{"email": strings.TrimSpace(auth.Username), "password": auth.Password},
+			map[string]string{"username": strings.TrimSpace(auth.Username), "password": auth.Password},
+		}
 	}
 
 	var lastErr error
-	for _, payload := range bodies {
-		token, err := postJSONLogin(ctx, route, payload, auth)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-		if token != "" {
-			contracts.ApplyBearerToken(auth, token)
-		}
-		if token != "" || auth.HasSession() {
-			if auth.Type == "" {
-				auth.Type = "credentials"
+	for _, route := range routes {
+		for _, payload := range bodies {
+			token, err := postJSONLogin(ctx, route, payload, auth)
+			if err != nil {
+				lastErr = err
+				if stopJSONLoginRoute(err) {
+					break
+				}
+				continue
 			}
-			return nil
+			if token != "" {
+				contracts.ApplyBearerToken(auth, token)
+			}
+			if token != "" || auth.HasSession() {
+				if auth.Type == "" {
+					auth.Type = "credentials"
+				}
+				return nil
+			}
+			lastErr = fmt.Errorf("json login: missing token")
 		}
-		lastErr = fmt.Errorf("json login: missing token")
 	}
 	if lastErr == nil {
 		lastErr = fmt.Errorf("json login failed")
 	}
 	return lastErr
+}
+
+func jsonLoginRoutes(targetURL string, auth *contracts.TargetAuth) []string {
+	loginURL := ""
+	registerURL := ""
+	if auth != nil {
+		loginURL = auth.LoginURL
+		registerURL = auth.RegisterURL
+	}
+
+	seen := map[string]struct{}{}
+	routes := make([]string, 0, 2)
+	add := func(route string) {
+		route = strings.TrimSpace(route)
+		if route == "" {
+			return
+		}
+		if _, exists := seen[route]; exists {
+			return
+		}
+		seen[route] = struct{}{}
+		routes = append(routes, route)
+	}
+
+	explicit := strings.TrimSpace(loginURL) != ""
+	if explicit {
+		if targeturl.IsBrowserAuthPage(loginURL) {
+			return nil
+		}
+		add(targeturl.CredentialJSONLoginURL(targetURL, loginURL))
+		return routes
+	}
+	add(targeturl.LoginURLFromRegister(targetURL, registerURL))
+	add(targeturl.CredentialJSONLoginURL(targetURL, ""))
+	return routes
+}
+
+func stopJSONLoginRoute(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "HTTP 404") || strings.Contains(msg, "HTTP 405")
 }
 
 func ApplyHTTPFormLogin(ctx context.Context, targetURL string, auth *contracts.TargetAuth) error {
@@ -92,7 +141,7 @@ func ApplyHTTPFormLogin(ctx context.Context, targetURL string, auth *contracts.T
 	return lastErr
 }
 
-func postJSONLogin(ctx context.Context, route string, payload map[string]string, auth *contracts.TargetAuth) (string, error) {
+func postJSONLogin(ctx context.Context, route string, payload any, auth *contracts.TargetAuth) (string, error) {
 	body, err := json.Marshal(payload)
 	if err != nil {
 		return "", err

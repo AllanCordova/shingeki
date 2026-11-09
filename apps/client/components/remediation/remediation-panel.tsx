@@ -14,6 +14,7 @@ import {
   Badge,
   Button,
   Card,
+  CopyIcon,
   CardContent,
   CardDescription,
   CardHeader,
@@ -383,6 +384,9 @@ function FindingRemediationCard({ finding }: { finding: RemediatedFinding }) {
                 </span>
               </div>
               <p className="text-muted-foreground">{remediation.description}</p>
+              <div className="flex justify-end">
+                <CopySnippetButton text={remediation.code_snippet} />
+              </div>
               <pre className="overflow-x-auto whitespace-pre-wrap rounded-app bg-surface-muted p-3 font-mono text-xs text-foreground">
                 {remediation.code_snippet}
               </pre>
@@ -407,6 +411,30 @@ function FindingRemediationCard({ finding }: { finding: RemediatedFinding }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function CopySnippetButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={() => {
+        void navigator.clipboard.writeText(text).then(
+          () => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 2000);
+          },
+          () => notify.error("Não foi possível copiar a correção."),
+        );
+      }}
+    >
+      <CopyIcon className="h-4 w-4" />
+      {copied ? "Correção copiada" : "Copiar correção"}
+    </Button>
   );
 }
 

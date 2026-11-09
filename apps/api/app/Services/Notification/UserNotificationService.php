@@ -53,20 +53,25 @@ class UserNotificationService
             ? round($durationMs / 1000, 1).' s'
             : $durationMs.' ms';
         $failed = $dispatch->failed_at !== null;
+        $sessionExpired = $dispatch->session_expired_at !== null;
 
         $notification->update([
-            'status' => $failed ? UserNotificationStatus::Failed : UserNotificationStatus::Completed,
-            'title' => $failed
-                ? "Scan {$scanLabel} falhou"
-                : "Scan {$scanLabel} finalizado",
-            'body' => $failed
-                ? sprintf('%s — não foi possível concluir o scan', $dispatch->system?->name ?? 'Sistema')
-                : sprintf(
-                    '%s — %d achado(s) em %s',
-                    $dispatch->system?->name ?? 'Sistema',
-                    $findings,
-                    $durationLabel,
-                ),
+            'status' => ($failed || $sessionExpired) ? UserNotificationStatus::Failed : UserNotificationStatus::Completed,
+            'title' => $sessionExpired
+                ? "Sessão do scan {$scanLabel} expirou"
+                : ($failed
+                    ? "Scan {$scanLabel} falhou"
+                    : "Scan {$scanLabel} finalizado"),
+            'body' => $sessionExpired
+                ? sprintf('%s — capture o navegador de novo para continuar', $dispatch->system?->name ?? 'Sistema')
+                : ($failed
+                    ? sprintf('%s — não foi possível concluir o scan', $dispatch->system?->name ?? 'Sistema')
+                    : sprintf(
+                        '%s — %d achado(s) em %s',
+                        $dispatch->system?->name ?? 'Sistema',
+                        $findings,
+                        $durationLabel,
+                    )),
             'read_at' => null,
             'payload' => [
                 ...($notification->payload ?? []),

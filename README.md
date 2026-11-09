@@ -1,51 +1,25 @@
 # Shingeki
 
-Plataforma para detecção automatizada e remediação interativa de vulnerabilidades web.
+Detecta vulnerabilidades em sistemas web autorizados e devolve a correção em código, pronta para copiar.
 
-## Arquitetura
+Um projeto reúne vários sistemas. Cada sistema é um alvo. O catálogo de ataques é o mesmo para todos; a remediação muda conforme a stack daquele sistema.
 
-Visão do monorepo, fluxo DAST e detalhes por pacote: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** (site: [Arquitetura](https://allancordova.github.io/shingeki/ARCHITECTURE/)).
-
-## Estrutura do repositório
-
-| Diretório | Descrição |
-|-----------|-----------|
-| [`apps/api/`](apps/api/) | Backend Laravel (REST, Sanctum, RabbitMQ, policies) |
-| [`apps/client/`](apps/client/) | Frontend Next.js (BFF, React Query, autenticação) |
-| [`workers/dast/`](workers/dast/) | Worker Go DAST (discovery, ataques, evidências) |
-| [`workers/sast/`](workers/sast/) | Worker Go SAST (clone + Semgrep) |
-
-## Documentação
-
-**[https://allancordova.github.io/shingeki/](https://allancordova.github.io/shingeki/)**
-
-Fonte canônica: **[`docs/`](docs/index.md)** (cada tópico tem um arquivo dono — [fontes de verdade](docs/index.md#fontes-de-verdade)). Como subir a stack: **[docs/RUN-PROJECT.md](docs/RUN-PROJECT.md)**.
+## Rodar
 
 ```bash
-docker compose up -d          # MySQL + RabbitMQ + api-consumers
-npm install                   # scripts da raiz (API + client juntos)
+docker compose up -d
+npm install
 npm run dev
 ```
 
-Workers (opcional): `docker compose --profile stack up -d --build`. Treino DAST sem Docker de alvo: [goldset](docs/architecture/shingeki-dast-goldset.md). Deploy do client, da API e dos workers: [docs/DEPLOY.md](docs/DEPLOY.md).
+O seed cria o projeto **Laboratório** com quatro alvos públicos de scanner: OWASP Juice Shop, Google Firing Range, Acunetix ASP.NET e Gin and Juice. Credenciais e o restante da stack: [docs/RUN-PROJECT.md](docs/RUN-PROJECT.md).
 
-| Tópico | Arquivo no repositório |
-|--------|-------------------------|
-| Arquitetura | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) |
-| Como rodar | [docs/RUN-PROJECT.md](docs/RUN-PROJECT.md) |
-| API REST | [docs/API.md](docs/API.md) |
-| Client web | [docs/WEB-DEVELOPMENT.md](docs/WEB-DEVELOPMENT.md) |
-| CI | [docs/ci/overview.md](docs/ci/overview.md) |
+## Documentação
 
-Preview local da documentação:
+A fonte canônica é [`docs/`](docs/index.md). O fluxo do operador e o desenho do monorepo estão em [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-```bash
-pip install -r requirements-docs.txt
-mkdocs serve
-```
-
-http://127.0.0.1:8001/shingeki/
+Site publicado: [allancordova.github.io/shingeki](https://allancordova.github.io/shingeki/).
 
 ## Licença
 
-Este projeto está licenciado sob a [MIT License](LICENSE).
+[MIT](LICENSE).

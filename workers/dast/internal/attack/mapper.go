@@ -160,42 +160,16 @@ func locationCompatible(vectorLocation, attackLocation string) bool {
 	return false
 }
 
-func ApplyAuth(jobs []types.Job, auth *contracts.TargetAuth) []types.Job {
+func ApplyAuth(jobs []types.Job, auth *contracts.TargetAuth, targetURL string) []types.Job {
 	if auth == nil {
 		return jobs
 	}
-	headers := contracts.EffectiveAuthHeaders(auth)
-	if len(auth.Cookies) == 0 {
-		return ApplyGlobalHeaders(jobs, headers)
-	}
-
-	global := make(map[string]string, len(headers))
-	for key, value := range headers {
-		if strings.EqualFold(key, "Cookie") {
-			continue
-		}
-		global[key] = value
-	}
-	jobs = ApplyGlobalHeaders(jobs, global)
-	fallbackCookie := ""
-	for key, value := range auth.Headers {
-		if strings.EqualFold(key, "Cookie") {
-			fallbackCookie = value
-			break
-		}
-	}
 	for i := range jobs {
-		cookie := contracts.CookieHeaderForURL(auth.Cookies, jobs[i].Vector.Route)
-		if cookie == "" {
-			cookie = fallbackCookie
-		}
-		if cookie == "" {
+		headers := contracts.HeadersForURL(auth, targetURL, jobs[i].Vector.Route)
+		if len(headers) == 0 {
 			continue
 		}
-		if jobs[i].Vector.Headers == nil {
-			jobs[i].Vector.Headers = map[string]string{}
-		}
-		jobs[i].Vector.Headers["Cookie"] = cookie
+		jobs[i].Vector.Headers = contracts.MergeHeaders(headers, jobs[i].Vector.Headers)
 	}
 	return jobs
 }

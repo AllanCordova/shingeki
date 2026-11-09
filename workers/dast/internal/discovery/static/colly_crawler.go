@@ -38,7 +38,6 @@ func (c *CollyCrawler) Discover(
 		seedURL = targetURL
 	}
 
-	authHeaders := contracts.EffectiveAuthHeaders(auth)
 	queue := bfs.NewQueue()
 	queue.Enqueue(seedURL, 0)
 	if auth != nil {
@@ -70,7 +69,7 @@ func (c *CollyCrawler) Discover(
 			continue
 		}
 
-		pageVectors, links, err := c.crawlPage(ctx, item.URL, authHeaders)
+		pageVectors, links, err := c.crawlPage(ctx, item.URL, contracts.HeadersForURL(auth, targetURL, item.URL))
 		if err != nil {
 			c.logger.Warn("static crawl failed", "url", item.URL, "error", err)
 			continue

@@ -113,6 +113,9 @@ export function DispatchesList({
                         </div>
                         <span className="text-xs text-muted-foreground">
                           {dispatch.attacks_count} ataque(s)
+                          {dispatch.route_map_count
+                            ? ` · ${dispatch.route_map_count} rota(s) do mapa`
+                            : ""}
                           {dispatch.findings_count !== null
                             ? ` · ${dispatch.findings_count} achado(s)`
                             : ""}

@@ -86,6 +86,7 @@ func (e *RestyEngine) ExecutePool(ctx context.Context, jobs []types.Job) []types
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 	cache := &baselineCache{values: map[string]baselineResult{}}
+	public := &publicRouteCache{values: map[string]bool{}}
 
 	for i, job := range jobs {
 		select {
@@ -99,7 +100,7 @@ func (e *RestyEngine) ExecutePool(ctx context.Context, jobs []types.Job) []types
 		go func(idx int, j types.Job) {
 			defer wg.Done()
 			defer func() { <-sem }()
-			results[idx] = e.executeJob(ctx, j, cache)
+			results[idx] = e.executeJob(ctx, j, cache, public)
 		}(i, job)
 	}
 
@@ -125,8 +126,36 @@ func (c *baselineCache) put(key string, result baselineResult) {
 	c.values[key] = result
 }
 
-func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *baselineCache) types.Response {
+type publicRouteCache struct {
+	mu     sync.Mutex
+	values map[string]bool
+}
+
+func (c *publicRouteCache) get(key string) (bool, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	got, ok := c.values[key]
+	return got, ok
+}
+
+func (c *publicRouteCache) put(key string, public bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.values[key] = public
+}
+
+func (e *RestyEngine) executeJob(ctx context.Context, job types.Job, cache *baselineCache, public *publicRouteCache) types.Response {
 	resp := types.Response{Job: job, PayloadUsed: job.Payload.Value}
+
+	if isJWTCategory(job.Attack.Category) {
+		open, err := e.routeIsPublic(ctx, job, public)
+		if err != nil {
+			e.logger.Warn("jwt public-route probe failed", "route", job.Vector.Route, "error", err)
+		} else if open {
+			resp.Skipped = true
+			return resp
+		}
+	}
 
 	baselineSpec, err := injectors.BuildBaseline(job)
 	if err != nil {
@@ -214,6 +243,28 @@ func (e *RestyEngine) send(ctx context.Context, spec injectors.RequestSpec) (int
 		limited = limited[:max]
 	}
 	return httpResp.StatusCode(), httputil.Truncate(string(limited), max), location, elapsed, nil
+}
+
+func (e *RestyEngine) routeIsPublic(ctx context.Context, job types.Job, cache *publicRouteCache) (bool, error) {
+	spec, err := injectors.BuildUnauthenticated(job)
+	if err != nil {
+		return false, err
+	}
+	key := spec.Method + "\n" + spec.URL
+	if known, ok := cache.get(key); ok {
+		return known, nil
+	}
+	status, _, _, _, err := e.send(ctx, spec)
+	if err != nil {
+		return false, err
+	}
+	open := status >= 200 && status < 300
+	cache.put(key, open)
+	return open, nil
+}
+
+func isJWTCategory(category string) bool {
+	return strings.Contains(strings.ToUpper(category), "JWT")
 }
 
 func baselineKey(spec injectors.RequestSpec) string {

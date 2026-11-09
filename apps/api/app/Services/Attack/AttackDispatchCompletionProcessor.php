@@ -69,14 +69,16 @@ class AttackDispatchCompletionProcessor
         }
 
         $failed = $status === 'failed';
+        $sessionExpired = $status === 'session_expired';
         $reason = null;
         if ($failed) {
             $reason = $error === '' ? 'Scan failed' : mb_substr($error, 0, 2000);
         }
 
         $dispatch->update([
-            'completed_at' => $failed ? null : now(),
+            'completed_at' => ($failed || $sessionExpired) ? null : now(),
             'failed_at' => $failed ? now() : null,
+            'session_expired_at' => $sessionExpired ? now() : null,
             'failure_reason' => $reason,
             'duration_ms' => (int) $durationMs,
             'findings_count' => (int) $findingsCount,

@@ -7,10 +7,11 @@ import (
 )
 
 var ErrScannerLogin = errors.New("scanner login failed")
+var ErrSessionExpired = errors.New("browser session expired")
 
 type TargetStorage struct {
-	Local   StringMap      `json:"local,omitempty"`
-	Session StringMap      `json:"session,omitempty"`
+	Local   StringMap       `json:"local,omitempty"`
+	Session StringMap       `json:"session,omitempty"`
 	Origins []OriginStorage `json:"origins,omitempty"`
 }
 
@@ -46,16 +47,21 @@ type CapturedRoute struct {
 }
 
 type TargetAuth struct {
-	Type               string            `json:"type"`
-	Headers            map[string]string `json:"headers"`
-	Storage            *TargetStorage    `json:"storage,omitempty"`
-	Cookies            []CapturedCookie  `json:"cookies,omitempty"`
-	UserAgent          string            `json:"user_agent,omitempty"`
-	Routes             []CapturedRoute   `json:"routes,omitempty"`
-	LoginURL           string            `json:"login_url,omitempty"`
-	Username           string            `json:"username,omitempty"`
-	Password           string            `json:"password,omitempty"`
-	LoggedInIndicator  string            `json:"logged_in_indicator,omitempty"`
+	Type              string                `json:"type"`
+	Headers           map[string]string     `json:"headers"`
+	Storage           *TargetStorage        `json:"storage,omitempty"`
+	Cookies           []CapturedCookie      `json:"cookies,omitempty"`
+	UserAgent         string                `json:"user_agent,omitempty"`
+	Routes            []CapturedRoute       `json:"routes,omitempty"`
+	LoginURL          string                `json:"login_url,omitempty"`
+	RegisterURL       string                `json:"register_url,omitempty"`
+	RegisterBody      map[string]any        `json:"register_body,omitempty"`
+	LoginBody         map[string]any        `json:"login_body,omitempty"`
+	Mode              string                `json:"mode,omitempty"`
+	Username          string                `json:"username,omitempty"`
+	Password          string                `json:"password,omitempty"`
+	LoggedInIndicator string                `json:"logged_in_indicator,omitempty"`
+	State             *BrowserStateEnvelope `json:"state,omitempty"`
 }
 
 func (auth *TargetAuth) HasCredentials() bool {
@@ -63,6 +69,13 @@ func (auth *TargetAuth) HasCredentials() bool {
 		return false
 	}
 	return strings.TrimSpace(auth.Username) != "" && strings.TrimSpace(auth.Password) != ""
+}
+
+func (auth *TargetAuth) WantsRegistration() bool {
+	if auth == nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(auth.Mode), "register")
 }
 
 func (auth *TargetAuth) HasSession() bool {
