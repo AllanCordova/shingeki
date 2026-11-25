@@ -58,7 +58,7 @@ func EvaluateDOMXSS(ctx context.Context, origin string) (bool, error) {
 	cfg.Discovery.RodHeadless = true
 	cfg.Discovery.RodNoSandbox = true
 	cfg.Discovery.ChromePath = FindChrome()
-	cfg.Discovery.BrowserLaunchTimeout = 20 * time.Second
+	cfg.Discovery.BrowserLaunchTimeout = 90 * time.Second
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	engine := attack.NewRestyEngine(cfg.Attack, logger)
 	validator := evidence.NewDOMXSSValidator(cfg.Discovery, logger)
