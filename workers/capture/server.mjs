@@ -12,6 +12,7 @@ const host = process.env.CAPTURE_SERVICE_HOST?.trim() || "0.0.0.0";
 const script = path.join(path.dirname(fileURLToPath(import.meta.url)), "capture.mjs");
 
 let child = null;
+let activeCaptureId = null;
 let vncProcess = null;
 let sessionGeneration = 0;
 
@@ -107,8 +108,27 @@ function authorized(request) {
   return token !== "" && request.headers.authorization === `Bearer ${token}`;
 }
 
+function requestPath(url) {
+  try {
+    return new URL(url, "http://127.0.0.1").pathname;
+  } catch {
+    return url.split("?")[0] ?? url;
+  }
+}
+
 const server = createServer((request, response) => {
-  if (request.method !== "POST" || request.url !== "/sessions") {
+  const pathname = requestPath(request.url ?? "/");
+
+  if (request.method === "GET" && pathname === "/health") {
+    send(response, 200, {
+      ok: true,
+      busy: child !== null,
+      active_capture_id: activeCaptureId,
+    });
+    return;
+  }
+
+  if (request.method !== "POST" || pathname !== "/sessions") {
     send(response, 404, { message: "Not found." });
     return;
   }
@@ -120,6 +140,7 @@ const server = createServer((request, response) => {
     sessionGeneration += 1;
     const previous = child;
     child = null;
+    activeCaptureId = null;
     previous.kill("SIGTERM");
   }
 
@@ -143,6 +164,8 @@ const server = createServer((request, response) => {
     const completeUrl =
       typeof payload.complete_url === "string" ? payload.complete_url.trim() : "";
     const vncPassword = typeof payload.vnc_password === "string" ? payload.vnc_password.trim() : "";
+    const captureId =
+      typeof payload.capture_id === "string" ? payload.capture_id.trim() : "";
     if (!loginUrl || !completeUrl || !/^[A-Za-z0-9]{16,64}$/.test(vncPassword)) {
       send(response, 422, { message: "login_url, complete_url, and vnc_password are required." });
       return;
@@ -154,19 +177,21 @@ const server = createServer((request, response) => {
     }
 
     const generation = sessionGeneration;
-    child = spawn(
-      process.execPath,
-      [script, "--login-url", loginUrl, "--complete-url", completeUrl],
-      {
-        env: { ...process.env, DISPLAY: process.env.DISPLAY || ":99" },
-        stdio: "inherit",
-      },
-    );
+    const args = [script, "--login-url", loginUrl, "--complete-url", completeUrl];
+    if (captureId) {
+      args.push("--capture-id", captureId);
+    }
+    activeCaptureId = captureId || null;
+    child = spawn(process.execPath, args, {
+      env: { ...process.env, DISPLAY: process.env.DISPLAY || ":99" },
+      stdio: "inherit",
+    });
     child.on("exit", () => {
       if (generation !== sessionGeneration) {
         return;
       }
       child = null;
+      activeCaptureId = null;
       void armVnc(randomBytes(16).toString("hex"));
     });
     send(response, 202, { message: "Capture browser started." });

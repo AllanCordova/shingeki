@@ -11,6 +11,7 @@ class AttackResultsMessageHandler
     public function __construct(
         private readonly AttackResultProcessor $resultProcessor,
         private readonly AttackProbeProcessor $probeProcessor,
+        private readonly AttackDispatchProgressProcessor $progressProcessor,
         private readonly AttackDispatchCompletionProcessor $completionProcessor,
     ) {}
 
@@ -24,6 +25,10 @@ class AttackResultsMessageHandler
 
         if ($event === AttackDispatchCompletionProcessor::EVENT) {
             return $this->completionProcessor->process($payload);
+        }
+
+        if ($event === AttackDispatchProgressProcessor::EVENT) {
+            return $this->progressProcessor->process($payload);
         }
 
         if ($event === AttackProbeProcessor::EVENT) {

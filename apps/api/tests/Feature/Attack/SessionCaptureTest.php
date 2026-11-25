@@ -99,7 +99,10 @@ test('encrypts captured browser state before saving or queueing it', function ()
         'cookies' => [['name' => 'session_id', 'value' => $secret]],
     ])->assertStatus(410);
 
-    expect(BrowserCaptureSession::query()->where('attack_dispatch_id', $dispatch->id)->count())->toBe(1);
+    $capture = BrowserCaptureSession::query()->where('attack_dispatch_id', $dispatch->id)->first();
+    expect($capture)->not->toBeNull()
+        ->and($capture->events()->where('event', 'created')->count())->toBe(1)
+        ->and($capture->events()->where('event', 'completed')->count())->toBe(1);
 });
 
 test('rejects an empty captured session and a reused capture stays pending', function () {
@@ -159,12 +162,18 @@ test('remote capture opens the system url and ignores a stored login page', func
 
     expect($sent['vnc_password'] ?? null)->toBeString()->and(strlen($sent['vnc_password']))->toBe(16)
         ->and($sent['login_url'] ?? null)->toBe('https://alvo.example')
+        ->and($sent['capture_id'] ?? null)->toBe($created->json('capture.id'))
         ->and($sent['complete_url'] ?? null)->toBe(
             'http://host.containers.internal:8000/api/session-captures/'.$created->json('token').'/complete',
         )
         ->and($opened->json('novnc_url'))->toBe(
             'http://127.0.0.1:6080/vnc.html?autoconnect=1&resize=scale&password='.$sent['vnc_password'],
         );
+
+    $session = BrowserCaptureSession::query()->findOrFail($created->json('capture.id'));
+    expect($session->browser_opened_at)->not->toBeNull()
+        ->and($session->source)->toBe('remote_browser')
+        ->and($session->events()->where('event', 'browser_opened')->count())->toBe(1);
 
     $system->update(['login_url' => 'http://rabbitmq:15672']);
 
@@ -181,6 +190,40 @@ test('remote capture opens the system url and ignores a stored login page', func
     )->assertOk();
 
     expect($sentAgain['login_url'] ?? null)->toBe('https://alvo.example');
+});
+
+test('imports pasted cookies or bearer token without opening the remote browser', function () {
+    $admin = User::factory()->admin()->create(['email' => 'admin@admin.com']);
+    $attack = Attack::factory()->for($admin)->create();
+    $user = User::factory()->create();
+    $project = Project::factory()->for($user)->create();
+    $system = System::factory()->for($project)->create([
+        'target_url' => 'https://alvo.example',
+    ]);
+
+    Sanctum::actingAs($user);
+
+    $created = $this->postJson(sessionCaptureUrl($project, $system), sessionCapturePayload($attack->id))
+        ->assertCreated();
+
+    $this->mock(AttackQueuePublisher::class)
+        ->shouldReceive('publishDispatchBatch')
+        ->once();
+
+    $this->postJson(
+        sessionCaptureUrl($project, $system).'/'.$created->json('capture.id').'/import',
+        [
+            'token' => $created->json('token'),
+            'cookies' => 'session_id=abc123; other=value',
+            'authorization' => 'Bearer header.payload.signature',
+        ],
+    )->assertAccepted();
+
+    $capture = BrowserCaptureSession::query()->findOrFail($created->json('capture.id'));
+    expect($capture->status())->toBe('completed')
+        ->and($capture->source)->toBe('manual_import')
+        ->and($capture->events()->where('event', 'imported')->count())->toBe(1)
+        ->and(AttackDispatch::query()->where('system_id', $system->id)->count())->toBe(1);
 });
 
 test('browser state ciphertext does not contain the plaintext secret', function () {

@@ -31,6 +31,8 @@ import {
   type LogSearchFilterValues,
 } from "@/components/results/log-search-filters";
 import { RemediationPanel } from "@/components/remediation/remediation-panel";
+import { CatalogCoverageNote } from "@/components/attack/catalog-coverage-note";
+import { ScanActivity } from "@/components/results/scan-activity";
 import { ScanCoveragePanel } from "@/components/results/scan-coverage-panel";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
@@ -146,7 +148,11 @@ export default function ResultsDetailPage() {
     probes,
     isPending,
     scanType: dispatch?.scan_type,
-    probesCount: dispatch?.probes_count,
+    probesCount:
+      dispatch?.probes_count ??
+      probesPagination?.total ??
+      probeCounts?.all ??
+      null,
     jobsPlanned: dispatch?.jobs_planned,
     vectorsDiscovered: dispatch?.vectors_discovered,
     filter: probeFilter,
@@ -201,6 +207,16 @@ export default function ResultsDetailPage() {
                 {dispatchStatusLabel(dispatch?.status ?? "pending")}
               </Badge>
             </div>
+            {dispatch?.scan_type !== "SAST" ? <CatalogCoverageNote /> : null}
+            {isPending ? (
+              <ScanActivity
+                description={
+                  coverageSummary
+                    ? `${coverageSummary}. Os achados aparecem aqui conforme os testes terminam.`
+                    : "O worker está percorrendo o alvo. Os achados aparecem aqui conforme os testes terminam."
+                }
+              />
+            ) : null}
             <p className="text-sm text-muted-foreground">
               {dispatch?.attacks_count} ataque(s)
               {dispatch?.findings_count !== null &&

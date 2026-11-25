@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { DispatchOutcomeChart } from "@/components/results/dispatch-outcome-chart";
+import { ScanActivity } from "@/components/results/scan-activity";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import { useDispatches } from "@/lib/hooks/results/use-results";
 import { formatDate } from "@/lib/utils";
@@ -80,10 +81,7 @@ export default function DispatchChartPage() {
           </div>
 
           {isPending ? (
-            <p className="rounded-app border border-border bg-warning-surface px-3 py-2 text-sm text-foreground">
-              O disparo ainda esta em andamento. Os numeros podem mudar conforme novos
-              testes forem concluidos.
-            </p>
+            <ScanActivity description="O disparo ainda está em andamento. Os números mudam conforme os testes terminam." />
           ) : null}
 
           <Card className="w-full">

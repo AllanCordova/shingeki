@@ -30,10 +30,13 @@ func ApplyDepth(base config.DiscoveryConfig, depth string) config.DiscoveryConfi
 
 func CapVectors(vectors []contracts.AttackVector, opts Options) []contracts.AttackVector {
 	limit := 0
-	if opts.HasMaxRoutes() {
+	switch {
+	case opts.HasMaxRoutes():
 		limit = opts.MaxRoutes
-	} else if normalizeDepth(opts.Depth) == contracts.DepthQuick {
+	case normalizeDepth(opts.Depth) == contracts.DepthQuick:
 		limit = quickMaxVectors
+	default:
+		limit = opts.MaxVectors
 	}
 	if limit <= 0 || len(vectors) <= limit {
 		return vectors

@@ -34,11 +34,19 @@ var browserDOMPayloads = []string{
 
 func MapVectorsToJobs(vectors []contracts.AttackVector, attacks []contracts.AttackItem) []types.Job {
 	var jobs []types.Job
+	rest := make([]contracts.AttackItem, 0, len(attacks))
+	for _, attackItem := range attacks {
+		if strings.EqualFold(strings.TrimSpace(attackItem.Category), "SECRET_LEAK") {
+			continue
+		}
+		if strings.EqualFold(strings.TrimSpace(attackItem.TargetLocation), "HEADER") {
+			jobs = append(jobs, headerJobs(attackItem, vectors)...)
+			continue
+		}
+		rest = append(rest, attackItem)
+	}
 	for _, vector := range vectors {
-		for _, attackItem := range attacks {
-			if strings.EqualFold(strings.TrimSpace(attackItem.Category), "SECRET_LEAK") {
-				continue
-			}
+		for _, attackItem := range rest {
 			if isXSSQuery(attackItem) {
 				jobs = append(jobs, browserDOMJobs(attackItem, vector)...)
 			}
@@ -117,6 +125,37 @@ func CapJobs(jobs []types.Job, max int) []types.Job {
 	take(true)
 	take(false)
 	return out
+}
+
+func headerJobs(attackItem contracts.AttackItem, vectors []contracts.AttackVector) []types.Job {
+	spec, err := parsePayload(attackItem.Payload)
+	if err != nil {
+		return nil
+	}
+	variants := payloadVariants(spec)
+	seen := map[string]struct{}{}
+	routes := make([]contracts.AttackVector, 0, len(vectors))
+	for _, vector := range vectors {
+		key := vector.Method + "\x00" + vector.Route
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		routes = append(routes, vector)
+	}
+
+	jobs := make([]types.Job, 0, len(routes)*len(variants))
+	for _, variant := range variants {
+		for _, vector := range routes {
+			jobs = append(jobs, types.Job{
+				Attack:   attackItem,
+				Vector:   vector,
+				ParamKey: variant.Field,
+				Payload:  variant,
+			})
+		}
+	}
+	return jobs
 }
 
 func jobQuota(job types.Job) int {

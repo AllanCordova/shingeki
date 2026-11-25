@@ -6,17 +6,23 @@ const { values } = parseArgs({
   options: {
     "login-url": { type: "string" },
     "complete-url": { type: "string" },
+    "capture-id": { type: "string" },
   },
 });
 
 const loginUrl = values["login-url"]?.trim() ?? "";
 const completeUrl = values["complete-url"]?.trim() ?? "";
+const captureId = values["capture-id"]?.trim() ?? "";
 
 if (!loginUrl || !completeUrl) {
   console.error(
-    "Uso: node capture.mjs --login-url URL --complete-url URL",
+    "Uso: node capture.mjs --login-url URL --complete-url URL [--capture-id UUID]",
   );
   process.exit(1);
+}
+
+if (captureId) {
+  console.log(`capture_id=${captureId}`);
 }
 
 const buttonScript = () => {
@@ -113,6 +119,28 @@ async function collectState(context) {
 const browser = await chromium.launch({ headless: false });
 const context = await browser.newContext();
 
+const visitedUrls = [];
+const seenUrls = new Set();
+const rememberUrl = (url) => {
+  if (typeof url !== "string") {
+    return;
+  }
+  const trimmed = url.trim();
+  if (
+    trimmed === "" ||
+    trimmed === "about:blank" ||
+    trimmed.startsWith("devtools:") ||
+    seenUrls.has(trimmed)
+  ) {
+    return;
+  }
+  seenUrls.add(trimmed);
+  visitedUrls.push(trimmed);
+  if (captureId) {
+    console.log(`navigated capture_id=${captureId} url=${trimmed}`);
+  }
+};
+
 let finish;
 const done = new Promise((resolve) => {
   finish = resolve;
@@ -124,12 +152,20 @@ await context.exposeBinding("__shingekiLoginDone", async () => {
 await context.addInitScript(buttonScript);
 
 const page = await context.newPage();
+page.on("framenavigated", (frame) => {
+  if (frame === page.mainFrame()) {
+    rememberUrl(frame.url());
+  }
+});
 await page.goto(loginUrl, { waitUntil: "domcontentloaded" });
+rememberUrl(page.url());
 
 console.log("Entre no alvo e clique em Login concluído — iniciar scan.");
 await done;
 
 const state = await collectState(context);
+state.visited_urls = visitedUrls;
+
 let response;
 try {
   response = await fetch(completeUrl, {

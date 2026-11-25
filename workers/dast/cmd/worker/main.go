@@ -51,7 +51,11 @@ func main() {
 	}()
 
 	consumer := queue.NewConsumer(cfg.RabbitMQ, func(jobCtx context.Context, batch contracts.DispatchBatch) error {
-		runCtx, cancel := context.WithTimeout(jobCtx, cfg.Worker.JobTimeout)
+		limit := cfg.Worker.JobTimeout
+		if cfg.Worker.ScanBudget > 0 && cfg.Worker.ScanBudget < limit {
+			limit = cfg.Worker.ScanBudget
+		}
+		runCtx, cancel := context.WithTimeout(jobCtx, limit)
 		defer cancel()
 		return pipeline.Run(runCtx, batch)
 	}, logger, cancels)

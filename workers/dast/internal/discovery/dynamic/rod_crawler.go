@@ -2,6 +2,7 @@ package dynamic
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -144,13 +145,7 @@ func (r *RodCrawler) Discover(
 		}
 	}
 
-	clicked := make(map[string]struct{})
-	submitted := make(map[string]struct{})
-	pagesVisited := 0
-	clicks := 0
-	formSubmits := 0
 	hasSession := hasSessionAuth(auth)
-
 	maxPages := r.cfg.MaxPages
 	if maxPages <= 0 {
 		maxPages = 50
@@ -163,177 +158,67 @@ func (r *RodCrawler) Discover(
 	if maxForms <= 0 {
 		maxForms = 8
 	}
-	const maxClicksPerPage = 4
+	workers := r.cfg.PageConcurrency
+	if workers < 1 {
+		workers = 1
+	}
+	r.logger.Info("dynamic discovery pages", "concurrency", workers)
 
-	for {
-		if err := exploreCtx.Err(); err != nil {
+	state := newExploreState(queue)
+	pages := []*rod.Page{page}
+	headerPairs := extraHeaderPairs(authHeaders)
+	for len(pages) < workers {
+		extra, pageErr := browser.Context(exploreCtx).Page(proto.TargetCreateTarget{URL: "about:blank"})
+		if pageErr != nil {
+			r.logger.Warn("extra discovery page unavailable", "error", pageErr)
 			break
 		}
-		if pagesVisited >= maxPages {
+		defer extra.Close()
+		if err := applyStealth(extra, userAgent); err != nil {
+			r.logger.Warn("stealth profile incomplete", "error", err)
+		}
+		if err := (proto.NetworkEnable{}).Call(extra); err != nil {
+			r.logger.Warn("enable network domain failed", "error", err)
 			break
 		}
-
-		item, ok := queue.Dequeue()
-		if !ok {
-			break
-		}
-		if item.Depth > r.cfg.MaxDepth {
-			continue
-		}
-
-		if err := r.openPage(exploreCtx, page, item.URL); err != nil {
-			if exploreCtx.Err() != nil {
-				break
+		go extra.EachEvent(func(e *proto.NetworkRequestWillBeSent) {
+			if e == nil || e.Request == nil {
+				return
 			}
-			r.logger.Warn("navigate failed", "url", item.URL, "error", err)
-			continue
-		}
-		r.settle(exploreCtx)
-
-		currentURL := pageURL(page)
-		if currentURL == "" {
-			continue
-		}
-		if looksLikeLoginURL(currentURL) && hasSession {
-			r.logger.Warn("page looks like login; scanner session may have been rejected",
-				"seed", item.URL,
-				"landed", currentURL,
-			)
-			record(contracts.NewAttackVector(currentURL, "GET", "URL_PATH"))
-			continue
-		}
-		if !bfs.IsAttackableDiscoveryURL(targetURL, currentURL) {
-			continue
-		}
-
-		pagesVisited++
-		record(contracts.NewAttackVector(currentURL, "GET", "URL_PATH"))
-		if vector, ok := queryVectorFromPageURL(currentURL); ok {
-			record(vector)
-		}
-
-		for _, link := range r.collectLinks(exploreCtx, page, currentURL) {
-			if bfs.IsAttackableDiscoveryURL(targetURL, link) {
-				queue.Enqueue(link, item.Depth+1)
-				if vector, ok := queryVectorFromPageURL(link); ok {
-					record(vector)
-				}
+			contentType := headerFromNetwork(e.Request.Headers, "Content-Type")
+			vector, ok := networkVector(targetURL, e.Request.Method, e.Request.URL, contentType, e.Request.PostData)
+			if ok {
+				record(vector)
+			}
+		})()
+		if len(headerPairs) > 0 {
+			if _, err := extra.SetExtraHeaders(headerPairs); err != nil {
+				r.logger.Warn("extra discovery headers incomplete", "error", err)
 			}
 		}
-
-		forms, err := r.collectForms(exploreCtx, page)
-		if err != nil {
-			r.logger.Warn("collect forms failed", "url", currentURL, "error", err)
-		} else {
-			for _, form := range forms {
-				if vector, ok := vectorFromForm(currentURL, form); ok {
-					record(vector)
-				}
-			}
-		}
-
-		candidates, err := r.collectClickables(exploreCtx, page, currentURL)
-		if err != nil {
-			r.logger.Warn("collect clickables failed", "url", currentURL, "error", err)
-		} else {
-			pageClicks := 0
-			for _, candidate := range candidates {
-				if exploreCtx.Err() != nil || clicks >= maxClicks || pageClicks >= maxClicksPerPage {
-					break
-				}
-				if _, done := clicked[candidate.Key]; done {
-					continue
-				}
-				clicked[candidate.Key] = struct{}{}
-				clicks++
-				pageClicks++
-
-				if href := strings.TrimSpace(candidate.Href); href != "" && !hasPrefixFold(href, "#") {
-					if resolved, ok := bfs.ResolveReference(currentURL, href); ok {
-						if bfs.IsAttackableDiscoveryURL(targetURL, resolved) {
-							queue.Enqueue(resolved, item.Depth+1)
-						}
-					}
-				}
-
-				if err := r.clickCandidate(exploreCtx, page, candidate); err != nil {
-					r.logger.Warn("click failed", "text", candidate.Text, "href", candidate.Href, "error", err)
-					if exploreCtx.Err() != nil {
-						break
-					}
-					_ = r.openPage(exploreCtx, page, currentURL)
-					r.settle(exploreCtx)
-					continue
-				}
-				r.settle(exploreCtx)
-
-				afterURL := pageURL(page)
-				if afterURL == "" {
-					continue
-				}
-				if looksLikeLoginURL(afterURL) && hasSession {
-					r.logger.Warn("click reached login page; returning to previous page",
-						"from", currentURL,
-						"to", afterURL,
-					)
-					record(contracts.NewAttackVector(afterURL, "GET", "URL_PATH"))
-					if err := r.openPage(exploreCtx, page, currentURL); err != nil && exploreCtx.Err() != nil {
-						break
-					}
-					r.settle(exploreCtx)
-					continue
-				}
-				if bfs.IsAttackableDiscoveryURL(targetURL, afterURL) {
-					queue.Enqueue(afterURL, item.Depth+1)
-				}
-				if afterURL != currentURL {
-					if err := r.openPage(exploreCtx, page, currentURL); err != nil && exploreCtx.Err() != nil {
-						break
-					}
-					r.settle(exploreCtx)
-				}
-			}
-		}
-
-		forms, err = r.collectForms(exploreCtx, page)
-		if err != nil {
-			r.logger.Warn("collect forms failed", "url", currentURL, "error", err)
-			continue
-		}
-		for _, form := range forms {
-			if exploreCtx.Err() != nil || formSubmits >= maxForms {
-				break
-			}
-			key := formKey(form)
-			if _, done := submitted[key]; done {
-				continue
-			}
-			if shouldSkipForm(form, hasSession) {
-				continue
-			}
-			submitted[key] = struct{}{}
-			formSubmits++
-			if err := r.submitForm(exploreCtx, page, form); err != nil {
-				r.logger.Warn("form submit failed", "action", form.Action, "error", err)
-				if exploreCtx.Err() != nil {
-					break
-				}
-			}
-			r.settle(exploreCtx)
-			afterURL := pageURL(page)
-			if afterURL != "" && bfs.IsAttackableDiscoveryURL(targetURL, afterURL) {
-				queue.Enqueue(afterURL, item.Depth+1)
-			}
-			if afterURL != currentURL {
-				if err := r.openPage(exploreCtx, page, currentURL); err != nil && exploreCtx.Err() != nil {
-					break
-				}
-				r.settle(exploreCtx)
-			}
-		}
+		pages = append(pages, extra)
 	}
 
+	var wg sync.WaitGroup
+	for _, workerPage := range pages {
+		wg.Add(1)
+		go func(workerPage *rod.Page) {
+			defer wg.Done()
+			r.exploreWorker(exploreCtx, workerPage, targetURL, hasSession, state, record, maxPages, maxClicks, maxForms)
+		}(workerPage)
+	}
+	wg.Wait()
+	pagesVisited, clicks := state.counts()
+
 	if err := ctx.Err(); err != nil {
+		if errors.Is(context.Cause(ctx), contracts.ErrDispatchCancelled) {
+			r.logger.Warn("dynamic discovery aborted", "error", err, "pages", pagesVisited, "target", targetURL)
+			return nil, err
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			r.logger.Info("dynamic discovery stopped at the time budget", "pages", pagesVisited, "target", targetURL)
+			return finalizeVectors(vectors, &mu, r, seedURL, targetURL, pagesVisited, clicks), nil
+		}
 		r.logger.Warn("dynamic discovery aborted", "error", err, "pages", pagesVisited, "target", targetURL)
 		return nil, err
 	}

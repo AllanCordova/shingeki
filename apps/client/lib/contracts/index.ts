@@ -23,3 +23,5 @@ export * from "./results/dispatch-compare";
 export * from "./remediation/remediation-history";
 export * from "./navigation/sidebar-navigation";
 export * from "./admin/admin-user";
+export * from "./admin/admin-browser-capture";
+export * from "./admin/admin-ops";

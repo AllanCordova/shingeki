@@ -78,6 +78,14 @@ describe('POST /api/auth/register', function () {
             ->assertJsonValidationErrors(['email']);
     });
 
+    test('rejects disposable email domains', function () {
+        $this->postJson(AUTH_REGISTER, validRegisterPayload([
+            'email' => 'chaos@mailinator.com',
+        ]))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
+    });
+
     test('rejects invalid payload', function (array $payload, array $errors) {
         $this->postJson(AUTH_REGISTER, $payload)
             ->assertUnprocessable()

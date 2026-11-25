@@ -208,6 +208,68 @@ func TestCapJobsRoundRobinKeepsLateVectors(t *testing.T) {
 	}
 }
 
+func TestHeaderAttackRunsOncePerRoute(t *testing.T) {
+	vectors := []contracts.AttackVector{
+		{
+			Route:          "https://example.com/search",
+			Method:         "GET",
+			TargetLocation: "QUERY_PARAMETER",
+			Params:         map[string]string{"q": "", "page": "1"},
+		},
+		{
+			Route:          "https://example.com/search",
+			Method:         "GET",
+			TargetLocation: "URL_PATH",
+		},
+		{
+			Route:          "https://example.com/login",
+			Method:         "POST",
+			TargetLocation: "FORM",
+			Params:         map[string]string{"email": "", "password": ""},
+		},
+	}
+	attacks := []contracts.AttackItem{
+		{
+			AttackID:       "ssrf",
+			Category:       "SSRF",
+			TargetLocation: "HEADER",
+			Payload:        json.RawMessage(`{"value":"http://127.0.0.1/","values":["http://127.0.0.1/","http://localhost/"]}`),
+		},
+		{
+			AttackID:       "csrf",
+			Category:       "CSRF",
+			TargetLocation: "HEADER",
+			Payload:        json.RawMessage(`{"field":"Origin","value":"https://evil.invalid"}`),
+		},
+	}
+
+	jobs := attack.MapVectorsToJobs(vectors, attacks)
+	ssrf := 0
+	csrf := 0
+	for _, job := range jobs {
+		switch job.Attack.AttackID {
+		case "ssrf":
+			ssrf++
+			if job.ParamKey != "" {
+				t.Fatalf("ssrf header job should not expand parameters, got %q", job.ParamKey)
+			}
+		case "csrf":
+			csrf++
+			if job.ParamKey != "Origin" {
+				t.Fatalf("csrf header param=%q", job.ParamKey)
+			}
+		default:
+			t.Fatalf("unexpected attack %s", job.Attack.AttackID)
+		}
+	}
+	if ssrf != 4 {
+		t.Fatalf("expected 2 routes x 2 ssrf payloads, got %d", ssrf)
+	}
+	if csrf != 2 {
+		t.Fatalf("expected 2 csrf jobs, got %d", csrf)
+	}
+}
+
 func TestMapVectorsToJobsSkipsSecretLeak(t *testing.T) {
 	vectors := []contracts.AttackVector{
 		{

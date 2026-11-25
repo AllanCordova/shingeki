@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/shingeki/dast-worker/internal/attack/types"
 	"github.com/shingeki/dast-worker/internal/contracts"
@@ -44,6 +45,7 @@ func (s stubAttack) ExecutePool(_ context.Context, _ []types.Job) []types.Respon
 type stubPublisher struct {
 	probes      []contracts.ProbeMessage
 	results     []contracts.ResultMessage
+	progress    []contracts.DispatchProgressMessage
 	completions []contracts.DispatchCompletionMessage
 }
 
@@ -54,6 +56,11 @@ func (s *stubPublisher) PublishProbe(_ context.Context, probe contracts.ProbeMes
 
 func (s *stubPublisher) PublishResult(_ context.Context, result contracts.ResultMessage) error {
 	s.results = append(s.results, result)
+	return nil
+}
+
+func (s *stubPublisher) PublishProgress(_ context.Context, progress contracts.DispatchProgressMessage) error {
+	s.progress = append(s.progress, progress)
 	return nil
 }
 
@@ -409,6 +416,153 @@ func TestPipelineControlUnauthorizedExpiresSession(t *testing.T) {
 	}
 	if publisher.completions[0].Status != contracts.CompletionStatusSessionExpired {
 		t.Fatalf("status=%s", publisher.completions[0].Status)
+	}
+}
+
+func TestPipelinePublishesBatchesWithoutSession(t *testing.T) {
+	publisher := &stubPublisher{}
+	attackEngine := &batchAttack{}
+	pipeline := newTestPipeline(
+		stubDiscovery{vectors: []contracts.AttackVector{contracts.NewAttackVector("https://target.example/", "GET", "URL_PATH")}},
+		stubAttack{},
+		noFinding{},
+		publisher,
+	)
+	pipeline.attack = attackEngine
+	pipeline.sessionBatch = 1
+
+	if err := pipeline.Run(context.Background(), testBatch()); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if attackEngine.calls != 2 {
+		t.Fatalf("expected a publish between batches, calls=%d", attackEngine.calls)
+	}
+	if len(publisher.probes) != 2 {
+		t.Fatalf("probes=%d", len(publisher.probes))
+	}
+	if len(publisher.progress) != 1 || publisher.progress[0].JobsPlanned != 2 || publisher.progress[0].VectorsDiscovered != 1 {
+		t.Fatalf("progress=%+v", publisher.progress)
+	}
+}
+
+type selectiveFinding struct{}
+
+func (selectiveFinding) Analyze(_ context.Context, response types.Response) *evidence.Finding {
+	if response.PayloadUsed != "first" {
+		return nil
+	}
+	return &evidence.Finding{
+		AttackID:        response.Job.Attack.AttackID,
+		VulnerableRoute: response.Job.Vector.Route,
+		PayloadUsed:     response.PayloadUsed,
+		Evidence:        "confirmed",
+	}
+}
+
+func TestPipelineStopsPayloadsAfterConfirmedCategory(t *testing.T) {
+	publisher := &stubPublisher{}
+	attackEngine := &confirmAttack{}
+	pipeline := newTestPipeline(
+		stubDiscovery{vectors: []contracts.AttackVector{contracts.NewAttackVector("https://target.example/search", "GET", "QUERY_PARAMETER")}},
+		stubAttack{},
+		selectiveFinding{},
+		publisher,
+	)
+	pipeline.attack = attackEngine
+	pipeline.sessionBatch = 1
+
+	if err := pipeline.Run(context.Background(), testBatch()); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if attackEngine.calls != 1 {
+		t.Fatalf("confirmed category should skip the next payload, calls=%d", attackEngine.calls)
+	}
+	if len(publisher.probes) != 1 || publisher.probes[0].PayloadUsed != "first" {
+		t.Fatalf("probes=%+v", publisher.probes)
+	}
+}
+
+type confirmAttack struct {
+	calls int
+}
+
+func (c *confirmAttack) MapVectorsToJobs(_ []contracts.AttackVector, _ []contracts.AttackItem) []types.Job {
+	job := func(payload string) types.Job {
+		return types.Job{
+			Attack:   contracts.AttackItem{AttackID: "atk-1", Category: "SQL_INJECTION"},
+			Vector:   contracts.AttackVector{Route: "https://target.example/search?q="},
+			ParamKey: "q",
+			Payload:  types.PayloadSpec{Value: payload},
+		}
+	}
+	return []types.Job{job("first"), job("second")}
+}
+
+func (c *confirmAttack) ExecutePool(_ context.Context, jobs []types.Job) []types.Response {
+	c.calls++
+	if c.calls > 1 {
+		return []types.Response{{
+			Job:         jobs[0],
+			PayloadUsed: jobs[0].Payload.Value,
+		}}
+	}
+	out := make([]types.Response, len(jobs))
+	for i, job := range jobs {
+		out[i] = types.Response{Job: job, AttackStatus: 200, PayloadUsed: job.Payload.Value}
+	}
+	return out
+}
+
+func TestDiscoveryContextReservesAttackTime(t *testing.T) {
+	now := time.Now()
+	parent, cancel := context.WithDeadline(context.Background(), now.Add(5*time.Minute))
+	defer cancel()
+
+	child, stop := discoveryContext(parent, now)
+	defer stop()
+
+	deadline, ok := child.Deadline()
+	if !ok {
+		t.Fatal("expected a discovery deadline")
+	}
+	got := deadline.Sub(now)
+	if got < 90*time.Second || got > 150*time.Second {
+		t.Fatalf("discovery slice = %s, want about 2m of a 5m budget", got)
+	}
+}
+
+func TestLongJobTimeoutDoesNotShortenDiscovery(t *testing.T) {
+	now := time.Now()
+	parent, cancel := context.WithDeadline(context.Background(), now.Add(3*time.Hour))
+	defer cancel()
+
+	child, stop := discoveryContext(parent, now)
+	defer stop()
+	if child != parent {
+		t.Fatal("a local full scan should keep the whole discovery window")
+	}
+}
+
+func TestPipelineBudgetCompletesInsteadOfFailing(t *testing.T) {
+	publisher := &stubPublisher{}
+	pipeline := newTestPipeline(
+		stubDiscovery{vectors: []contracts.AttackVector{contracts.NewAttackVector("https://target.example/", "GET", "URL_PATH")}},
+		stubAttack{jobs: []types.Job{{
+			Attack:  contracts.AttackItem{AttackID: "atk-1", Category: "XSS"},
+			Vector:  contracts.AttackVector{Route: "https://target.example/"},
+			Payload: types.PayloadSpec{Value: "x"},
+		}}},
+		noFinding{},
+		publisher,
+	)
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Millisecond))
+	defer cancel()
+
+	if err := pipeline.Run(ctx, testBatch()); err != nil {
+		t.Fatalf("budget should finish the scan: %v", err)
+	}
+	if len(publisher.completions) != 1 || publisher.completions[0].Status != contracts.CompletionStatusCompleted {
+		t.Fatalf("completion=%+v", publisher.completions)
 	}
 }
 

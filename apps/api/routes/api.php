@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminBrowserCaptureController;
+use App\Http\Controllers\Admin\AdminOpsController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Attack\AttackAcknowledgmentController;
 use App\Http\Controllers\Attack\AttackController;
@@ -63,6 +65,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('users', [AdminUserController::class, 'index']);
         Route::put('users/{user}', [AdminUserController::class, 'update']);
         Route::delete('users/{user}', [AdminUserController::class, 'destroy']);
+
+        Route::get('browser-captures/export', [AdminBrowserCaptureController::class, 'export']);
+        Route::get('browser-captures', [AdminBrowserCaptureController::class, 'index']);
+        Route::get('browser-captures/{capture}', [AdminBrowserCaptureController::class, 'show']);
+
+        Route::get('ops/status', [AdminOpsController::class, 'status']);
     });
 
     Route::middleware('role:ADMIN,SPECIALIST')->prefix('catalog')->group(function () {
@@ -96,6 +104,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/systems/{system}/attacks/session-captures', [SessionCaptureController::class, 'store']);
     Route::get('projects/{project}/systems/{system}/attacks/session-captures/{capture}', [SessionCaptureController::class, 'show']);
     Route::post('projects/{project}/systems/{system}/attacks/session-captures/{capture}/browser', [SessionCaptureController::class, 'browser']);
+    Route::post('projects/{project}/systems/{system}/attacks/session-captures/{capture}/import', [SessionCaptureController::class, 'import']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch', [AttackController::class, 'dispatch']);
     Route::post('projects/{project}/systems/{system}/attacks/dispatch/sast', [AttackController::class, 'dispatchSast']);
     Route::post('projects/{project}/systems/{system}/remediate', [RemediationController::class, 'remediate']);

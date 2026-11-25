@@ -24,6 +24,7 @@ const publishTimeout = 10 * time.Second
 type resultPublisher interface {
 	PublishProbe(ctx context.Context, probe contracts.ProbeMessage) error
 	PublishResult(ctx context.Context, result contracts.ResultMessage) error
+	PublishProgress(ctx context.Context, progress contracts.DispatchProgressMessage) error
 	PublishCompletion(ctx context.Context, completion contracts.DispatchCompletionMessage) error
 }
 
@@ -107,6 +108,10 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	}()
 
 	if err = ctx.Err(); err != nil {
+		if stopForBudget(ctx) {
+			p.logger.Info("scan budget reached before discovery", "dispatch_id", batch.DispatchID)
+			return nil
+		}
 		return err
 	}
 
@@ -135,9 +140,15 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 		return fmt.Errorf("browser state: %w", err)
 	}
 
+	discoverCtx, discoverCancel := discoveryContext(ctx, time.Now())
+	defer discoverCancel()
 	var vectors []contracts.AttackVector
-	vectors, err = p.discovery.Discover(ctx, targetURL, batch.Auth, discovery.OptionsFromBatch(batch))
+	vectors, err = p.discovery.Discover(discoverCtx, targetURL, batch.Auth, discovery.OptionsFromBatch(batch))
 	if err != nil {
+		if stopForBudget(ctx) {
+			p.logger.Info("scan budget reached during discovery", "dispatch_id", batch.DispatchID)
+			return nil
+		}
 		return fmt.Errorf("discovery: %w", err)
 	}
 	vectorsDiscovered = len(vectors)
@@ -154,26 +165,42 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 	jobs = attack.ApplyAuth(jobs, batch.Auth, targetURL)
 	jobsPlanned = len(jobs)
 	p.logger.Info("mapped attack jobs", "jobs", jobsPlanned)
+	if err = p.publishProgress(batch, vectorsDiscovered, jobsPlanned); err != nil {
+		return err
+	}
 
 	controlURL, err := p.establishControl(ctx, targetURL, batch.Auth, vectors)
 	if err != nil {
 		return err
 	}
 
-	batchSize := len(jobs)
-	if controlURL != "" {
-		batchSize = p.sessionBatch
-		if batchSize < 1 {
-			batchSize = 20
-		}
-	}
+	batchSize := p.sessionBatch
 	if batchSize < 1 {
-		batchSize = 1
+		batchSize = 20
 	}
+	confirmed := map[string]struct{}{}
 
-	for start := 0; start < len(jobs); start += batchSize {
+	for start := 0; start < len(jobs); {
 		if err = ctx.Err(); err != nil {
+			if stopForBudget(ctx) {
+				p.logger.Info("scan budget reached", "dispatch_id", batch.DispatchID, "probes", probesPublished)
+				return nil
+			}
 			return err
+		}
+		end := start
+		next := make([]types.Job, 0, batchSize)
+		for end < len(jobs) && len(next) < batchSize {
+			job := jobs[end]
+			end++
+			if _, hit := confirmed[confirmedAttackKey(job)]; hit {
+				continue
+			}
+			next = append(next, job)
+		}
+		if len(next) == 0 {
+			start = end
+			continue
 		}
 		if start > 0 && controlURL != "" {
 			expired, checkErr := p.guard.Expired(ctx, targetURL, controlURL, batch.Auth)
@@ -184,11 +211,7 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 				return contracts.ErrSessionExpired
 			}
 		}
-		end := start + batchSize
-		if end > len(jobs) {
-			end = len(jobs)
-		}
-		responses := p.attack.ExecutePool(ctx, jobs[start:end])
+		responses := p.attack.ExecutePool(ctx, next)
 		for _, response := range responses {
 			if response.Error != nil && errors.Is(response.Error, context.Canceled) {
 				continue
@@ -229,6 +252,7 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 			if finding != nil {
 				outcome = "vulnerable"
 				evidenceText = finding.Evidence
+				confirmed[confirmedAttackKey(response.Job)] = struct{}{}
 				finding.VulnerableRoute = targeturl.CanonicalSinkRoute(finding.VulnerableRoute)
 
 				key := findingIdentity(finding.AttackID, finding.VulnerableRoute)
@@ -258,7 +282,12 @@ func (p *Pipeline) Run(ctx context.Context, batch contracts.DispatchBatch) (err 
 			}
 			probesPublished++
 		}
+		start = end
 		if err = ctx.Err(); err != nil {
+			if stopForBudget(ctx) {
+				p.logger.Info("scan budget reached", "dispatch_id", batch.DispatchID, "probes", probesPublished)
+				return nil
+			}
 			return err
 		}
 	}
@@ -287,6 +316,22 @@ func (p *Pipeline) establishControl(ctx context.Context, targetURL string, auth 
 		return "", err
 	}
 	return controlURL, nil
+}
+
+func (p *Pipeline) publishProgress(batch contracts.DispatchBatch, vectorsDiscovered, jobsPlanned int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), publishTimeout)
+	defer cancel()
+	progress := contracts.DispatchProgressMessage{
+		Event:             contracts.EventDispatchProgress,
+		DispatchID:        batch.DispatchID,
+		SystemID:          batch.SystemID,
+		VectorsDiscovered: vectorsDiscovered,
+		JobsPlanned:       jobsPlanned,
+	}
+	if err := p.publisher.PublishProgress(ctx, progress); err != nil {
+		return fmt.Errorf("publish progress: %w", err)
+	}
+	return nil
 }
 
 func (p *Pipeline) publishProbe(probe contracts.ProbeMessage) error {
@@ -398,8 +443,42 @@ func secretLeakAttackID(attacks []contracts.AttackItem) string {
 	return ""
 }
 
+// discoveryContext keeps the last portion of a short scan budget for attacks.
+// A multi-hour job timeout is left whole so a local full scan can finish discovery.
+func discoveryContext(parent context.Context, now time.Time) (context.Context, context.CancelFunc) {
+	deadline, ok := parent.Deadline()
+	if !ok {
+		return parent, func() {}
+	}
+	remaining := deadline.Sub(now)
+	if remaining > 15*time.Minute || remaining <= time.Second {
+		return parent, func() {}
+	}
+	reserve := 3 * time.Minute
+	if remaining < reserve+time.Minute {
+		reserve = remaining * 3 / 5
+	}
+	if remaining-reserve < 30*time.Second {
+		return parent, func() {}
+	}
+	return context.WithDeadline(parent, now.Add(remaining-reserve))
+}
+
+func stopForBudget(ctx context.Context) bool {
+	if errors.Is(context.Cause(ctx), contracts.ErrDispatchCancelled) {
+		return false
+	}
+	return errors.Is(ctx.Err(), context.DeadlineExceeded)
+}
+
 func findingIdentity(attackID, route string) string {
 	return attackID + "\x00" + targeturl.CanonicalSinkRoute(route)
+}
+
+func confirmedAttackKey(job types.Job) string {
+	return strings.ToUpper(strings.TrimSpace(job.Attack.Category)) + "\x00" +
+		targeturl.CanonicalSinkRoute(job.Vector.Route) + "\x00" +
+		job.ParamKey
 }
 
 func skippedProbe(batch contracts.DispatchBatch, response types.Response) contracts.ProbeMessage {
