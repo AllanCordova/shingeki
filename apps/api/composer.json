@@ -16,6 +16,7 @@
         "laravel/socialite": "^5.29",
         "laravel/tinker": "^3.0",
         "nuwave/lighthouse": "^6.68",
+        "propaganistas/laravel-disposable-email": "^2.5",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^15.0"
     },
     "require-dev": {

@@ -67,11 +67,11 @@ flowchart LR
 
 `depth` (`quick` | `full`) ajusta discovery: **quick** usa limites menores e desliga Rod; **full** (padrão) usa `DISCOVERY_MAX_*`.
 
-`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Com escopo, o limiar de 20 vetores do quick não se aplica. O worker ataca só rotas que o crawl, a sessão capturada ou o `route_map` entregaram.
+`start_path` / `max_routes` (opcionais) escopam o crawl: o BFS começa em `target_url` + `start_path` e visita no máximo `max_routes` páginas (`MaxPages`). Sem `max_routes`, quick corta em 20 vetores. O full corta só quando `DISCOVERY_MAX_VECTORS` é maior que zero (`0` no worker local, `400` na plataforma). `SCAN_BUDGET` na plataforma é `5m`: o crawl usa cerca de 2 minutos e o resto fica para os testes. Ao estourar o relógio o disparo conclui com o que já encontrou. Com `max_routes`, esse número substitui o corte de rotas. O worker ataca só rotas que o crawl, a sessão capturada ou o `route_map` entregaram.
 
 ### Saída: `attacks.results`
 
-A mesma fila carrega três eventos. A API consome via `attacks:consume-results` (container **`api-consumers`**).
+A mesma fila carrega probe, achado, progresso (`attack.dispatch.progress`, com rotas descobertas e testes planejados) e conclusão. A API consome via `attacks:consume-results` (container **`api-consumers`**).
 
 **Probe** (`event: attack.probe`) — toda tentativa de payload, persistida em `dispatch_probes`:
 
@@ -113,7 +113,7 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 - **SPA hash**: links `#/…` que o crawl realmente abriu, e a query que já está no fragmento, entram como vetor. O worker não inventa `/#/search`, login JSON nem rotas REST de laboratório.
 - **Sessão**: com `auth.type=browser_state`, o worker decifra o envelope AES-256-GCM (`BROWSER_STATE_KEY`) e injeta cookies e `localStorage`/`sessionStorage` só no host do alvo. Não preenche login nem cadastro. Sem sessão, o crawl é a superfície pública. Um GET de controle, sem payload, mede a sessão: `401` ou `403` nesse GET encerra o disparo com `session_expired` e publica o que já foi coletado. `401` ou `403` de um payload continua sendo probe.
 - **Chrome do usuário / proxy**: `DISCOVERY_CDP_URL` anexa a um Chrome já aberto (`--remote-debugging-port=9222`) em vez de lançar Chromium headless. `DISCOVERY_PROXY` (ex. SOCKS no host) faz o crawl sair por um proxy.
-- **Estático (fallback)**: Colly só se o Chromium falhar (ou Rod estiver desligado). Segue `href` e extrai forms do HTML.
+- **Estático (fallback)**: Colly roda se o Chromium falhar, se Rod estiver desligado, ou se o browser devolver menos vetores que `DISCOVERY_MIN_VECTORS_FOR_ROD`. Quando o browser já cobriu esse mínimo, o crawl HTTP não roda.
 - **Budgets**: `depth` `quick` reduz `MaxPages`/`MaxClicks`/forms/settle e **desliga Rod**. `start_path` define a semente; `max_routes` sobrescreve `MaxPages` e limita o número de vetores. Clique limitado por `DISCOVERY_MAX_CLICKS`; submits por `DISCOVERY_MAX_FORM_SUBMITS`. Logout, pagamento e login (quando já há sessão) não são submetidos.
 
 ### Variáveis úteis (discovery)
@@ -122,6 +122,9 @@ Contrato HTTP dos resultados: [ATTACKS-AND-RESULTS.md](../api/ATTACKS-AND-RESULT
 |-----|---------|--------|
 | `DISCOVERY_ROD_ENABLED` | `false` | Liga Chromium/Rod (principal) |
 | `DISCOVERY_MAX_PAGES` | `50` | Páginas/estados no crawl |
+| `DISCOVERY_MAX_VECTORS` | `0` | Teto de rotas no scan completo. `0` não corta. A plataforma usa `400` |
+| `SCAN_BUDGET` | `0` | Relógio do disparo. `0` não corta. A plataforma usa `5m` e conclui com o que achou |
+| `DISCOVERY_PAGE_CONCURRENCY` | `1` | Abas do mesmo browser, ou fetches HTTP, em paralelo. A plataforma usa `3` |
 | `DISCOVERY_MAX_CLICKS` | `80` | Cliques no explore Rod |
 | `DISCOVERY_MAX_FORM_SUBMITS` | `8` | Submits de formulário por job |
 | `DISCOVERY_EXPLORE_SETTLE` | `1500ms` | Espera após navigate/click/submit |

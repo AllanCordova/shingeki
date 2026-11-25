@@ -31,7 +31,7 @@ O lote inclui ataques cujo autor tem papel `ADMIN` ou `SPECIALIST` no catálogo 
 
 - `depth` (opcional): `quick` ou `full` (padrão `full` se omitido).
   - **quick**: discovery rasa no worker DAST (`MaxDepth=1`, `MaxPages=12`, sem Rod, até 20 vetores).
-  - **full**: usa os limites padrão do worker (`DISCOVERY_MAX_DEPTH` / `DISCOVERY_MAX_PAGES`).
+  - **full**: usa os limites padrão do worker (`DISCOVERY_MAX_DEPTH` / `DISCOVERY_MAX_PAGES`). Sem `max_routes`, corta a lista só se `DISCOVERY_MAX_VECTORS` for maior que zero. No computador local o padrão é `0` (sem corte). Na plataforma o valor é `400` e `SCAN_BUDGET` é `5m`.
 - `start_path` (opcional, DAST): rota semente do crawl (ex. `/products`). Pode ser path relativo ou URL; a API normaliza para path. O worker inicia o BFS nessa rota (mesma origem do `target_url`).
 - `max_routes` (opcional, DAST): orçamento máximo de páginas visitadas no discovery (1–500). Quando `start_path` é enviado e `max_routes` é omitido, o padrão é `50`. Sobrescreve `MaxPages` do depth (incluindo quick).
 

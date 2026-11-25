@@ -7,6 +7,7 @@ use App\Models\User\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class BrowserCaptureSession extends Model
 {
@@ -33,6 +34,10 @@ class BrowserCaptureSession extends Model
         'terms_version',
         'ip_address',
         'user_agent',
+        'browser_opened_at',
+        'browser_opened_ip',
+        'browser_opened_user_agent',
+        'source',
         'attack_dispatch_id',
     ];
 
@@ -44,6 +49,7 @@ class BrowserCaptureSession extends Model
         return [
             'expires_at' => 'datetime',
             'consumed_at' => 'datetime',
+            'browser_opened_at' => 'datetime',
             'max_routes' => 'integer',
             'route_map' => 'array',
             'attack_ids' => 'array',
@@ -63,6 +69,11 @@ class BrowserCaptureSession extends Model
     public function attackDispatch(): BelongsTo
     {
         return $this->belongsTo(AttackDispatch::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(BrowserCaptureEvent::class);
     }
 
     public function status(): string

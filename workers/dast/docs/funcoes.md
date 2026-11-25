@@ -106,7 +106,7 @@ Funções de produção, arquivo por arquivo. Testes (`*_test.go`) ficam de fora
 | `ApplyDepthAndScope` | `quick` reduz limites e desliga o Rod; `max_routes` substitui `MaxPages` |
 | `ResolveSeedURL` | Junta o start path à origem. Recusa outra origem |
 | `ApplyDepth` | Números do modo quick |
-| `CapVectors` | Corta por `max_routes` ou, no quick sem teto, em 20 |
+| `CapVectors` | Corta por `max_routes`, em 20 no quick, ou em `DISCOVERY_MAX_VECTORS` no full quando a variável é maior que zero |
 | `CanonicalizeQueryVectors` | Normaliza query e funde parâmetros do mesmo sink |
 | `FilterAttackable` | Tira o que a blocklist ou a origem recusam |
 | `fallbackVectors` | Um GET na semente quando o crawl não achou nada |

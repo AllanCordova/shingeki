@@ -11,7 +11,7 @@ Cadastra usuário e retorna token.
 | Campo | Tipo | Regras |
 |-------|------|--------|
 | `name` | string | obrigatório, máx. 255 |
-| `email` | string | obrigatório, e-mail único |
+| `email` | string | obrigatório, e-mail único, não descartável (`indisposable`) |
 | `password` | string | obrigatório, mín. 8, `password_confirmation` |
 
 **Resposta `201`:**

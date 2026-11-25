@@ -6,17 +6,14 @@ use App\Enums\Attack\AttackScanType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Attack\AttackDispatch as AttackDispatchRequest;
 use App\Models\Attack\Attack;
-use App\Models\Attack\AttackAcknowledgment;
-use App\Models\Attack\AttackDispatch;
 use App\Models\Attack\BrowserCaptureSession;
 use App\Models\Project\Project;
 use App\Models\System\System;
-use App\Models\User\User;
 use App\Services\Attack\AttackCatalogService;
-use App\Services\Attack\AttackQueuePublisher;
-use App\Services\Notification\UserNotificationService;
+use App\Services\Attack\BrowserCaptureAuditService;
+use App\Services\Attack\SessionCaptureCompletionService;
 use App\Support\AttackAcknowledgmentTerms;
-use App\Support\BrowserStateCipher;
+use App\Support\SessionStateNormalizer;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,9 +24,9 @@ class SessionCaptureController extends Controller
 {
     public function __construct(
         private readonly AttackCatalogService $attackCatalog,
-        private readonly AttackQueuePublisher $attackQueuePublisher,
-        private readonly UserNotificationService $userNotificationService,
-        private readonly BrowserStateCipher $browserStateCipher,
+        private readonly BrowserCaptureAuditService $audit,
+        private readonly SessionCaptureCompletionService $completion,
+        private readonly SessionStateNormalizer $stateNormalizer,
     ) {}
 
     public function store(AttackDispatchRequest $request, Project $project, System $system): JsonResponse
@@ -62,6 +59,8 @@ class SessionCaptureController extends Controller
             'ip_address' => $request->ip(),
             'user_agent' => $request->userAgent(),
         ]);
+
+        $this->audit->record($capture, 'created', $request);
 
         return response()->json([
             'capture' => [
@@ -127,6 +126,7 @@ class SessionCaptureController extends Controller
                 'login_url' => $openUrl,
                 'complete_url' => $this->completeUrl($token, config('browser_state.complete_base_url')),
                 'vnc_password' => $vncPassword,
+                'capture_id' => $session->id,
             ]);
 
         if ($response->status() === 409) {
@@ -141,9 +141,64 @@ class SessionCaptureController extends Controller
             ], 502);
         }
 
+        $session->update([
+            'browser_opened_at' => now(),
+            'browser_opened_ip' => $request->ip(),
+            'browser_opened_user_agent' => $request->userAgent(),
+            'source' => 'remote_browser',
+        ]);
+
+        $this->audit->record($session, 'browser_opened', $request, url: $openUrl);
+
         return response()->json([
             'novnc_url' => $this->novncUrl($vncPassword),
         ]);
+    }
+
+    public function import(Request $request, Project $project, System $system, string $capture): JsonResponse
+    {
+        $this->authorize('create', [Attack::class, $system]);
+
+        $session = $this->ownedCapture($request, $system, $capture);
+        if ($session->status() !== 'pending') {
+            return response()->json([
+                'message' => 'Esta captura não está mais pendente.',
+            ], 422);
+        }
+
+        $token = $request->string('token')->toString();
+        if ($token === '' || ! hash_equals($session->token_hash, hash('sha256', $token))) {
+            return response()->json([
+                'message' => 'Token de captura inválido.',
+            ], 422);
+        }
+
+        $normalized = $this->stateNormalizer->fromImportRequest($request, (string) $system->target_url);
+        if ($normalized instanceof JsonResponse) {
+            return $normalized;
+        }
+
+        $session->update([
+            'source' => 'manual_import',
+        ]);
+
+        try {
+            $result = $this->completion->complete(
+                $session,
+                $normalized['state'],
+                auditEvent: 'imported',
+                auditMeta: ['kind' => $normalized['kind']],
+            );
+        } catch (RuntimeException $exception) {
+            return response()->json([
+                'message' => $exception->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => $result['message'],
+            'dispatch_id' => $result['dispatch']->id,
+        ], 202);
     }
 
     public function complete(Request $request, string $token): JsonResponse
@@ -164,78 +219,37 @@ class SessionCaptureController extends Controller
             ], 410);
         }
 
-        $state = $this->validatedState($request);
+        $raw = $request->getContent();
+        if (! is_string($raw)) {
+            return response()->json([
+                'message' => 'O estado do navegador precisa ser um objeto JSON.',
+            ], 422);
+        }
+
+        $state = $this->stateNormalizer->fromCompleteBody($raw);
         if ($state instanceof JsonResponse) {
             return $state;
         }
 
-        $system = $session->system;
-        $user = $session->user;
-        if (! $system instanceof System || ! $user instanceof User) {
-            return response()->json([
-                'message' => 'Captura não encontrada.',
-            ], 404);
-        }
+        // visited_urls is audit-only; strip before encrypting browser state.
+        unset($state['visited_urls']);
 
         try {
-            $attacks = $this->attacksFromIds($session->attack_ids);
+            $result = $this->completion->complete(
+                $session,
+                $state,
+                auditEvent: 'completed',
+                visitedUrls: $this->stateNormalizer->visitedUrlsFromCompleteBody($raw),
+            );
         } catch (RuntimeException $exception) {
             return response()->json([
                 'message' => $exception->getMessage(),
             ], 422);
         }
 
-        $plaintext = json_encode($state, JSON_THROW_ON_ERROR);
-        $envelope = $this->browserStateCipher->encrypt($plaintext);
-
-        $dispatch = AttackDispatch::query()->create([
-            'system_id' => $system->id,
-            'user_id' => $user->id,
-            'scan_type' => AttackScanType::Dast,
-            'depth' => $session->depth,
-            'start_path' => $session->start_path,
-            'max_routes' => $session->max_routes,
-            'route_map' => $session->route_map,
-            'browser_state' => $envelope,
-            'attacks_count' => $attacks->count(),
-            'dispatched_at' => now(),
-        ]);
-
-        AttackAcknowledgment::query()->create([
-            'user_id' => $user->id,
-            'project_id' => $system->project_id,
-            'system_id' => $system->id,
-            'attack_dispatch_id' => $dispatch->id,
-            'accepted_responsibility' => true,
-            'accepted_legal_terms' => true,
-            'terms_version' => $session->terms_version,
-            'ip_address' => $session->ip_address,
-            'user_agent' => $session->user_agent,
-            'acknowledged_at' => now(),
-        ]);
-
-        $session->update([
-            'consumed_at' => now(),
-            'attack_dispatch_id' => $dispatch->id,
-        ]);
-
-        $this->attackQueuePublisher->publishDispatchBatch(
-            $dispatch,
-            $system,
-            $user,
-            $attacks,
-            AttackScanType::Dast,
-            [
-                'type' => 'browser_state',
-                'state' => $envelope,
-            ],
-        );
-
-        $this->userNotificationService->trackAttackDispatchPending($dispatch);
-
         return response()->json([
-            'message' => 'Sessão recebida. O scan foi iniciado.',
-            'dispatch_id' => $dispatch->id,
+            'message' => $result['message'],
+            'dispatch_id' => $result['dispatch']->id,
         ], 202);
     }
 
@@ -258,81 +272,6 @@ class SessionCaptureController extends Controller
         return $ids === null
             ? $this->attackCatalog->catalogAttacksOrFail(AttackScanType::Dast)
             : $this->attackCatalog->catalogAttacksForDispatch(AttackScanType::Dast, $ids);
-    }
-
-    /**
-     * @return Collection<int, Attack>
-     */
-    private function attacksFromIds(mixed $ids)
-    {
-        if (! is_array($ids) || $ids === []) {
-            return $this->attackCatalog->catalogAttacksOrFail(AttackScanType::Dast);
-        }
-
-        /** @var list<string> $attackIds */
-        $attackIds = array_values(array_filter($ids, fn (mixed $id): bool => is_string($id) && $id !== ''));
-
-        return $this->attackCatalog->catalogAttacksForDispatch(AttackScanType::Dast, $attackIds);
-    }
-
-    /**
-     * @return array<string, mixed>|JsonResponse
-     */
-    private function validatedState(Request $request): array|JsonResponse
-    {
-        $raw = $request->getContent();
-        if (! is_string($raw) || strlen($raw) > 1_048_576) {
-            return response()->json([
-                'message' => 'O estado do navegador é grande demais.',
-            ], 422);
-        }
-
-        $decoded = json_decode($raw, true);
-        if (! is_array($decoded) || array_is_list($decoded)) {
-            return response()->json([
-                'message' => 'O estado do navegador precisa ser um objeto JSON.',
-            ], 422);
-        }
-
-        $cookies = $decoded['cookies'] ?? [];
-        $origins = $decoded['origins'] ?? [];
-        if (! is_array($cookies) || ! is_array($origins) || array_is_list($decoded)) {
-            return response()->json([
-                'message' => 'O estado do navegador precisa seguir o storageState.',
-            ], 422);
-        }
-
-        if (! $this->stateHasSession($cookies, $origins)) {
-            return response()->json([
-                'message' => 'A sessão capturada está vazia.',
-            ], 422);
-        }
-
-        return $decoded;
-    }
-
-    /**
-     * @param  array<mixed>  $cookies
-     * @param  array<mixed>  $origins
-     */
-    private function stateHasSession(array $cookies, array $origins): bool
-    {
-        if ($cookies !== []) {
-            return true;
-        }
-
-        foreach ($origins as $origin) {
-            if (! is_array($origin)) {
-                continue;
-            }
-            foreach (['localStorage', 'sessionStorage'] as $key) {
-                if (isset($origin[$key]) && is_array($origin[$key]) && $origin[$key] !== []) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     private function completeUrl(string $token, mixed $base = null): string

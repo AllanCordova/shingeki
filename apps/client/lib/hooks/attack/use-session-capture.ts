@@ -99,3 +99,38 @@ export function useOpenCaptureBrowser(projectId: string, systemId: string) {
     error: (mutation.error as ApiError | null) ?? null,
   };
 }
+
+export function useImportSessionCapture(projectId: string, systemId: string) {
+  const mutation = useMutation({
+    mutationFn: async ({
+      captureId,
+      token,
+      cookies,
+      authorization,
+      storage_state,
+    }: {
+      captureId: string;
+      token: string;
+      cookies?: string;
+      authorization?: string;
+      storage_state?: unknown;
+    }) => {
+      const { data } = await apiClient.post<{
+        message: string;
+        dispatch_id: string;
+      }>(`${capturePath(projectId, systemId)}/${captureId}/import`, {
+        token,
+        ...(cookies ? { cookies } : {}),
+        ...(authorization ? { authorization } : {}),
+        ...(storage_state ? { storage_state } : {}),
+      });
+      return data;
+    },
+  });
+
+  return {
+    importSession: mutation.mutateAsync,
+    isLoading: mutation.isPending,
+    error: (mutation.error as ApiError | null) ?? null,
+  };
+}

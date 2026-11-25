@@ -52,6 +52,8 @@ Exemplo de validação:
 |--------|------|
 | Autenticação, Google e papéis | [api/AUTHENTICATION.md](api/AUTHENTICATION.md) |
 | Administração de usuários (`ADMIN`) | [api/ADMIN-USERS.md](api/ADMIN-USERS.md) |
+| Auditoria de capturas de navegador (`ADMIN`) | [api/ADMIN-BROWSER-CAPTURES.md](api/ADMIN-BROWSER-CAPTURES.md) |
+| Observabilidade / ops (`ADMIN`) | [api/ADMIN-OPS.md](api/ADMIN-OPS.md) |
 | Projetos, sistemas e dashboard | [api/PROJECTS-AND-SYSTEMS.md](api/PROJECTS-AND-SYSTEMS.md) |
 | Stacks tecnológicas | [api/STACKS.md](api/STACKS.md) |
 | Capas, biblioteca e avatar | [api/COVERS.md](api/COVERS.md) |

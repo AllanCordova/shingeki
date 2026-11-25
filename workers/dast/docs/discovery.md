@@ -25,13 +25,13 @@ Placeholder `{nome}` é obrigatório ter valor seguro. Método vazio vira `GET`.
 Ordem dentro de `Discover`:
 
 1. Se Rod está ligado, `RodCrawler.Discover`. Qualquer erro do Rod cai só no crawl estático.
-2. Se o Rod voltou vetores, o Colly roda mesmo assim e `mergeAttackVectors` junta os dois. A chave é `método + rota + target_location`. Campo vazio de um lado é preenchido pelo outro (`MergeVector`). Abaixo de `DISCOVERY_MIN_VECTORS_FOR_ROD` (default 2) o log avisa que o estático cobriu a lacuna; os vetores dinâmicos não são descartados.
+2. Se o Rod voltou pelo menos `DISCOVERY_MIN_VECTORS_FOR_ROD` vetores (default 2), o crawl estático não roda. Abaixo disso, o Colly roda e `mergeAttackVectors` junta os dois. A chave é `método + rota + target_location`. Campo vazio de um lado é preenchido pelo outro (`MergeVector`). Os vetores dinâmicos não são descartados.
 3. Rod desligado: só Colly.
 4. `AppendRecordedRoutes` soma URLs gravadas em `auth.routes` que ainda não estão na lista, se passarem na blocklist.
 5. Lista vazia: um único vetor `GET` `URL_PATH` na semente (`fallbackVectors`).
 6. `CanonicalizeQueryVectors` normaliza a query e funde parâmetros do mesmo sink.
 7. `FilterAttackable` tira URL fora da origem atacável e o que a blocklist recusa.
-8. `CapVectors`: se há `max_routes`, corta nesse número. Senão, no `quick`, corta em 20. `full` sem `max_routes` não corta a lista de vetores (o corte de páginas já aconteceu no crawl).
+8. `CapVectors`: se há `max_routes`, corta nesse número. Senão, o `quick` corta em 20. O `full` só corta quando `DISCOVERY_MAX_VECTORS` é maior que zero; `0` deixa a lista inteira. Com `SCAN_BUDGET` curto (5m na plataforma), o crawl para perto dos 2 minutos e devolve as rotas já vistas para os testes usarem o resto do relógio.
 
 ## Rod (`discovery/dynamic`)
 
@@ -41,6 +41,7 @@ Ordem dentro de `Discover`:
 - Uma página, network domain ligado. Cada `NetworkRequestWillBeSent` passa por `networkVector`.
 - `injectBrowserAuth` aplica cookies e storage só em origens do alvo. Não preenche formulário de login.
 - Fila BFS começa na semente e nas `auth.routes`. Score em `bfs.Score`: termos de API, admin e identificador sobem; blog, faq e paginação descem.
+- `DISCOVERY_PAGE_CONCURRENCY` (padrão 1, plataforma 3) abre esse número de abas no mesmo browser. Cada aba tira a próxima URL da fila. Cliques e formulários ficam na aba que abriu a página. O padrão 1 percorre uma página por vez.
 - Em cada página, dentro do orçamento (`MaxPages`, `MaxClicks`, `MaxFormSubmits`, settle, timeout de página e um teto de exploração): coleta links, clica `a`, `button`, `role=button|link`, `onclick` e submits, preenche form com dicionário fictício e submete. Logout, pagamento e login (quando já há sessão) são pulados.
 - `finalizeVectors` devolve o mapa deduplicado.
 

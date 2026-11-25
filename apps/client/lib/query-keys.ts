@@ -19,6 +19,13 @@ export const queryKeys = {
       params?.role ?? "",
     ] as const,
 
+  adminBrowserCapturesAll: ["admin", "browser-captures"] as const,
+  adminBrowserCaptures: (params?: Record<string, string | number | undefined>) =>
+    [...queryKeys.adminBrowserCapturesAll, params ?? {}] as const,
+  adminBrowserCapture: (captureId: string) =>
+    ["admin", "browser-captures", captureId] as const,
+  adminOpsStatus: ["admin", "ops", "status"] as const,
+
   coverUploads: ["cover-uploads"] as const,
   coverStockImages: (query: string) => ["cover-stock-images", query] as const,
   stacks: ["stacks"] as const,

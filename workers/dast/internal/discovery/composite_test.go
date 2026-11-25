@@ -61,6 +61,40 @@ func TestCompositeUsesRodFirst(t *testing.T) {
 	}
 }
 
+func TestCompositeSkipsStaticWhenRodHasEnoughVectors(t *testing.T) {
+	rod := &stubCrawl{name: "rod", vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("https://app.example/api/v1/produtos", "POST", "JSON_BODY"),
+		contracts.NewAttackVector("https://app.example/api/v1/users", "GET", "URL_PATH"),
+	}}
+	colly := &stubCrawl{name: "colly", vectors: []contracts.AttackVector{
+		contracts.NewAttackVector("https://app.example/", "GET", "URL_PATH"),
+	}}
+
+	engine := &CompositeEngine{
+		cfg: config.Config{
+			Discovery: config.DiscoveryConfig{
+				MaxPages:         50,
+				RodEnabled:       true,
+				MinVectorsForRod: 2,
+			},
+		},
+		logger:  slog.New(slog.NewTextHandler(io.Discard, nil)),
+		static:  colly,
+		dynamic: rod,
+	}
+
+	vectors, err := engine.Discover(context.Background(), "https://app.example", nil, Options{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rod.calls != 1 || colly.calls != 0 {
+		t.Fatalf("expected rod only, rod=%d colly=%d", rod.calls, colly.calls)
+	}
+	if len(vectors) != 2 {
+		t.Fatalf("expected browser routes only, got %+v", vectors)
+	}
+}
+
 func TestCompositeFallsBackToStaticWhenRodFails(t *testing.T) {
 	rod := &stubCrawl{err: errors.New("chrome missing")}
 	colly := &stubCrawl{vectors: []contracts.AttackVector{

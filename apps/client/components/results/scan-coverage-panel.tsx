@@ -64,7 +64,9 @@ export function ScanCoveragePanel({
   contentClassName?: string;
   listClassName?: string;
 }) {
-  const emptyForFilter = !isPending && probes.length === 0 && (pagination?.total ?? 0) === 0;
+  const noProbes = probes.length === 0 && (pagination?.total ?? 0) === 0;
+  const emptyForFilter = !isPending && noProbes;
+  const waitingForProbes = isPending && noProbes;
   const useCompactEmpty = compactWhenEmpty && emptyForFilter;
 
   return (
@@ -80,7 +82,7 @@ export function ScanCoveragePanel({
         </div>
       </CardHeader>
       <CardContent className={cn(useCompactEmpty ? "pt-0 pb-4" : undefined, contentClassName)}>
-        {emptyForFilter ? (
+        {emptyForFilter || waitingForProbes ? (
           <EmptyState
             title={emptyTitle(filter, isPending)}
             description={emptyDescription({
@@ -88,6 +90,7 @@ export function ScanCoveragePanel({
               isPending,
               jobsPlanned,
               probesCount,
+              vectorsDiscovered,
             })}
             className={
               useCompactEmpty
@@ -138,11 +141,13 @@ export function ScanCoveragePanel({
           </>
         )}
 
-        {!emptyForFilter && vectorsDiscovered != null ? (
+        {!emptyForFilter && !waitingForProbes && coverageProgress({ vectorsDiscovered, jobsPlanned, probesCount }) ? (
           <p className="mt-4 text-xs text-muted-foreground">
-            {vectorsDiscovered} rota(s) descoberta(s)
-            {jobsPlanned != null ? ` · ${jobsPlanned} teste(s) planejado(s)` : ""}
-            {probesCount != null ? ` · ${probesCount} teste(s) executado(s)` : ""}
+            {coverageProgress({
+              vectorsDiscovered,
+              jobsPlanned,
+              probesCount,
+            })}
           </p>
         ) : null}
       </CardContent>
@@ -157,23 +162,52 @@ function emptyTitle(filter: DispatchProbeListFilter, isPending: boolean): string
   return "Nenhum teste registrado";
 }
 
+function coverageProgress({
+  vectorsDiscovered,
+  jobsPlanned,
+  probesCount,
+}: {
+  vectorsDiscovered?: number | null;
+  jobsPlanned?: number | null;
+  probesCount?: number | null;
+}): string {
+  return [
+    vectorsDiscovered != null ? `${vectorsDiscovered} rota(s) descoberta(s)` : null,
+    jobsPlanned != null ? `${jobsPlanned} teste(s) planejado(s)` : null,
+    probesCount != null && probesCount > 0
+      ? `${probesCount} teste(s) executado(s)`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function emptyDescription({
   filter,
   isPending,
   jobsPlanned,
   probesCount,
+  vectorsDiscovered,
 }: {
   filter: DispatchProbeListFilter;
   isPending: boolean;
   jobsPlanned?: number | null;
   probesCount?: number | null;
+  vectorsDiscovered?: number | null;
 }): string {
   if (filter !== "all") {
     return "Nenhum registro corresponde ao filtro selecionado.";
   }
 
   if (isPending) {
-    return "Os testes aparecerao aqui conforme o scan avanca.";
+    const progress = coverageProgress({
+      vectorsDiscovered,
+      jobsPlanned,
+      probesCount,
+    });
+    return progress
+      ? `${progress}. Os testes aparecerao aqui conforme o scan avanca.`
+      : "Os testes aparecerao aqui conforme o scan avanca.";
   }
 
   if (jobsPlanned === 0) {

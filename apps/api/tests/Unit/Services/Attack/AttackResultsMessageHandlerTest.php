@@ -5,6 +5,7 @@ use App\Models\Attack\AttackDispatch;
 use App\Models\System\System;
 use App\Models\User\User;
 use App\Services\Attack\AttackDispatchCompletionProcessor;
+use App\Services\Attack\AttackDispatchProgressProcessor;
 use App\Services\Attack\AttackProbeProcessor;
 use App\Services\Attack\AttackResultsMessageHandler;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,6 +35,25 @@ test('handler routes completion messages to dispatch processor', function () {
         ->and($updated->probes_count)->toBe(20)
         ->and($updated->vectors_discovered)->toBe(5)
         ->and($updated->jobs_planned)->toBe(20);
+});
+
+test('handler stores discovery progress without completing the dispatch', function () {
+    $user = User::factory()->create();
+    $system = System::factory()->create();
+    $dispatch = AttackDispatch::factory()->for($system)->for($user)->create();
+
+    $updated = app(AttackResultsMessageHandler::class)->handle([
+        'event' => AttackDispatchProgressProcessor::EVENT,
+        'dispatch_id' => $dispatch->id,
+        'system_id' => $system->id,
+        'vectors_discovered' => 12,
+        'jobs_planned' => 240,
+    ]);
+
+    expect($updated)->toBeInstanceOf(AttackDispatch::class)
+        ->and($updated->completed_at)->toBeNull()
+        ->and($updated->vectors_discovered)->toBe(12)
+        ->and($updated->jobs_planned)->toBe(240);
 });
 
 test('handler routes finding messages to result processor', function () {

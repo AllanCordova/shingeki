@@ -53,7 +53,11 @@ Com `CAPTURE_SERVICE_URL`, `CAPTURE_SERVICE_TOKEN` e `CAPTURE_NOVNC_PUBLIC_URL`,
 
 `CAPTURE_NOVNC_PUBLIC_URL` aponta para `127.0.0.1:6080`. O Caddy não publica `/capture-browser`. Quem acessa de outra máquina usa um túnel até essa porta. A senha deixa de valer quando a captura termina.
 
-O serviço é `workers/capture` (Playwright, Xvfb, noVNC). O mesmo `complete` encerra a sessão.
+O serviço é `workers/capture` (Playwright, Xvfb, noVNC). O mesmo `complete` encerra a sessão. O Chromium registra `visited_urls` (sem cookies) e a API grava eventos `navigated` ligados à conta dona da captura. Admin consulta e exporta em [ADMIN-BROWSER-CAPTURES.md](ADMIN-BROWSER-CAPTURES.md).
+
+## Importação manual
+
+`POST .../attacks/session-captures/{id}/import` (Sanctum) aceita o token da captura e um de: `cookies` (header `a=b; c=d` ou array Playwright), `authorization` (`Bearer …` ou token cru), `storage_state` (JSON Playwright). Normaliza para storageState, cifra e dispara o scan como o `complete`. Evento de auditoria: `imported`.
 
 ## Execução
 

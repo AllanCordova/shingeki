@@ -13,7 +13,7 @@ Arquivo: `internal/orchestrator/pipeline.go` e `session.go`. `cmd/worker` monta 
 7. `publishSecretLeaks`, só se alguma categoria do lote é `SECRET_LEAK`.
 8. `MapVectorsToJobs` + `ApplyAuth`. Auth de sessão vira headers do job, restritos ao host do alvo.
 9. `establishControl` se `HasSession`.
-10. Executa jobs em fatias. Sem sessão, uma fatia com todos. Com sessão, fatias de 20 (`sessionBatch`). Entre fatias, um GET na URL de controle: `401` ou `403` devolve `ErrSessionExpired` e para. `401` de um payload não expira a sessão.
+10. Publica `attack.dispatch.progress` com rotas descobertas e testes planejados. Executa jobs em fatias de 20. Entre fatias, um achado confirmado na mesma rota, parâmetro e categoria não dispara o resto dos payloads. Com sessão, um GET na URL de controle: `401` ou `403` devolve `ErrSessionExpired` e para. `401` de um payload não expira a sessão.
 11. Cada resposta vira probe e, se a evidência confirmar e o par ainda não foi publicado, um achado.
 
 Publicação de probe e achado usa context novo de 10s (`publishTimeout`), para um cancelamento no meio do job ainda conseguir entregar o que já foi decidido.

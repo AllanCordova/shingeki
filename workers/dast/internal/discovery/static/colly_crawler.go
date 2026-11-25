@@ -2,12 +2,14 @@ package static
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gocolly/colly/v2"
@@ -52,40 +54,67 @@ func (c *CollyCrawler) Discover(
 		}
 	}
 
-	var vectors []contracts.AttackVector
-	pagesVisited := 0
-
-	for queue.Len() > 0 {
-		if err := ctx.Err(); err != nil {
-			return vectors, err
-		}
-		if pagesVisited >= c.cfg.MaxPages {
-			break
-		}
-
-		item, ok := queue.Dequeue()
-		if !ok {
-			break
-		}
-		if item.Depth > c.cfg.MaxDepth {
-			continue
-		}
-
-		pageVectors, links, err := c.crawlPage(ctx, item.URL, contracts.HeadersForURL(auth, targetURL, item.URL))
-		if err != nil {
-			c.logger.Warn("static crawl failed", "url", item.URL, "error", err)
-			continue
-		}
-
-		vectors = append(vectors, pageVectors...)
-		pagesVisited++
-
-		for _, link := range links {
-			if !bfs.IsAttackableDiscoveryURL(targetURL, link) {
-				continue
+	workers := c.cfg.PageConcurrency
+	if workers < 1 {
+		workers = 1
+	}
+	state := newStaticCrawl(queue)
+	vectors := make([]contracts.AttackVector, 0)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				if err := ctx.Err(); err != nil {
+					return
+				}
+				item, ok, stop := state.next(c.cfg.MaxPages)
+				if stop {
+					return
+				}
+				if !ok {
+					select {
+					case <-ctx.Done():
+						return
+					case <-time.After(40 * time.Millisecond):
+					}
+					continue
+				}
+				if item.Depth > c.cfg.MaxDepth {
+					state.finish(false)
+					continue
+				}
+				pageVectors, links, err := c.crawlPage(ctx, item.URL, contracts.HeadersForURL(auth, targetURL, item.URL))
+				if err != nil {
+					c.logger.Warn("static crawl failed", "url", item.URL, "error", err)
+					state.finish(false)
+					continue
+				}
+				mu.Lock()
+				vectors = append(vectors, pageVectors...)
+				mu.Unlock()
+				for _, link := range links {
+					if bfs.IsAttackableDiscoveryURL(targetURL, link) {
+						state.enqueue(link, item.Depth+1)
+					}
+				}
+				state.finish(true)
 			}
-			queue.Enqueue(link, item.Depth+1)
+		}()
+	}
+	wg.Wait()
+	pagesVisited, _ := state.counts()
+	if err := ctx.Err(); err != nil {
+		if errors.Is(context.Cause(ctx), contracts.ErrDispatchCancelled) {
+			return nil, err
 		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			c.logger.Info("static discovery stopped at the time budget", "pages", pagesVisited, "target", targetURL)
+			return vectors, nil
+		}
+		return vectors, err
 	}
 
 	c.logger.Info("static discovery complete",
