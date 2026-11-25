@@ -10,10 +10,11 @@ import (
 )
 
 type Options struct {
-	Depth     string
-	StartPath string
-	MaxRoutes int
-	RouteMap  []contracts.DispatchRoute
+	Depth      string
+	StartPath  string
+	MaxRoutes  int
+	MaxVectors int
+	RouteMap   []contracts.DispatchRoute
 }
 
 func OptionsFromBatch(batch contracts.DispatchBatch) Options {

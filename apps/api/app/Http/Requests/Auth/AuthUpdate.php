@@ -21,7 +21,7 @@ class AuthUpdate extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'email' => ['sometimes', 'string', 'email', 'max:255', 'unique:users,email,'.$this->user()?->id],
+            'email' => ['sometimes', 'string', 'email', 'max:255', 'indisposable', 'unique:users,email,'.$this->user()?->id],
             'password' => ['sometimes', 'nullable', 'string', 'confirmed', Password::min(8)],
             'current_password' => ['required_with:password', 'string', 'current_password'],
             'avatar' => [
@@ -41,6 +41,16 @@ class AuthUpdate extends FormRequest
                 ),
             ],
             'remove_avatar' => ['sometimes', 'boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.indisposable' => 'E-mails temporários ou descartáveis não são permitidos.',
         ];
     }
 }

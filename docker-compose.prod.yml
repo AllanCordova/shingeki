@@ -227,6 +227,10 @@ services:
       DISCOVERY_ROD_NO_SANDBOX: "true"
       DISCOVERY_BROWSER_LAUNCH_TIMEOUT: 90s
       ATTACK_REQUEST_TIMEOUT: 30s
+      ATTACK_MAX_JOBS: "4000"
+      DISCOVERY_MAX_VECTORS: "400"
+      DISCOVERY_PAGE_CONCURRENCY: "3"
+      SCAN_BUDGET: 5m
       BROWSER_STATE_KEY: ${BROWSER_STATE_KEY:-}
       WORKER_JOB_TIMEOUT: 3h
     depends_on:
@@ -253,6 +257,14 @@ services:
   dast-worker-2:
     <<: *dast-worker
     container_name: shingeki-prod-dast-worker-2
+
+  dast-worker-3:
+    <<: *dast-worker
+    container_name: shingeki-prod-dast-worker-3
+
+  dast-worker-4:
+    <<: *dast-worker
+    container_name: shingeki-prod-dast-worker-4
 
   cloudflared:
     profiles: ["share"]

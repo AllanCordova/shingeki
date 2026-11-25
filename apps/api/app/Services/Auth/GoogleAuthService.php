@@ -7,6 +7,7 @@ use App\Models\User\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Two\User as SocialiteUser;
+use Propaganistas\LaravelDisposableEmail\Facades\DisposableDomains;
 use RuntimeException;
 
 class GoogleAuthService
@@ -39,6 +40,10 @@ class GoogleAuthService
 
         if (! $emailVerified) {
             throw new RuntimeException('Google email is not verified.');
+        }
+
+        if (DisposableDomains::isDisposable($email)) {
+            throw new RuntimeException('E-mails temporários ou descartáveis não são permitidos.');
         }
 
         $user = User::query()->where('google_id', $googleId)->first();

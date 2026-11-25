@@ -19,8 +19,18 @@ class AuthRegister extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['required', 'string', 'email', 'max:255', 'indisposable', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'email.indisposable' => 'E-mails temporários ou descartáveis não são permitidos.',
         ];
     }
 }

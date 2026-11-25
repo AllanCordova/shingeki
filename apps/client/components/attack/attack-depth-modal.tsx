@@ -9,6 +9,7 @@ import {
 import type { AttackDepth } from "@/lib/contracts/attack/attack";
 import type { DastRouteMapEntry } from "@/lib/contracts/attack/route-map";
 import type { AttackScanType } from "@/lib/hooks/attack/use-attack";
+import { CatalogCoverageNote } from "@/components/attack/catalog-coverage-note";
 import { Button, Checkbox, Modal } from "@/components/ui";
 import { SettingsIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,7 @@ const depthOptions: Array<{
     value: "full",
     title: "Completo",
     description:
-      "Discovery ampla com os limites padrão do worker. Mais demorado e abrangente.",
+      "Discovery ampla com browser. No seu computador o scan completo segue sem teto. Na plataforma ele procura mais rotas e para em cerca de 5 minutos.",
   },
 ];
 
@@ -62,7 +63,7 @@ export function AttackDepthModal({
   onCapture,
 }: AttackDepthModalProps) {
   const preview = useRouteMapPreview();
-  const [depth, setDepth] = useState<AttackDepth>("full");
+  const [depth, setDepth] = useState<AttackDepth>("quick");
   const [useRouteMapOverride, setUseRouteMapOverride] = useState<boolean | null>(null);
   const useRouteMap = useRouteMapOverride ?? preview.routes.length > 0;
   const [routeMapError, setRouteMapError] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export function AttackDepthModal({
   if (nextKey !== resetKey) {
     setResetKey(nextKey);
     if (open) {
-      setDepth("full");
+      setDepth("quick");
       setRouteMapError(null);
       setUseRouteMapOverride(null);
     }
@@ -183,6 +184,8 @@ export function AttackDepthModal({
             );
           })}
         </div>
+
+        {scanType === "dast" ? <CatalogCoverageNote /> : null}
 
         {showRouteMap ? (
           <div className="flex flex-col gap-3 rounded-app border border-border p-3">

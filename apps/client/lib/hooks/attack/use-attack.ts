@@ -143,7 +143,7 @@ export function useDispatchAttack(projectId: string, systemId: string) {
         acceptedResponsibility: boolean;
         acceptedLegalTerms: boolean;
       },
-      depth: AttackDepth = "full",
+      depth: AttackDepth = "quick",
       scope: AttackDiscoveryScope = {},
     ) =>
       mutation.mutateAsync({

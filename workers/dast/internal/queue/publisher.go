@@ -103,6 +103,15 @@ func (p *Publisher) PublishResult(ctx context.Context, result contracts.ResultMe
 	)
 }
 
+func (p *Publisher) PublishProgress(ctx context.Context, progress contracts.DispatchProgressMessage) error {
+	return p.publishJSON(ctx, progress.MarshalJSONBytes, "published dispatch progress",
+		"dispatch_id", progress.DispatchID,
+		"system_id", progress.SystemID,
+		"vectors_discovered", progress.VectorsDiscovered,
+		"jobs_planned", progress.JobsPlanned,
+	)
+}
+
 func (p *Publisher) PublishCompletion(ctx context.Context, completion contracts.DispatchCompletionMessage) error {
 	return p.publishJSON(ctx, completion.MarshalJSONBytes, "published dispatch completion",
 		"dispatch_id", completion.DispatchID,

@@ -111,13 +111,16 @@ func (v *DOMXSSValidator) probe(ctx context.Context, pageURL, payload, body stri
 	defer page.Close()
 
 	dialog := make(chan string, 1)
-	go page.EachEvent(func(e *proto.PageJavascriptDialogOpening) {
+	// Register before navigation. EachEvent enables the Page domain synchronously;
+	// starting it inside a goroutine lets a fast alert fire first and block the page.
+	waitDialog := page.EachEvent(func(e *proto.PageJavascriptDialogOpening) {
 		_ = proto.PageHandleJavaScriptDialog{Accept: true}.Call(page)
 		select {
 		case dialog <- e.Message:
 		default:
 		}
-	})()
+	})
+	go waitDialog()
 
 	if err := driveDOMSource(page, pageURL, payload, plan, browserSource); err != nil {
 		return false, "", err
@@ -168,6 +171,9 @@ func (v *DOMXSSValidator) probe(ctx context.Context, pageURL, payload, body stri
 		}
 		return true, "JavaScript dialog opened in the rendered page (" + msg + ")", nil
 	default:
+	}
+	if err := (proto.PageHandleJavaScriptDialog{Accept: true}).Call(page); err == nil {
+		return true, "JavaScript dialog opened in the rendered page (alert)", nil
 	}
 
 	if sink, ok := domSinkPresent(page, payload); ok {

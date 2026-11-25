@@ -37,7 +37,7 @@ Patched: 401/403 e ignora campos privilegiados.
 | `path-confidential` | `GET /files/acquisitions.md` |
 | `csrf-change-password` | `POST /api/password` com `Origin` cruzado |
 
-XSS refletido já está em **secrets**. DOM XSS no Chromium não faz parte deste gabarito.
+XSS refletido já está em **secrets**. DOM XSS no Chromium entra como fixture de hash (`/#/search`): a página grava `location.hash` em `innerHTML`, e a versão corrigida usa `textContent`. O teste só roda quando há um Chromium no `PATH`.
 
 ## SAST
 

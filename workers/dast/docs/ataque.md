@@ -7,13 +7,13 @@ O pipeline chama dois métodos de `attack.Engine`: `MapVectorsToJobs` e `Execute
 `MapVectorsToJobs` (função, também método do engine) cruza cada vetor com cada item do catálogo.
 
 - Categoria `SECRET_LEAK` é ignorada aqui. Ela já rodou no scanner passivo.
-- `locationCompatible`: locais iguais casam. `API_ENDPOINT` casa com `JSON_BODY` e `FORM`, e o inverso de `JSON_BODY` com `API_ENDPOINT`. `HEADER` casa com **qualquer** local do vetor.
+- `locationCompatible`: locais iguais casam. `API_ENDPOINT` casa com `JSON_BODY` e `FORM`, e o inverso de `JSON_BODY` com `API_ENDPOINT`. Ataque `HEADER` não entra nesse cruzamento: sai um job por rota (`método + rota`), não um por parâmetro.
 - Payload sem `value` e sem `values` é pulado.
 - `payloadVariants` gera um job por valor. `value` entra na lista se ainda não estava em `values`.
 - Se o payload traz `field` (ou `parameter`), um job só, nesse parâmetro. Senão, um job por chave de `vector.Params`. Sem parâmetros, um job com `ParamKey` vazio.
 - `injectableParam` recusa viewstate ASP.NET e nomes de token CSRF. Esses campos não recebem payload.
 
-`RestyEngine.MapVectorsToJobs` aplica `CapJobs` quando `ATTACK_MAX_JOBS` está definido e a lista passa desse número. Sem a variável, não há teto. O `.env.example` usa `5000`. O corte é round-robin por vetor (`rota + método + local`).
+`RestyEngine.MapVectorsToJobs` aplica `CapJobs` quando `ATTACK_MAX_JOBS` é maior que zero. Sem a variável, ou com `0`, não há teto. O `.env.example` deixa `0`. O compose de produção usa `4000`. O corte é round-robin por vetor (`rota + método + local`).
 
 `ApplyAuth` copia headers da sessão para cada job, via `HeadersForURL`. `ApplyGlobalHeaders` existe e não é usado pelo pipeline.
 

@@ -11,6 +11,7 @@ import {
 import { DeleteAllDispatchesModal } from "@/components/results/delete-all-dispatches-modal";
 import { DeleteDispatchModal } from "@/components/results/delete-dispatch-modal";
 import { ExportAuditReportModal } from "@/components/results/export-audit-report-modal";
+import { ScanActivity } from "@/components/results/scan-activity";
 import { ScanTypeBadge } from "@/components/results/scan-type-badge";
 import {
   Badge,
@@ -111,6 +112,9 @@ export function DispatchesList({
                           <Badge tone={dispatchStatusTone(dispatch.status)}>
                             {dispatchStatusLabel(dispatch.status)}
                           </Badge>
+                          {dispatch.status === "pending" ? (
+                            <ScanActivity compact title="Processando" />
+                          ) : null}
                         </div>
                         <span className="text-xs text-muted-foreground">
                           {dispatch.attacks_count} ataque(s)

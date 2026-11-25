@@ -138,6 +138,75 @@ body {
   animation: guided-setup-highlight-pulse 1.5s ease-in-out 3;
 }
 
+.scan-activity-radar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.scan-activity-ring,
+.scan-activity-sweep,
+.scan-activity-core {
+  position: absolute;
+  border-radius: 9999px;
+}
+
+.scan-activity-ring {
+  inset: 0;
+  border: 1px solid var(--foreground);
+  opacity: 0.35;
+  animation: scan-activity-ring 1.8s ease-out infinite;
+}
+
+.scan-activity-ring-delay {
+  animation-delay: 0.9s;
+}
+
+.scan-activity-sweep {
+  inset: 12%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg 280deg,
+    color-mix(in srgb, var(--foreground) 70%, transparent) 360deg
+  );
+  animation: scan-activity-sweep 1.4s linear infinite;
+  mask: radial-gradient(circle, transparent 42%, #000 44%);
+}
+
+.scan-activity-core {
+  width: 22%;
+  height: 22%;
+  background: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scan-activity-ring,
+  .scan-activity-sweep {
+    animation: none;
+  }
+}
+
+@keyframes scan-activity-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes scan-activity-ring {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.45;
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
 @keyframes guided-setup-highlight-pulse {
   0%,
   100% {

@@ -75,6 +75,12 @@ func (e *CompositeEngine) Discover(
 				return nil, staticErr
 			}
 			vectors = staticVectors
+		} else if rodFoundEnough(discCfg, dynamicVectors) {
+			e.logger.Info("dynamic discovery covered the route budget; skipping static crawl",
+				"dynamic", len(dynamicVectors),
+				"min", discCfg.MinVectorsForRod,
+			)
+			vectors = dynamicVectors
 		} else {
 			staticVectors, staticErr := staticEngine.Discover(ctx, targetURL, auth, seedURL)
 			if staticErr != nil && len(dynamicVectors) == 0 {
@@ -129,6 +135,7 @@ func (e *CompositeEngine) Discover(
 	}
 
 	beforeCap := len(vectors)
+	opts.MaxVectors = discCfg.MaxVectors
 	vectors = CapVectors(vectors, opts)
 	if len(vectors) < beforeCap {
 		e.logger.Info("capped discovery vectors",
@@ -162,6 +169,13 @@ func (e *CompositeEngine) discoverRouteMap(
 	)
 
 	return vectors, nil
+}
+
+func rodFoundEnough(cfg config.DiscoveryConfig, vectors []contracts.AttackVector) bool {
+	if cfg.MinVectorsForRod < 1 {
+		return false
+	}
+	return len(vectors) >= cfg.MinVectorsForRod
 }
 
 func mergeAttackVectors(primary, extra []contracts.AttackVector) []contracts.AttackVector {

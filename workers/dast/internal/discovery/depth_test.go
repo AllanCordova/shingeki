@@ -57,7 +57,17 @@ func TestCapVectorsQuick(t *testing.T) {
 
 	uncapped := discovery.CapVectors(vectors, discovery.Options{Depth: contracts.DepthFull})
 	if len(uncapped) != 25 {
-		t.Fatalf("full should not cap, got %d", len(uncapped))
+		t.Fatalf("full below the cap should keep 25 vectors, got %d", len(uncapped))
+	}
+
+	wide := make([]contracts.AttackVector, 100)
+	fullOpen := discovery.CapVectors(wide, discovery.Options{Depth: contracts.DepthFull})
+	if len(fullOpen) != 100 {
+		t.Fatalf("full without DISCOVERY_MAX_VECTORS should keep every route, got %d", len(fullOpen))
+	}
+	fullCapped := discovery.CapVectors(wide, discovery.Options{Depth: contracts.DepthFull, MaxVectors: 80})
+	if len(fullCapped) != 80 {
+		t.Fatalf("full with DISCOVERY_MAX_VECTORS=80 should cap at 80, got %d", len(fullCapped))
 	}
 
 	scoped := discovery.CapVectors(vectors, discovery.Options{

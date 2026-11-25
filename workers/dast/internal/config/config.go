@@ -31,6 +31,8 @@ type RabbitMQConfig struct {
 
 type WorkerConfig struct {
 	JobTimeout time.Duration
+	// ScanBudget stops a platform scan early and keeps what was found. Zero means no extra clock cap.
+	ScanBudget time.Duration
 }
 
 type DiscoveryConfig struct {
@@ -48,6 +50,10 @@ type DiscoveryConfig struct {
 	CDPURL               string
 	Proxy                string
 	MinVectorsForRod     int
+	// MaxVectors caps a full scan when max_routes is omitted. Zero means no cap.
+	MaxVectors int
+	// PageConcurrency is how many browser tabs, or HTTP fetches, explore at once.
+	PageConcurrency int
 }
 
 type AttackConfig struct {
@@ -85,6 +91,11 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_MAX_PAGES: %w", err)
 	}
 
+	maxVectors, err := strconv.Atoi(getEnv("DISCOVERY_MAX_VECTORS", "0"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid DISCOVERY_MAX_VECTORS: %w", err)
+	}
+
 	minVectorsRod, err := strconv.Atoi(getEnv("DISCOVERY_MIN_VECTORS_FOR_ROD", "2"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_MIN_VECTORS_FOR_ROD: %w", err)
@@ -98,6 +109,11 @@ func Load() (Config, error) {
 	maxFormSubmits, err := strconv.Atoi(getEnv("DISCOVERY_MAX_FORM_SUBMITS", "8"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid DISCOVERY_MAX_FORM_SUBMITS: %w", err)
+	}
+
+	pageConcurrency, err := strconv.Atoi(getEnv("DISCOVERY_PAGE_CONCURRENCY", "1"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid DISCOVERY_PAGE_CONCURRENCY: %w", err)
 	}
 
 	concurrency, err := strconv.Atoi(getEnv("WORKER_ATTACK_CONCURRENCY", "5"))
@@ -128,6 +144,11 @@ func Load() (Config, error) {
 	jobTimeout, err := time.ParseDuration(getEnv("WORKER_JOB_TIMEOUT", "3h"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid WORKER_JOB_TIMEOUT: %w", err)
+	}
+
+	scanBudget, err := parseOptionalDuration("SCAN_BUDGET")
+	if err != nil {
+		return Config{}, err
 	}
 
 	pageTimeout, err := time.ParseDuration(getEnv("DISCOVERY_PAGE_TIMEOUT", "30s"))
@@ -169,6 +190,7 @@ func Load() (Config, error) {
 		},
 		Worker: WorkerConfig{
 			JobTimeout: jobTimeout,
+			ScanBudget: scanBudget,
 		},
 		Discovery: DiscoveryConfig{
 			MaxDepth:             maxDepth,
@@ -185,6 +207,8 @@ func Load() (Config, error) {
 			CDPURL:               getEnv("DISCOVERY_CDP_URL", ""),
 			Proxy:                getEnv("DISCOVERY_PROXY", ""),
 			MinVectorsForRod:     minVectorsRod,
+			MaxVectors:           maxVectors,
+			PageConcurrency:      pageConcurrency,
 		},
 		Attack: AttackConfig{
 			Concurrency:    concurrency,
@@ -212,6 +236,9 @@ func Load() (Config, error) {
 	if cfg.Worker.JobTimeout <= 0 {
 		return Config{}, fmt.Errorf("WORKER_JOB_TIMEOUT must be > 0")
 	}
+	if cfg.Worker.ScanBudget < 0 {
+		return Config{}, fmt.Errorf("SCAN_BUDGET must be >= 0")
+	}
 	if cfg.Discovery.MaxDepth < 0 {
 		return Config{}, fmt.Errorf("DISCOVERY_MAX_DEPTH must be >= 0")
 	}
@@ -221,8 +248,14 @@ func Load() (Config, error) {
 	if cfg.Discovery.MaxFormSubmits < 0 {
 		return Config{}, fmt.Errorf("DISCOVERY_MAX_FORM_SUBMITS must be >= 0")
 	}
+	if cfg.Discovery.PageConcurrency < 1 {
+		return Config{}, fmt.Errorf("DISCOVERY_PAGE_CONCURRENCY must be >= 1")
+	}
 	if cfg.Discovery.MinVectorsForRod < 0 {
 		return Config{}, fmt.Errorf("DISCOVERY_MIN_VECTORS_FOR_ROD must be >= 0")
+	}
+	if cfg.Discovery.MaxVectors < 0 {
+		return Config{}, fmt.Errorf("DISCOVERY_MAX_VECTORS must be >= 0")
 	}
 	if cfg.Attack.Concurrency < 1 {
 		return Config{}, fmt.Errorf("WORKER_ATTACK_CONCURRENCY must be >= 1")
@@ -270,6 +303,21 @@ func getEnv(key, fallback string) string {
 
 // optionalNonNegativeInt reads key when it is set. An empty variable means 0,
 // which the attack pool treats as no job cap.
+func parseOptionalDuration(key string) (time.Duration, error) {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" || raw == "0" {
+		return 0, nil
+	}
+	value, err := time.ParseDuration(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid %s: %w", key, err)
+	}
+	if value < 0 {
+		return 0, fmt.Errorf("%s must be >= 0", key)
+	}
+	return value, nil
+}
+
 func optionalNonNegativeInt(key string) (int, error) {
 	raw := strings.TrimSpace(os.Getenv(key))
 	if raw == "" {
